@@ -1,0 +1,319 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project default="all" basedir="." name="fop-pdf-images">
+
+  <!-- See build.properties and build-local.properties for overriding build settings. -->
+  <!-- build-local.properties is not stored in SVN and overrides values from build.properties -->
+  <property file="${basedir}/build-local.properties"/>
+  <property file="${basedir}/build.properties"/>
+  <property environment="env"/>
+
+  <property name="Name" value="PDF image support for Apache FOP"/>
+  <property name="name" value="fop-pdf-images"/>
+
+  <property name="javadoc.packages" value="org.apache.fop.*"/>
+  
+  <property name="src.dir" value="${basedir}/src"/>
+  <property name="src.java.dir" value="${src.dir}/java"/>
+  <property name="lib.dir" value="${basedir}/lib"/>
+
+  <property name="build.dir" value="${basedir}/build"/>
+  <property name="build.classes.dir" value="${build.dir}/classes"/>
+  <property name="build.javadocs.dir" value="${build.dir}/javadocs"/>
+  
+  <property name="dist.bin.dir" value="${basedir}/dist-bin"/>
+  <property name="dist.src.dir" value="${basedir}/dist-src"/>
+  <property name="dist.bin.result.dir" value="${dist.bin.dir}/${name}-${version}"/>
+  <property name="dist.src.result.dir" value="${dist.src.dir}/${name}-${version}"/>
+
+  <tstamp>
+    <format property="ts" pattern="yyyyMMdd-HHmmss-z"/>
+  </tstamp>
+
+  <path id="libs-build-classpath">
+    <fileset dir="${lib.dir}">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+
+  <fileset dir="${basedir}" id="dist.bin">
+    <include name="LICENSE"/>
+    <include name="NOTICE"/>
+    <include name="README"/>
+    <include name="KEYS"/>
+  </fileset>
+
+  <fileset dir="${basedir}" id="dist.bin.lib">
+  </fileset>
+
+  <fileset dir="${basedir}" id="dist.src">
+    <include name="src/**"/>
+    <patternset>
+      <include name="lib/*"/>
+    </patternset>
+    <include name="LICENSE"/>
+    <include name="NOTICE"/>
+    <include name="README"/>
+    <include name="KEYS"/>
+    <include name="build.*"/>
+  </fileset>
+
+  <!-- =================================================================== -->
+  <!-- Initialization target                                               -->
+  <!-- =================================================================== -->
+  <target name="info">
+    <echo message="------------------- ${Name} ${version} [${year}] ----------------"/>
+    <echo message="See build.properties and build-local.properties for additional build settings"/>
+    <echo message="${ant.version}"/>
+    <echo message="VM: ${java.vm.version}, ${java.vm.vendor}"/>
+    <echo message="JAVA_HOME: ${env.JAVA_HOME}"/>
+  </target>
+  
+  <target name="init" depends="info, init-avail"/>
+
+  <target name="init-avail">
+  </target>
+
+
+  <!-- =================================================================== -->
+  <!-- Compiles the source directory                                       -->
+  <!-- =================================================================== -->
+  <target name="compile-java" depends="init" description="Compiles the source code">
+    <!-- create directories -->
+    <mkdir dir="${build.classes.dir}"/>
+    <javac destdir="${build.classes.dir}" fork="${javac.fork}" debug="${javac.debug}"
+           deprecation="${javac.deprecation}"
+           source="${javac.source}" target="${javac.target}">
+      <src path="${src.java.dir}"/>
+      <classpath refid="libs-build-classpath"/>
+    </javac>
+    <copy todir="${build.classes.dir}">
+      <fileset dir="${src.java.dir}">
+        <include name="META-INF/**"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Creates JAR files                                                   -->
+  <!-- =================================================================== -->
+
+  <target name="uptodate-jar-main" depends="compile-java">
+    <uptodate property="jar.main.uptodate" targetfile="${build.dir}/${name}.jar">
+      <srcfiles dir= "${build.classes.dir}"/>
+    </uptodate>
+  </target>
+
+  <target name="jar-main" depends="compile-java,uptodate-jar-main" description="Generates the main jar file" unless="jar.main.uptodate">
+    <jar jarfile="${build.dir}/${name}-${version}.jar" basedir="${build.classes.dir}">
+      <manifest>
+        <attribute name="Implementation-Title" value="${Name}"/>
+        <attribute name="Implementation-Version" value="${version}"/>
+        <attribute name="Implementation-Vendor" value="${vendor}"/>
+        <attribute name="Build-Id" value="${ts} (${user.name} [${os.name} ${os.version} ${os.arch}, Java ${java.runtime.version}])"/>
+      </manifest>
+      <metainf dir="${basedir}" includes="LICENSE,NOTICE"/>
+    </jar>
+    <jar jarfile="${build.dir}/${name}-${version}-res.jar">
+      <manifest>
+        <attribute name="Implementation-Title" value="${Name}"/>
+        <attribute name="Implementation-Version" value="${version}"/>
+        <attribute name="Implementation-Vendor" value="${vendor}"/>
+        <attribute name="Build-Id" value="${ts} (${user.name} [${os.name} ${os.version} ${os.arch}, Java ${java.runtime.version}])"/>
+      </manifest>
+      <metainf dir="${basedir}" includes="LICENSE,NOTICE"/>
+      <fileset dir="${src.java.dir}">
+        <include name="META-INF/**"/>
+      </fileset>
+    </jar>
+  </target>
+
+  <target name="package" depends="jar-main" description="Generates the jar files"/>
+
+
+  <!-- =================================================================== -->
+  <!-- Creates the API documentation                                       -->
+  <!-- =================================================================== -->
+  <target name="javadocs" depends="init" description="Generates javadocs">
+    <mkdir dir="${build.javadocs.dir}"/>
+
+    <javadoc
+        packagenames="${javadoc.packages}"
+        destdir="${build.javadocs.dir}"
+        author="true"
+        version="true"
+        windowtitle="${Name} ${version} API"
+        doctitle="PDF image support for Apache FOP"
+        bottom="Copyright ${year} Jeremias Maerki. All Rights Reserved."
+        use="true"
+        failonerror="true">
+      <header><![CDATA[${name} ${version}]]></header>
+      <footer><![CDATA[${name} ${version}]]></footer>
+      <classpath>
+        <path refid="libs-build-classpath"/>
+        <pathelement path="${java.class.path}"/>
+      </classpath>
+      <sourcepath>
+        <pathelement path="${src.java.dir}"/>
+      </sourcepath>
+      <tag name="todo" scope="all" description="To do:"/>
+    </javadoc>
+  </target>
+
+  <target name="jar-javadocs" depends="javadocs">
+    <jar jarfile="${build.dir}/${name}-${version}-javadoc.jar">
+      <manifest>
+        <attribute name="Build-Id" value="${ts} (${user.name} [${os.name} ${os.version} ${os.arch}, Java ${java.runtime.version}])"/>
+      </manifest>
+      <fileset dir="${build.javadocs.dir}"/>
+      <metainf dir="${basedir}" includes="LICENSE,NOTICE"/>
+    </jar>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Creates the distribution                                            -->
+  <!-- =================================================================== -->
+  <target name="dist" depends="distclean,dist-src,dist-bin" description="Generates the distribution package"/>
+
+  <target name="dist-bin" depends="all,javadocs">
+    <echo message="Building the binary distribution files (zip,tar)"/>
+    <mkdir dir="${dist.bin.result.dir}"/>
+    <copy todir="${dist.bin.result.dir}">
+      <fileset refid="dist.bin"/>
+      <fileset dir="${build.dir}">
+        <include name="*.jar"/>
+        <exclude name="*-res.jar"/>
+      </fileset>
+      <fileset dir="${lib.dir}">
+        <include name="PDFBox*"/>
+        <include name="pdfbox*"/>
+        <include name="fontbox*"/>
+        <include name="jempbox*"/>
+      </fileset>
+    </copy>
+    <copy todir="${dist.bin.result.dir}/javadocs">
+      <fileset dir="${build.javadocs.dir}"/>
+    </copy>
+
+    <property name="bin.suffix" value="bin"/>
+    <zip zipfile="${name}-${version}-${bin.suffix}.zip" basedir="${dist.bin.dir}" includes="**"/>
+    <tar longfile="gnu"
+         destfile="${name}-${version}-${bin.suffix}.tar">
+      <tarfileset dir="${dist.bin.dir}">
+        <include name="**"/>
+      </tarfileset>
+    </tar>
+    <gzip zipfile="${name}-${version}-${bin.suffix}.tar.gz" src="${name}-${version}-${bin.suffix}.tar"/>
+    <delete file="${name}-${version}-${bin.suffix}.tar"/>
+  </target>
+
+  <target name="dist-src" depends="all">
+    <echo message="Building the source distribution files (zip,tar)"/>
+    <mkdir dir="${dist.src.result.dir}"/>
+    <copy todir="${dist.src.result.dir}">
+      <fileset refid="dist.src"/>
+    </copy>
+
+    <zip zipfile="${name}-${version}-src.zip">
+      <zipfileset dir="${dist.src.dir}" filemode="644" dirmode="755">
+        <include name="**"/>
+      </zipfileset>
+    </zip>
+    <tar longfile="gnu"
+         destfile="${name}-${version}-src.tar" >
+      <tarfileset dir="${dist.src.dir}" mode="644" dirmode="755">
+        <include name="**"/>
+      </tarfileset>
+    </tar>
+    <gzip zipfile="${name}-${version}-src.tar.gz" src="${name}-${version}-src.tar"/>
+    <delete file="${name}-${version}-src.tar"/>
+  </target>
+
+  <target name="release-dist" depends="dist" description="Generates the distribution package and signs the release">
+    <property name="bin.suffix" value="bin-jdk${java.specification.version}"/>
+    <input message="Passphrase for your default private key (attention: passphrase will be echoed in clear text on the display!)" addproperty="pwd"/>
+    <antcall target="md5">
+      <param name="sign.archive" value="${name}-${version}-src.zip"/>
+    </antcall>
+    <antcall target="sign-file">
+      <param name="sign.archive" value="${name}-${version}-src.zip"/>
+      <param name="pwd" value="${pwd}"/>
+    </antcall>
+    <antcall target="md5">
+      <param name="sign.archive" value="${name}-${version}-src.tar.gz"/>
+    </antcall>
+    <antcall target="sign-file">
+      <param name="sign.archive" value="${name}-${version}-src.tar.gz"/>
+      <param name="pwd" value="${pwd}"/>
+    </antcall>
+    <antcall target="md5">
+      <param name="sign.archive" value="${name}-${version}-${bin.suffix}.zip"/>
+    </antcall>
+    <antcall target="sign-file">
+      <param name="sign.archive" value="${name}-${version}-${bin.suffix}.zip"/>
+      <param name="pwd" value="${pwd}"/>
+    </antcall>
+    <antcall target="md5">
+      <param name="sign.archive" value="${name}-${version}-${bin.suffix}.tar.gz"/>
+    </antcall>
+    <antcall target="sign-file">
+      <param name="sign.archive" value="${name}-${version}-${bin.suffix}.tar.gz"/>
+      <param name="pwd" value="${pwd}"/>
+    </antcall>
+  </target>
+
+  <target name="md5">
+    <property name="md5.exec" value="md5"/>
+    <property name="md5.options" value="-q"/>
+    <exec executable="${md5.exec}" output="${sign.archive}.md5">
+      <arg line="${md5.options} ${sign.archive}"/>
+    </exec>
+  </target>
+
+  <target name="sign-file">
+    <property name="gpg.exec" value="gpg"/>
+    <property name="gpg.options" value="--armor --detach-sign --force-v3-sigs --batch --verbose --passphrase-fd 0"/>
+    <delete file="${sign.archive}.asc"/>
+    <exec executable="${gpg.exec}" inputstring="${pwd}">
+      <arg line="${gpg.options} ${sign.archive}"/>
+    </exec>
+  </target>
+  
+  <!-- =================================================================== -->
+  <!-- Clean targets                                                       -->
+  <!-- =================================================================== -->
+  <target name="clean" description="Cleans the build directory">
+    <delete dir="${build.dir}"/>
+  </target>
+
+  <target name="distclean" depends="clean" description="Cleans the distribution target directories">
+    <delete dir="${dist.src.dir}"/>
+    <delete dir="${dist.bin.dir}"/>
+    <delete>
+      <fileset dir="${basedir}" includes="${name}-*.tar.gz*"/>
+      <fileset dir="${basedir}" includes="${name}-*.zip*"/>
+    </delete>
+  </target>
+  
+  <!-- =================================================================== -->
+  <!-- Default Target                                                      -->
+  <!-- =================================================================== -->
+
+  <target name="all" depends="package"/>
+
+</project>
