@@ -282,12 +282,12 @@ class PDFBoxAdapter {
         }
     }
 
-    private void transferDict(COSDictionary orgDict, PDFDictionary targetDict,
+    private void transferDict(COSDictionary orgDict, PDFStream targetDict,
             Set filter) throws IOException {
         transferDict(orgDict, targetDict, filter, false);
     }
 
-    private void transferDict(COSDictionary orgDict, PDFDictionary targetDict,
+    private void transferDict(COSDictionary orgDict, PDFStream targetDict,
             Set filter, boolean inclusive) throws IOException {
         Iterator iter = orgDict.keySet().iterator();
         while (iter.hasNext()) {
@@ -350,9 +350,9 @@ class PDFBoxAdapter {
         form = pdfDoc.addFormXObject(null, pageStream,
                 (pageResources != null ? pageResources.makeReference() : null), key);
         if (originalPageContents != null) {
-            transferDict(originalPageContents, form, filter);
+            transferDict(originalPageContents, pageStream, filter);
         }
-        transferDict(page.getCOSDictionary(), form, page2form, true);
+        transferDict(page.getCOSDictionary(), pageStream, page2form, true);
         AffineTransform at = form.getMatrix();
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();

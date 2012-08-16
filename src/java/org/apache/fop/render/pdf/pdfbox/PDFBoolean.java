@@ -21,7 +21,6 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.Writer;
 
 import org.apache.commons.io.output.CountingOutputStream;
 
@@ -51,23 +50,10 @@ public class PDFBoolean extends PDFObject {
         return this.value;
     }
 
-    /** {@inheritDoc} */
     @Override
-    protected int output(OutputStream stream) throws IOException {
+    public int output(OutputStream stream) throws IOException {
         CountingOutputStream cout = new CountingOutputStream(stream);
-        Writer writer = PDFDocument.getWriterFor(cout);
-        if (hasObjectNumber()) {
-            writer.write(getObjectID());
-        }
-
-        writer.write(Boolean.toString(getValue()));
-
-        if (hasObjectNumber()) {
-            writer.write("\nendobj\n");
-        }
-
-        writer.flush();
+        PDFDocument.flushTextBuffer(new StringBuilder(Boolean.toString(getValue())), cout);
         return cout.getCount();
     }
-
 }
