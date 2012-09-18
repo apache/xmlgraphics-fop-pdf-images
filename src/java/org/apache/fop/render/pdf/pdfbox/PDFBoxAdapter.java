@@ -151,13 +151,6 @@ class PDFBoxAdapter {
                             + object.getObjectNumber().longValue()
                             + " " + object.getGenerationNumber().longValue());
                 }
-            } else {
-                throw new IllegalStateException("Expected to get a PDFObject but got"
-                        + (obj != null ? " a " + obj.getClass().getName() : " null")
-                        + " for " + object);
-            }
-            if (getCachedClone(keyBase) == null) {
-                throw new IllegalStateException("Object must be cached at this point: " + keyBase);
             }
             return obj;
         } else if (base instanceof COSArray) {
