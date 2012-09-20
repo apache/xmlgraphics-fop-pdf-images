@@ -21,18 +21,22 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.WeakHashMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
 
+import org.apache.fop.apps.FOUserAgent;
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFPage;
+import org.apache.fop.pdf.Version;
+import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 
 /**
  * Abstract base class for implementation of FOP's image handler interfaces (old and new)
@@ -41,96 +45,100 @@ import org.apache.fop.pdf.PDFPage;
  */
 public abstract class AbstractPDFBoxHandler {
 
-    /** logging instance */
-    protected static Log log = LogFactory.getLog(AbstractPDFBoxHandler.class);
+    private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
+            System.getProperty("fop.pdfbox.doc-cache", Cache.Type.WEAK.name()).toUpperCase());
 
-    private static Map objectCaches = Collections.synchronizedMap(new java.util.WeakHashMap());
+    private static Cache<String, Map<Object, Object>> createDocumentCache() {
+        return Cache.createCache(CACHE_TYPE);
+    }
+
+    private static final ValueMaker<Map<Object, Object>> MAP_MAKER
+            = new ValueMaker<Map<Object, Object>>() {
+        public Map<Object, Object> make() throws Exception {
+            return new HashMap<Object, Object>();
+        }
+    };
+
+    private static Map<Object, Cache<String, Map<Object, Object>>> objectCacheMap
+            = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
     protected PDFFormXObject createFormForPDF(ImagePDF image,
-            PDFPage targetPage) throws IOException {
-        final int selectedPage = ImageUtil.needPageIndexFromURI(image.getInfo().getOriginalURI());
+            PDFPage targetPage, FOUserAgent userAgent) throws IOException {
+
+        EventBroadcaster eventBroadcaster = userAgent.getEventBroadcaster();
+        String originalImageUri = image.getInfo().getOriginalURI();
+        final int selectedPage = ImageUtil.needPageIndexFromURI(originalImageUri);
 
         PDDocument pddoc = image.getPDDocument();
         float pdfVersion = pddoc.getDocument().getVersion();
-        if (pdfVersion > 1.4f) {
-            log.warn("The version of the loaded PDF is " + pdfVersion
-                    + ". PDF Versions beyond 1.4 might not create correct results.");
+        Version inputDocVersion = Version.getValueOf(String.valueOf(pdfVersion));
+        PDFDocument pdfDoc = targetPage.getDocument();
+
+        if (pdfDoc.getPDFVersion().compareTo(inputDocVersion) < 0) {
+            try {
+                pdfDoc.setPDFVersion(inputDocVersion);
+            } catch (IllegalStateException e) {
+                getEventProducer(eventBroadcaster).pdfVersionMismatch(this,
+                         pdfDoc.getPDFVersionString(), String.valueOf(pdfVersion));
+            }
         }
 
         //Encryption test
-        if (pddoc.isEncrypted() && pddoc.getCurrentAccessPermission().isOwnerPermission()) {
-            log.error("PDF to be embedded must not be encrypted!"
-                    + " Alternative: provide authentication via interceptor.");
+        if (pddoc.isEncrypted()) {
+            getEventProducer(eventBroadcaster).encryptedPdf(this);
             return null;
         }
 
-        PDFDocument pdfDoc = targetPage.getDocument();
+
         //Warn about potential problems with PDF/A and PDF/X
         if (pdfDoc.getProfile().isPDFAActive()) {
-            log.warn("PDF/A mode is active."
-                    + " Embedding a PDF file may result in a non-compliant file!");
+            getEventProducer(eventBroadcaster).pdfAActive(this);
         }
         if (pdfDoc.getProfile().isPDFXActive()) {
-            log.warn("PDF/X mode is active."
-                    + " Embedding a PDF file may result in a non-compliant file!");
+            getEventProducer(eventBroadcaster).pdfXActive(this);
         }
 
-        PDPage page = (PDPage)pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
+        Map<Object, Object> objectCache = getObjectCache(originalImageUri, userAgent);
 
-        //Only has an effect if PDDocuments are reused for multiple page which is currently not
-        //the case. Code remains in place in case this can be improved in the future.
-        MapKey key = new MapKey(pddoc, pdfDoc);
-        Map objectCache = (Map)objectCaches.get(key);
-        if (objectCache == null) {
-            //Object cache itself doesn't need to be cached as FOP is not multi-threaded
-            objectCache = new java.util.HashMap();
-            objectCaches.put(key, objectCache);
-        }
+        PDPage page = (PDPage) pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
 
         PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache);
-        PDFFormXObject form = adapter.createFormFromPDFBoxPage(
-                pddoc, page, image.getInfo().getOriginalURI());
+        PDFFormXObject form = adapter.createFormFromPDFBoxPage(pddoc, page, originalImageUri,
+                eventBroadcaster);
         return form;
     }
 
-    private static final class MapKey {
-
-        private PDDocument sourceDocument;
-        private PDFDocument targetDocument;
-
-        public MapKey(PDDocument source, PDFDocument target) {
-            this.sourceDocument = source;
-            this.targetDocument = target;
+    private Map<Object, Object> getObjectCache(String originalImageUri,
+            Object documentScopedReference) {
+        String fileUri = getImagePath(originalImageUri);
+        try {
+            return getDocumentCache(documentScopedReference)
+                        .getValue(fileUri, MAP_MAKER);
+        } catch (Exception e) {
+            // We cannot recover from this
+            throw new RuntimeException(e);
         }
-
-        /** {@inheritDoc} */
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + sourceDocument.hashCode();
-            result = prime * result + targetDocument.hashCode();
-            return result;
-        }
-
-        /** {@inheritDoc} */
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            MapKey other = (MapKey)obj;
-            return sourceDocument == other.sourceDocument
-                    && targetDocument == other.targetDocument;
-        }
-
-
     }
 
+    private Cache<String, Map<Object, Object>> getDocumentCache(Object documentScopedReference) {
+        Cache<String, Map<Object, Object>> documentCache = objectCacheMap.get(documentScopedReference);
+        if (documentCache == null) {
+            documentCache = createDocumentCache();
+            objectCacheMap.put(documentScopedReference, documentCache);
+        }
+        return documentCache;
+    }
+
+    private String getImagePath(String originalImageUri) {
+        int hashIndex = originalImageUri.indexOf('#');
+        if (hashIndex > 0) {
+            return originalImageUri.substring(0, hashIndex);
+        } else {
+            return originalImageUri;
+        }
+    }
+
+    private PDFBoxEventProducer getEventProducer(EventBroadcaster eventBroadcaster) {
+        return PDFBoxEventProducer.Provider.get(eventBroadcaster);
+    }
 }

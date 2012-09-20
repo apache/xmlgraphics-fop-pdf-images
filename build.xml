@@ -51,6 +51,13 @@
     </fileset>
   </path>
 
+  <path id="libs-build-tools-classpath">
+    <path refid="libs-build-classpath"/>
+    <fileset dir="${lib.dir}/build">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+
   <fileset dir="${basedir}" id="dist.bin">
     <include name="LICENSE"/>
     <include name="NOTICE"/>
@@ -109,6 +116,23 @@
     </copy>
   </target>
 
+  <target name="resourcegen" depends="compile-java">
+    <taskdef name="generateEventResources" 
+      classname="org.apache.fop.tools.EventProducerCollectorTask">
+      <classpath refid="libs-build-tools-classpath"/>
+    </taskdef>
+    <generateEventResources destdir="${build.classes.dir}">
+      <fileset dir="${src.java.dir}">
+        <include name="org/apache/fop/render/pdf/pdfbox/*.java"/>
+      </fileset>
+    </generateEventResources>
+    <copy todir="${build.classes.dir}">
+      <fileset dir="${src.java.dir}">
+        <include name="org/apache/fop/render/pdf/pdfbox/PDFBoxEventProducer.xml"/>
+      </fileset>
+    </copy>
+  </target>
+
   <!-- =================================================================== -->
   <!-- Creates JAR files                                                   -->
   <!-- =================================================================== -->
@@ -119,7 +143,7 @@
     </uptodate>
   </target>
 
-  <target name="jar-main" depends="compile-java,uptodate-jar-main" description="Generates the main jar file" unless="jar.main.uptodate">
+  <target name="jar-main" depends="resourcegen,compile-java,uptodate-jar-main" description="Generates the main jar file" unless="jar.main.uptodate">
     <jar jarfile="${build.dir}/${name}-${version}.jar" basedir="${build.classes.dir}">
       <manifest>
         <attribute name="Implementation-Title" value="${Name}"/>

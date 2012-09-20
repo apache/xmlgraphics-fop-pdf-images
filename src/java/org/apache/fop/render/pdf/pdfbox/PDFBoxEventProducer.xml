@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalogue xml:lang="en">
+  <message key="pdfVersionMismatch">The version of the loaded PDF is {inputDocVersion}. This doesn't match the document version {outDocVersion} and could lead to errors.</message>
+  <message key="encryptedPdf">PDF to be embedded must not be encrypted!</message>
+  <message key="pdfAActive">PDF/A mode is active. Embedding a PDF file may result in a non-compliant file!</message>
+  <message key="pdfXActive">PDF/X mode is active. Embedding a PDF file may result in a non-compliant file!</message>
+</catalogue>

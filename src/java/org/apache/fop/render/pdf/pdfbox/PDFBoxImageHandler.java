@@ -54,7 +54,8 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         PDFContentGenerator generator = pdfContext.getGenerator();
         ImagePDF pdfImage = (ImagePDF)image;
 
-        PDFFormXObject form = createFormForPDF(pdfImage, pdfContext.getPage());
+        PDFFormXObject form = createFormForPDF(pdfImage, pdfContext.getPage(),
+                pdfContext.getUserAgent());
         if (form == null) {
             return;
         }
@@ -79,7 +80,7 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
     }
 
     /** {@inheritDoc} */
-    public Class<?> getSupportedImageClass() {
+    public Class getSupportedImageClass() {
         return ImagePDF.class;
     }
 

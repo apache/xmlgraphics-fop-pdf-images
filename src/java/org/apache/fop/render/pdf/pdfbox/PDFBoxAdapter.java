@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,7 @@ import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
@@ -172,8 +174,6 @@ class PDFBoxAdapter {
         } else if (base instanceof COSStream) {
             COSStream originalStream = (COSStream)base;
 
-            PDFStream stream = new PDFStream();
-
             InputStream in;
             Set filter;
             if (pdfDoc.isEncryptionActive()) {
@@ -184,17 +184,18 @@ class PDFBoxAdapter {
                 in = originalStream.getFilteredStream();
                 filter = Collections.EMPTY_SET;
             }
+            PDFStream stream = new PDFStream();
             OutputStream out = stream.getBufferOutputStream();
             IOUtils.copyLarge(in, out);
             transferDict(originalStream, stream, filter);
             return cacheClonedObject(keyBase, stream);
         } else if (base instanceof COSDictionary) {
             COSDictionary dic = (COSDictionary)base;
+            List keys = dic.keyList();
             PDFDictionary newDict = new PDFDictionary();
             cacheClonedObject(keyBase, newDict);
-            Iterator iter = dic.keySet().iterator();
-            while (iter.hasNext()) {
-                COSName key = (COSName)iter.next();
+            for (int i = 0; i < keys.size(); i++) {
+                COSName key = (COSName)keys.get(i);
                 if (!exclude.contains(key)) {
                     (newDict).put(key.getName(), cloneForNewDocument(dic.getItem(key)));
                 }
@@ -248,18 +249,16 @@ class PDFBoxAdapter {
 
     private Object cacheClonedObject(Object base, Object cloned) {
         Object key = getBaseKey(base);
-        if (base instanceof COSObject) {
-            PDFObject pdfobj = (PDFObject)cloned;
-            if (!pdfobj.hasObjectNumber()) {
-                pdfDoc.registerObject(pdfobj);
-                if (log.isTraceEnabled()) {
-                    log.trace(key + ": " + pdfobj.getClass().getName() + " registered as "
+        if (key == null) {
+            return cloned;
+        }
+        PDFObject pdfobj = (PDFObject) cloned;
+        if (!pdfobj.hasObjectNumber()) {
+            pdfDoc.registerObject(pdfobj);
+            if (log.isTraceEnabled()) {
+                log.trace(key + ": " + pdfobj.getClass().getName() + " registered as "
                             + pdfobj.getObjectNumber() + " " + pdfobj.getGeneration());
-                }
             }
-        } else if (log.isTraceEnabled()) {
-            //TODO PDFDictionary.toString() may cause stack overflows
-            //log.trace(key + ": cached, direct object");
         }
         clonedVersion.put(key, cloned);
         return cloned;
@@ -268,10 +267,9 @@ class PDFBoxAdapter {
     private Object getBaseKey(Object base) {
         if (base instanceof COSObject) {
             COSObject obj = (COSObject)base;
-            return obj.getObjectNumber().intValue()
-                    + " " + obj.getGenerationNumber().intValue();
+            return obj.getObjectNumber().intValue() + " " + obj.getGenerationNumber().intValue();
         } else {
-            return base;
+            return null;
         }
     }
 
@@ -282,9 +280,9 @@ class PDFBoxAdapter {
 
     private void transferDict(COSDictionary orgDict, PDFStream targetDict,
             Set filter, boolean inclusive) throws IOException {
-        Iterator iter = orgDict.keySet().iterator();
-        while (iter.hasNext()) {
-            COSName key = (COSName)iter.next();
+        List keys = orgDict.keyList();
+        for (int i = 0, ci = keys.size(); i < ci; i++) {
+            COSName key = (COSName)keys.get(i);
             if (inclusive && !filter.contains(key.getName())) {
                 continue;
             } else if (!inclusive && filter.contains(key.getName())) {
@@ -303,9 +301,9 @@ class PDFBoxAdapter {
      * @return the Form XObject
      * @throws IOException if an I/O error occurs
      */
-    public PDFFormXObject createFormFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key)
-            throws IOException {
-        handleAcroForm(sourceDoc, page);
+    public PDFFormXObject createFormFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
+            EventBroadcaster eventBroadcaster) throws IOException {
+        handleAcroForm(sourceDoc, page, eventBroadcaster);
 
         PDResources sourcePageResources = page.findResources();
         PDFDictionary pageResources = null;
@@ -320,6 +318,8 @@ class PDFBoxAdapter {
         if (pdStream != null) {
             originalPageContents = (COSStream)pdStream.getCOSObject();
         }
+
+        bindOptionalContent(sourceDoc);
 
         PDFStream pageStream;
         Set filter;
@@ -338,14 +338,14 @@ class PDFBoxAdapter {
             pageStream = new PDFStream();
         }
 
-        PDFFormXObject form;
-
-        form = pdfDoc.addFormXObject(null, pageStream,
+        PDFFormXObject form = pdfDoc.addFormXObject(null, pageStream,
                 (pageResources != null ? pageResources.makeReference() : null), key);
+
         if (originalPageContents != null) {
             transferDict(originalPageContents, pageStream, filter);
         }
         transferDict(page.getCOSDictionary(), pageStream, page2form, true);
+
         AffineTransform at = form.getMatrix();
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();
@@ -356,6 +356,8 @@ class PDFBoxAdapter {
 
         //Transform to FOP's user space
         at.scale(1 / viewBox.getWidth(), 1 / viewBox.getHeight());
+        at.translate(mediaBox.getLowerLeftX() - viewBox.getLowerLeftX(),
+                mediaBox.getLowerLeftY() - viewBox.getLowerLeftY());
         switch (rotation) {
         case 90:
             at.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
@@ -373,8 +375,6 @@ class PDFBoxAdapter {
         default:
             //no additional transformations necessary
         }
-        //Compensate for Crop Boxes not starting at 0,0
-        at.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
         form.setMatrix(at);
 
         form.setBBox(new Rectangle2D.Float(
@@ -396,7 +396,17 @@ class PDFBoxAdapter {
         return widgets;
     }
 
-    private void handleAcroForm(PDDocument sourceDoc, PDPage page) throws IOException {
+    private void bindOptionalContent(PDDocument sourceDoc) throws IOException {
+        /*
+         * PDOptionalContentProperties ocProperties =
+         * sourceDoc.getDocumentCatalog().getOCProperties(); PDFDictionary ocDictionary =
+         * (PDFDictionary) cloneForNewDocument(ocProperties); if (ocDictionary != null) {
+         * this.pdfDoc.getRoot().put(COSName.OCPROPERTIES.getName(), ocDictionary); }
+         */
+    }
+
+    private void handleAcroForm(PDDocument sourceDoc, PDPage page,
+            EventBroadcaster eventBroadcaster) throws IOException {
         PDDocumentCatalog srcCatalog = sourceDoc.getDocumentCatalog();
         PDAcroForm srcAcroForm = srcCatalog.getAcroForm();
         List pageWidgets = getWidgets(page);
@@ -429,29 +439,25 @@ class PDFBoxAdapter {
         cacheClonedObject(cosPage, this.targetPage);
 
         COSArray annots = (COSArray)page.getCOSDictionary().getDictionaryObject(COSName.ANNOTS);
-        Set fields = Collections.EMPTY_SET;
+        Set fields = Collections.emptySet();
         if (annots != null) {
-            fields = new java.util.HashSet();
+            fields = new HashSet();
             Iterator iter = annots.iterator();
             while (iter.hasNext()) {
-                COSBase annot = (COSBase)iter.next();
-                PDFObject clonedAnnot;
-                //Exclude the parent of the annotation from being duplicated
-                COSObject cosAnnot = (COSObject)annot.getCOSObject();
-                COSDictionary field = (COSDictionary)(cosAnnot).getObject();
-                if (!"Widget".equals(field.getNameAsString(COSName.SUBTYPE))) {
-                    continue; //not a widget
+                COSObject annot = (COSObject) iter.next();
+                COSObject fieldObject = annot;
+                COSDictionary field = (COSDictionary) fieldObject.getObject();
+                if ("Widget".equals(field.getNameAsString(COSName.SUBTYPE))) {
+                    COSObject parent;
+                    while ((parent = (COSObject) field.getItem(COSName.PARENT)) != null) {
+                        fieldObject = parent;
+                        field = (COSDictionary) fieldObject.getObject();
+                    }
+                    fields.add(fieldObject);
+                    Collection exclude = Collections.singletonList(COSName.P);
+                    PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot, annot, exclude);
+                    targetPage.addAnnotation(clonedAnnot);
                 }
-                COSDictionary parent;
-                while ((parent = (COSDictionary)field.getDictionaryObject(COSName.PARENT))
-                        != null) {
-                    field = parent;
-                }
-                fields.add(field);
-                Collection exclude = Collections.singletonList(COSName.P);
-                clonedAnnot = (PDFObject)cloneForNewDocument(
-                        (cosAnnot).getObject(), cosAnnot, exclude);
-                targetPage.addAnnotation(clonedAnnot);
             }
         }
 
@@ -475,21 +481,16 @@ class PDFBoxAdapter {
                 destAcroForm = new PDFDictionary(pdfDoc.getRoot());
             }
             pdfDoc.registerObject(destAcroForm);
-            catalog.put(COSName.ACRO_FORM.getName(), destAcroForm);
+            catalog.put(COSName.ACRO_FORM.getName(), destAcroForm );
         }
-
-        //Merge fields
-        PDFArray clonedFields = (PDFArray)destAcroForm.get(COSName.FIELDS.getName());
+        PDFArray clonedFields = (PDFArray) destAcroForm.get(COSName.FIELDS.getName());
         if (clonedFields == null) {
-            //No cloned AcroForm, yet
             clonedFields = new PDFArray();
             destAcroForm.put(COSName.FIELDS.getName(), clonedFields);
         }
         for (Iterator iter = fields.iterator(); iter.hasNext();) {
-            //Add collected fields to existing cloned AcroForm
-            COSDictionary field = (COSDictionary)iter.next();
-            PDFDictionary clone = (PDFDictionary)cloneForNewDocument(field);
-            pdfDoc.registerObject(clone);
+            COSObject field = (COSObject) iter.next();
+            PDFDictionary clone = (PDFDictionary) cloneForNewDocument(field);
             clonedFields.add(clone);
         }
     }
