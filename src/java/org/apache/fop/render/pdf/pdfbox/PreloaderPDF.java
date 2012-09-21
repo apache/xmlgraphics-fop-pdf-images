@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 import javax.imageio.stream.ImageInputStream;
 import javax.xml.transform.Source;
@@ -40,10 +43,10 @@ import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSize;
 import org.apache.xmlgraphics.image.loader.impl.AbstractImagePreloader;
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
-import org.apache.xmlgraphics.image.loader.util.SoftMapCache;
 import org.apache.xmlgraphics.util.io.SubInputStream;
 
 import org.apache.fop.datatypes.URISpecification;
+import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 
 /**
  * Image preloader for PDF images.
@@ -54,7 +57,11 @@ public class PreloaderPDF extends AbstractImagePreloader {
     private static final String PDF_HEADER = "%PDF-";
 
     /** static PDDocument cache for faster multi-page processing */
-    private static SoftMapCache pdfCache = null; //new SoftMapCache(true);
+    private static final Cache.Type CACHE_TYPE =Cache.Type.valueOf(
+            System.getProperty("fop.pdfbox.preloader-cache", Cache.Type.WEAK.name()).toUpperCase());
+
+    private static Map<Object, Cache<URI, PDDocument>> documentCacheMap
+            = Collections.synchronizedMap(new WeakHashMap<Object, Cache<URI, PDDocument>>());
     //the cache here can cause problems because PDDocument that have been closed might still
     //be accessed. Example: java.io.IOException: The handle is invalid
 
@@ -77,19 +84,21 @@ public class PreloaderPDF extends AbstractImagePreloader {
             }
             return info;
         } finally {
-            if (info != null) {
-                ImageUtil.closeQuietly(src); //Image is fully read
-            } else {
+            if (info == null) {
                 in.reset(); //Error detected or not a PDF file
             }
         }
     }
 
-    private static URI deriveDocumentURI(String uri) throws URISyntaxException {
-        URI originalURI = new URI(URISpecification.escapeURI(uri));
-        URI tempURI = new URI(originalURI.getScheme(),
-                originalURI.getSchemeSpecificPart(), null);
-        return tempURI;
+    private static URI deriveDocumentURI(String uri) throws ImageException {
+        try {
+            URI originalURI = new URI(URISpecification.escapeURI(uri));
+            URI tempURI = new URI(originalURI.getScheme(),
+                    originalURI.getSchemeSpecificPart(), null);
+            return tempURI;
+        } catch (URISyntaxException e) {
+            throw new ImageException("Problem processing URI", e);
+        }
     }
 
     private ImageInfo loadPDF(String uri, Source src, ImageContext context) throws IOException,
@@ -98,25 +107,10 @@ public class PreloaderPDF extends AbstractImagePreloader {
 
         int selectedPage = ImageUtil.needPageIndexFromURI(uri);
 
-        URI docURI;
-        try {
-            docURI = deriveDocumentURI(src.getSystemId() != null ? src.getSystemId() : uri);
-        } catch (URISyntaxException e) {
-            //Can't get full document URI, so we can't cache later on
-            docURI = null;
-        }
-        PDDocument pddoc;
-        if (pdfCache != null && docURI != null) {
-            pddoc = (PDDocument)pdfCache.get(docURI);
-            if (pddoc == null) {
-                pddoc = PDDocument.load(new SubInputStream(in, Integer.MAX_VALUE));
-                pddoc = Interceptors.getInstance().interceptOnLoad(pddoc, docURI);
-                pdfCache.put(docURI, pddoc);
-            }
-        } else {
-            pddoc = PDDocument.load(new SubInputStream(in, Integer.MAX_VALUE));
-            pddoc = Interceptors.getInstance().interceptOnLoad(pddoc, docURI);
-        }
+        URI docURI = deriveDocumentURI(src.getSystemId());
+
+        PDDocument pddoc = getDocument(context, docURI, src);
+        pddoc = Interceptors.getInstance().interceptOnLoad(pddoc, docURI);
 
         //Disable the warning about a missing close since we rely on the GC to decide when
         //the cached PDF shall be disposed off.
@@ -179,5 +173,41 @@ public class PreloaderPDF extends AbstractImagePreloader {
                 + e.getMessage()
                 + "\nPlease use an OnLoadInterceptor to provide "
                 + "suitable decryption material (ex. a password).", e);
+    }
+
+    private PDDocument getDocument(Object context, URI uri, Source src)
+            throws IOException {
+        try {
+            return getDocumentCache(context).getValue(uri, createDocumentMaker(src, uri));
+        } catch (IOException ioe) {
+            throw ioe;
+        } catch (Exception e) {
+            // We cannot recover from this
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Cache<URI, PDDocument> getDocumentCache(Object context) {
+        Cache<URI, PDDocument> documentCache = documentCacheMap.get(context);
+
+        if (documentCache == null) {
+            documentCache = Cache.createCache(CACHE_TYPE);
+            documentCacheMap.put(context, documentCache);
+        }
+        return documentCache;
+    }
+
+    private ValueMaker<PDDocument> createDocumentMaker(final Source src, final URI docURI) {
+        return new ValueMaker<PDDocument>() {
+            public PDDocument make() throws Exception {
+                final InputStream in = ImageUtil.needInputStream(src);
+                try {
+                    PDDocument pddoc = PDDocument.load(new SubInputStream(in, Integer.MAX_VALUE));
+                    return Interceptors.getInstance().interceptOnLoad(pddoc, docURI);
+                } finally {
+                    ImageUtil.closeQuietly(src);
+                }
+            }
+        };
     }
 }
