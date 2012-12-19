@@ -102,6 +102,28 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 Dimension pageDimension = mediaBox.createDimension();
 
                 AffineTransform at = new AffineTransform();
+
+                Integer rotation = page.getRotation();
+                if (rotation != null) {
+                    switch (rotation) {
+                    case 270:
+                        at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
+                        at.translate(0, area.getWidth());
+                        at.rotate(-Math.PI / 2.0);
+                        break;
+                    case 180:
+                        at.translate(area.getWidth(), area.getHeight());
+                        at.rotate(-Math.PI);
+                        break;
+                    case 90:
+                        at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
+                        at.translate(area.getHeight(), 0);
+                        at.rotate(-Math.PI * 1.5);
+                    default:
+                        //no additional transformations necessary
+                    }
+                }
+
                 at.translate(area.getX(), area.getY());
                 at.scale(area.getWidth() / pageDimension.width,
                         area.getHeight() / pageDimension.height);

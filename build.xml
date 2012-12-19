@@ -26,6 +26,15 @@
   <property name="Name" value="PDF image support for Apache FOP"/>
   <property name="name" value="fop-pdf-images"/>
 
+  <property name="javac.debug" value="on"/>
+  <property name="javac.optimize" value="off"/>
+  <property name="javac.deprecation" value="on"/>
+  <property name="javac.source" value="1.5"/>
+  <property name="javac.target" value="1.5"/>
+  <property name="javac.fork" value="no"/>
+
+  <property name="junit.fork" value="on"/>
+
   <property name="javadoc.packages" value="org.apache.fop.*"/>
   
   <property name="src.dir" value="${basedir}/src"/>
@@ -79,6 +88,49 @@
     <include name="KEYS"/>
     <include name="build.*"/>
   </fileset>
+  
+  <property name="build.unit.tests.dir" value="${build.dir}/test-classes"/>
+  <path id="standard-junit-classpath">
+    <pathelement location="${build.unit.tests.dir}"/>
+    <path refid="libs-build-tools-classpath"/>
+    <fileset dir="${build.dir}">
+      <include name="fop*.jar"/>
+    </fileset>
+  </path>
+  
+  <target name="junit-compile-java" depends="package">
+    <property name="test.dir" value="${basedir}/test"/>
+    <mkdir dir="${build.unit.tests.dir}"/>
+    <javac destdir="${build.unit.tests.dir}" fork="${javac.fork}" debug="${javac.debug}" deprecation="${javac.deprecation}" optimize="${javac.optimize}" source="${javac.source}" target="${javac.target}">
+      <src path="${test.dir}/java"/>
+      <classpath>
+        <path refid="libs-build-tools-classpath"/>
+        <fileset dir="${build.dir}">
+          <include name="fop*.jar"/>
+        </fileset>
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="junit" depends="junit-compile-java" description="Runs PDF Plugin's JUnit basic tests">
+    <property name="junit.reports.dir" value="${build.dir}/test-reports"/>
+    <mkdir dir="${junit.reports.dir}"/>
+    <junit dir="${basedir}" haltonfailure="yes">
+      <sysproperty key="jawa.awt.headless" value="true"/>
+      <formatter type="brief" usefile="false"/>
+      <formatter type="plain" usefile="true"/>
+      <formatter type="xml" usefile="true"/>
+      <classpath>
+        <path refid="standard-junit-classpath"/>
+      </classpath>
+      <assertions>
+        <enable/>
+      </assertions>
+      <batchtest todir="${junit.reports.dir}">
+        <fileset dir="${build.unit.tests.dir}" includes="**/*TestCase.class"/>
+      </batchtest>
+    </junit>
+  </target>
 
   <!-- =================================================================== -->
   <!-- Initialization target                                               -->
@@ -338,6 +390,6 @@
   <!-- Default Target                                                      -->
   <!-- =================================================================== -->
 
-  <target name="all" depends="package"/>
+  <target name="all" depends="package,junit"/>
 
 </project>
