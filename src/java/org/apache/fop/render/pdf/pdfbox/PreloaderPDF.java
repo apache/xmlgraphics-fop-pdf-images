@@ -43,6 +43,7 @@ import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSize;
 import org.apache.xmlgraphics.image.loader.impl.AbstractImagePreloader;
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
+import org.apache.xmlgraphics.util.UnitConv;
 import org.apache.xmlgraphics.util.io.SubInputStream;
 
 import org.apache.fop.datatypes.URISpecification;
@@ -151,7 +152,8 @@ public class PreloaderPDF extends AbstractImagePreloader {
         }
 
         ImageSize size = new ImageSize();
-        size.setSizeInMillipoints(w, h);
+        float ratioToDefault = context.getSourceResolution() / UnitConv.IN2PT;
+        size.setSizeInMillipoints((int)(w * ratioToDefault), (int)(h * ratioToDefault));
         size.setResolution(context.getSourceResolution());
         size.calcPixelsFromSize();
 
