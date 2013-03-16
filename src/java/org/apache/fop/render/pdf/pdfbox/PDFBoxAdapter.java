@@ -298,12 +298,13 @@ class PDFBoxAdapter {
      * @param sourceDoc the source PDF the given page to be copied belongs to
      * @param page the page to transform into a Form XObject
      * @param key value to use as key for the Form XObject
+     * @param atdoc adjustment for form
      * @return the Form XObject
      * @throws IOException if an I/O error occurs
      */
     public PDFFormXObject createFormFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
-            EventBroadcaster eventBroadcaster) throws IOException {
-        handleAcroForm(sourceDoc, page, eventBroadcaster);
+            EventBroadcaster eventBroadcaster, AffineTransform atdoc) throws IOException {
+        handleAcroForm(sourceDoc, page, eventBroadcaster, atdoc);
 
         PDResources sourcePageResources = page.findResources();
         PDFDictionary pageResources = null;
@@ -406,12 +407,18 @@ class PDFBoxAdapter {
     }
 
     private void handleAcroForm(PDDocument sourceDoc, PDPage page,
-            EventBroadcaster eventBroadcaster) throws IOException {
+            EventBroadcaster eventBroadcaster, AffineTransform at) throws IOException {
         PDDocumentCatalog srcCatalog = sourceDoc.getDocumentCatalog();
         PDAcroForm srcAcroForm = srcCatalog.getAcroForm();
         List pageWidgets = getWidgets(page);
         if (srcAcroForm == null && pageWidgets.isEmpty()) {
             return;
+        }
+
+        for (Object obj : pageWidgets) {
+            PDAnnotation annot = (PDAnnotation)obj;
+            PDRectangle rect = annot.getRectangle();
+            rect.move((float)at.getTranslateX(), (float)at.getTranslateY());
         }
 
         //Pseudo-cache the target page in place of the original source page.

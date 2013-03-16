@@ -20,6 +20,7 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -54,16 +55,18 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         PDFContentGenerator generator = pdfContext.getGenerator();
         ImagePDF pdfImage = (ImagePDF)image;
 
-        PDFFormXObject form = createFormForPDF(pdfImage, pdfContext.getPage(),
-                pdfContext.getUserAgent());
-        if (form == null) {
-            return;
-        }
-
         float x = (float)pos.getX() / 1000f;
         float y = (float)pos.getY() / 1000f;
         float w = (float)pos.getWidth() / 1000f;
         float h = (float)pos.getHeight() / 1000f;
+
+        AffineTransform formadjust = generator.getAffineTransform();
+        PDFFormXObject form = createFormForPDF(pdfImage, pdfContext.getPage(),
+                pdfContext.getUserAgent(), formadjust);
+        if (form == null) {
+            return;
+        }
+
         generator.placeImage(x, y, w, h, form);
     }
 

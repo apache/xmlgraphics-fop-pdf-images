@@ -19,6 +19,7 @@
 
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -63,7 +64,7 @@ public abstract class AbstractPDFBoxHandler {
             = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
     protected PDFFormXObject createFormForPDF(ImagePDF image,
-            PDFPage targetPage, FOUserAgent userAgent) throws IOException {
+            PDFPage targetPage, FOUserAgent userAgent, AffineTransform at) throws IOException {
 
         EventBroadcaster eventBroadcaster = userAgent.getEventBroadcaster();
         String originalImageUri = image.getInfo().getOriginalURI();
@@ -104,7 +105,7 @@ public abstract class AbstractPDFBoxHandler {
 
         PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache);
         PDFFormXObject form = adapter.createFormFromPDFBoxPage(pddoc, page, originalImageUri,
-                eventBroadcaster);
+                eventBroadcaster, at);
         return form;
     }
 
