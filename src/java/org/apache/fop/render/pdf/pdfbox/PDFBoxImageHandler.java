@@ -60,7 +60,14 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         float w = (float)pos.getWidth() / 1000f;
         float h = (float)pos.getHeight() / 1000f;
 
-        AffineTransform formadjust = generator.getAffineTransform();
+        AffineTransform formadjust = new AffineTransform();
+        AffineTransform at = generator.getAffineTransform();
+        if (at != null) {
+            formadjust.setToTranslation(
+                (float) at.getTranslateX(),
+                (float) (generator.getState().getTransform().getTranslateY() - h - y));
+        }
+
         PDFFormXObject form = createFormForPDF(pdfImage, pdfContext.getPage(),
                 pdfContext.getUserAgent(), formadjust);
         if (form == null) {
