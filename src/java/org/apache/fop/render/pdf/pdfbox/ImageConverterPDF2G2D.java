@@ -98,7 +98,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         /** {@inheritDoc} */
         public void paint(Graphics2D g2d, Rectangle2D area) {
             try {
-                PDRectangle mediaBox = page.findMediaBox();
+                PDRectangle mediaBox = page.findCropBox();
                 Dimension pageDimension = mediaBox.createDimension();
 
                 AffineTransform at = new AffineTransform();
