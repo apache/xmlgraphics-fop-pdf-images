@@ -24,6 +24,7 @@ import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -124,7 +125,7 @@ class PDFBoxAdapter {
             cacheClonedObject(keyBase, array);
             List list = (List)base;
             for (int i = 0; i < list.size(); i++) {
-                array.add(cloneForNewDocument(list.get(i)));
+                array.add(cloneForNewDocument(list.get(i), list.get(i), exclude));
             }
             return array;
         } else if (base instanceof COSObjectable && !(base instanceof COSBase)) {
@@ -138,7 +139,7 @@ class PDFBoxAdapter {
                         + object.getObjectNumber().longValue()
                         + " " + object.getGenerationNumber().longValue());
             }
-            Object obj = cloneForNewDocument(object.getObject(), object);
+            Object obj = cloneForNewDocument(object.getObject(), object, exclude);
             if (obj instanceof PDFObject) {
                 PDFObject pdfobj = (PDFObject)obj;
                 //pdfDoc.registerObject(pdfobj);
@@ -160,7 +161,7 @@ class PDFBoxAdapter {
             cacheClonedObject(keyBase, newArray);
             COSArray array = (COSArray)base;
             for (int i = 0; i < array.size(); i++) {
-                newArray.add(cloneForNewDocument(array.get(i)));
+                newArray.add(cloneForNewDocument(array.get(i), array.get(i), exclude));
             }
             return newArray;
         } else if (base instanceof COSStreamArray) {
@@ -197,7 +198,7 @@ class PDFBoxAdapter {
             for (int i = 0; i < keys.size(); i++) {
                 COSName key = (COSName)keys.get(i);
                 if (!exclude.contains(key)) {
-                    (newDict).put(key.getName(), cloneForNewDocument(dic.getItem(key)));
+                    (newDict).put(key.getName(), cloneForNewDocument(dic.getItem(key), dic.getItem(key), exclude));
                 }
             }
             return newDict;
@@ -461,7 +462,11 @@ class PDFBoxAdapter {
                         field = (COSDictionary) fieldObject.getObject();
                     }
                     fields.add(fieldObject);
-                    Collection exclude = Collections.singletonList(COSName.P);
+                    Collection<COSName> exclude = new ArrayList<COSName>();
+                    exclude.add(COSName.P);
+                    if (((COSDictionary)annot.getObject()).getItem(COSName.getPDFName("StructParent")) != null) {
+                        exclude.add(COSName.PARENT);
+                    }
                     PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot, annot, exclude);
                     targetPage.addAnnotation(clonedAnnot);
                 }
@@ -497,7 +502,7 @@ class PDFBoxAdapter {
         }
         for (Iterator iter = fields.iterator(); iter.hasNext();) {
             COSObject field = (COSObject) iter.next();
-            PDFDictionary clone = (PDFDictionary) cloneForNewDocument(field);
+            PDFDictionary clone = (PDFDictionary) cloneForNewDocument(field, field, Arrays.asList(COSName.KIDS));
             clonedFields.add(clone);
         }
     }
