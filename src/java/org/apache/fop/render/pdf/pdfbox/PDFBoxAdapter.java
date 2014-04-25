@@ -358,8 +358,16 @@ class PDFBoxAdapter {
 
         //Transform to FOP's user space
         at.scale(1 / viewBox.getWidth(), 1 / viewBox.getHeight());
-        at.translate(mediaBox.getLowerLeftX() - viewBox.getLowerLeftX(),
-                mediaBox.getLowerLeftY() - viewBox.getLowerLeftY());
+        float tempX = viewBox.getLowerLeftX();
+        float tempY = viewBox.getLowerLeftY();
+        if (tempX != 0) {
+            tempX = -tempX;
+        }
+        if (tempY != 0) {
+            tempY = -tempY;
+        }
+        at.translate(tempX, tempY);
+        
         switch (rotation) {
         case 90:
             at.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
@@ -411,15 +419,20 @@ class PDFBoxAdapter {
             EventBroadcaster eventBroadcaster, AffineTransform at) throws IOException {
         PDDocumentCatalog srcCatalog = sourceDoc.getDocumentCatalog();
         PDAcroForm srcAcroForm = srcCatalog.getAcroForm();
-        List pageWidgets = getWidgets(page);
-        if (srcAcroForm == null && pageWidgets.isEmpty()) {
+        List pageAnnotations = page.getAnnotations();
+        if (srcAcroForm == null && pageAnnotations.isEmpty()) {
             return;
         }
 
-        for (Object obj : pageWidgets) {
+        PDRectangle mediaBox = page.findMediaBox();
+        PDRectangle cropBox = page.findCropBox();
+        PDRectangle viewBox = (cropBox != null ? cropBox : mediaBox);
+
+        for (Object obj : pageAnnotations) {
             PDAnnotation annot = (PDAnnotation)obj;
             PDRectangle rect = annot.getRectangle();
-            rect.move((float)at.getTranslateX(), (float)at.getTranslateY());
+            rect.move((float)(at.getTranslateX() - viewBox.getLowerLeftX()),
+                    (float)at.getTranslateY() - viewBox.getLowerLeftY());
         }
 
         //Pseudo-cache the target page in place of the original source page.
