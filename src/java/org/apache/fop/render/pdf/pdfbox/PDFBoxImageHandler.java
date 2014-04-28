@@ -29,7 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;
 
-import org.apache.fop.pdf.PDFFormXObject;
+
 import org.apache.fop.render.ImageHandler;
 import org.apache.fop.render.RenderingContext;
 import org.apache.fop.render.pdf.PDFContentGenerator;
@@ -57,24 +57,26 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
 
         float x = (float)pos.getX() / 1000f;
         float y = (float)pos.getY() / 1000f;
-        float w = (float)pos.getWidth() / 1000f;
+//        float w = (float)pos.getWidth() / 1000f;
         float h = (float)pos.getHeight() / 1000f;
 
-        AffineTransform formadjust = new AffineTransform();
+        AffineTransform pageAdjust = new AffineTransform();
         AffineTransform at = generator.getAffineTransform();
         if (at != null) {
-            formadjust.setToTranslation(
-                (float) at.getTranslateX(),
-                (float) (generator.getState().getTransform().getTranslateY() - h - y));
+            pageAdjust.setToTranslation(
+                (float)(generator.getState().getTransform().getTranslateX()),
+                (float)(generator.getState().getTransform().getTranslateY() - h - y));
         }
 
-        PDFFormXObject form = createFormForPDF(pdfImage, pdfContext.getPage(),
-                pdfContext.getUserAgent(), formadjust);
-        if (form == null) {
+        String stream = createStreamForPDF(pdfImage, pdfContext.getPage(),
+                pdfContext.getUserAgent(), pageAdjust, pos);
+        if (stream == null) {
             return;
         }
-
-        generator.placeImage(x, y, w, h, form);
+        if (pageAdjust.getScaleX() != 0) {
+            pageAdjust.translate(x * (1 / pageAdjust.getScaleX()), -y * (1 / -pageAdjust.getScaleY()));
+        }
+        generator.placeImage(pageAdjust, stream);
     }
 
     /** {@inheritDoc} */

@@ -19,6 +19,7 @@
 
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.Collections;
@@ -34,8 +35,8 @@ import org.apache.xmlgraphics.image.loader.util.ImageUtil;
 import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.pdf.PDFDocument;
-import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFPage;
+import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.Version;
 import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 
@@ -63,8 +64,8 @@ public abstract class AbstractPDFBoxHandler {
     private static Map<Object, Cache<String, Map<Object, Object>>> objectCacheMap
             = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
-    protected PDFFormXObject createFormForPDF(ImagePDF image,
-            PDFPage targetPage, FOUserAgent userAgent, AffineTransform at) throws IOException {
+    protected String createStreamForPDF(ImagePDF image,
+            PDFPage targetPage, FOUserAgent userAgent, AffineTransform at, Rectangle pos) throws IOException {
 
         EventBroadcaster eventBroadcaster = userAgent.getEventBroadcaster();
         String originalImageUri = image.getInfo().getOriginalURI();
@@ -103,10 +104,16 @@ public abstract class AbstractPDFBoxHandler {
 
         PDPage page = (PDPage) pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
 
+        if (targetPage.getPDFResources().getParentResources() == null) {
+            PDFResources res = pdfDoc.getFactory().makeResources();
+            res.setParentResources(pdfDoc.getResources());
+            targetPage.put("Resources", res);
+        }
+
         PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache);
-        PDFFormXObject form = adapter.createFormFromPDFBoxPage(pddoc, page, originalImageUri,
-                eventBroadcaster, at);
-        return form;
+        String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri,
+                eventBroadcaster, at, pos);
+        return stream;
     }
 
     private Map<Object, Object> getObjectCache(String originalImageUri,

@@ -19,11 +19,14 @@
 
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -48,6 +51,7 @@ import org.apache.pdfbox.cos.COSNull;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.cos.COSString;
+import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentCatalog;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -64,28 +68,26 @@ import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
-import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFName;
 import org.apache.fop.pdf.PDFNumber;
 import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFRoot;
 import org.apache.fop.pdf.PDFStream;
+import org.apache.pdfbox.util.PDFOperator;
 
 /**
  * This class provides an adapter for transferring content from a PDFBox PDDocument to
  * FOP's PDFDocument. It is used to parse PDF using PDFBox and write content using
  * FOP's PDF library.
  */
-class PDFBoxAdapter {
+public class PDFBoxAdapter {
 
     /** logging instance */
     protected static Log log = LogFactory.getLog(PDFBoxAdapter.class);
 
     private static final Set filterFilter = new java.util.HashSet(
             Arrays.asList(new String[] {"Filter", "DecodeParms"}));
-    private static final Set page2form = new java.util.HashSet(
-            Arrays.asList(new String[] {"Group", "LastModified", "Metadata"}));
 
     private final PDFPage targetPage;
     private final PDFDocument pdfDoc;
@@ -294,32 +296,113 @@ class PDFBoxAdapter {
         }
     }
 
+    public class PDFWriter {
+        protected StringBuilder s = new StringBuilder();
+        private String key;
+        private List<COSName> resourceNames;
+
+        public PDFWriter(String key, List<COSName> resourceNames) {
+            this.key = key;
+            this.resourceNames = resourceNames;
+        }
+
+        public String writeText(PDStream pdStream) throws IOException {
+            Iterator<Object> it = new PDFStreamParser(pdStream).getTokenIterator();
+            List<COSBase> arguments = new ArrayList<COSBase>();
+            while (it.hasNext()) {
+                Object o = it.next();
+                if (o instanceof PDFOperator) {
+                    PDFOperator op = (PDFOperator)o;
+                    readPDFArguments(op, arguments);
+                    s.append(op.getOperation() + "\n");
+                    arguments.clear();
+                    if (op.getImageParameters() != null) {
+                        for (Map.Entry<COSName, COSBase> cn : op.getImageParameters().getDictionary().entrySet()) {
+                            arguments.add(cn.getKey());
+                            arguments.add(cn.getValue());
+                        }
+                        readPDFArguments(op, arguments);
+                        s.append("ID " + new String(op.getImageData(), "ISO-8859-1"));
+                        arguments.clear();
+                        s.append("EI\n");
+                    }
+                } else {
+                    arguments.add((COSBase)o);
+                }
+            }
+            return s.toString();
+        }
+
+        protected void readPDFArguments(PDFOperator op, Collection<COSBase> arguments) throws IOException {
+            for (COSBase c : arguments) {
+                processArg(op, c);
+            }
+        }
+
+        protected void processArg(PDFOperator op, COSBase c) throws IOException {
+            if (c instanceof COSInteger) {
+                s.append(((COSInteger) c).intValue());
+                s.append(" ");
+            } else if (c instanceof COSFloat) {
+                float f = ((COSFloat) c).floatValue();
+                s.append(new DecimalFormat("#.####").format(f));
+                s.append(" ");
+            } else if (c instanceof COSName) {
+                COSName cn = (COSName)c;
+                s.append("/" + cn.getName());
+                addKey(cn);
+                s.append(" ");
+            } else if (c instanceof COSString) {
+                s.append("<" + ((COSString) c).getHexString() + ">");
+            } else if (c instanceof COSArray) {
+                s.append("[");
+                readPDFArguments(op, (Collection<COSBase>) ((COSArray) c).toList());
+                s.append("] ");
+            } else if (c instanceof COSDictionary) {
+                Collection<COSBase> dictArgs = new ArrayList<COSBase>();
+                for (Map.Entry<COSName, COSBase> cn : ((COSDictionary)c).entrySet()) {
+                    dictArgs.add(cn.getKey());
+                    dictArgs.add(cn.getValue());
+                }
+                s.append("<<");
+                readPDFArguments(op, dictArgs);
+                s.append(">>");
+            } else {
+                throw new IOException(c + " not supported");
+            }
+        }
+
+        protected void addKey(COSName cn) {
+            if (resourceNames.contains(cn)) {
+                s.append(key);
+            }
+        }
+    }
     /**
-     * Creates a PDFFormXObject (from FOP's PDF library) from a PDF page parsed with PDFBox.
+     * Creates a stream (from FOP's PDF library) from a PDF page parsed with PDFBox.
      * @param sourceDoc the source PDF the given page to be copied belongs to
-     * @param page the page to transform into a Form XObject
-     * @param key value to use as key for the Form XObject
-     * @param atdoc adjustment for form
-     * @return the Form XObject
+     * @param page the page to transform into a stream
+     * @param key value to use as key for the stream
+     * @param atdoc adjustment for stream
+     * @return the stream
      * @throws IOException if an I/O error occurs
      */
-    public PDFFormXObject createFormFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
-            EventBroadcaster eventBroadcaster, AffineTransform atdoc) throws IOException {
+    public String createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
+            EventBroadcaster eventBroadcaster, AffineTransform atdoc, Rectangle pos) throws IOException {
         handleAcroForm(sourceDoc, page, eventBroadcaster, atdoc);
 
         PDResources sourcePageResources = page.findResources();
         PDFDictionary pageResources = null;
-        if (sourcePageResources != null) {
-            pageResources = (PDFDictionary)cloneForNewDocument(
-                    sourcePageResources.getCOSDictionary());
-            pdfDoc.registerObject(pageResources);
-        }
-
-        COSStream originalPageContents = null;
         PDStream pdStream = page.getContents();
-        if (pdStream != null) {
-            originalPageContents = (COSStream)pdStream.getCOSObject();
-        }
+        COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSDictionary().getDictionaryObject(COSName.FONT);
+        String uniqueName = Integer.toString(key.hashCode());
+        String newStream = new PDFWriter(uniqueName, getResourceNames(sourcePageResources.getCOSDictionary())).writeText(pdStream);
+        pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
+        pageResources = (PDFDictionary)cloneForNewDocument(
+                sourcePageResources.getCOSDictionary());
+        pdfDoc.registerObject(pageResources);
+
+        COSStream originalPageContents = (COSStream)pdStream.getCOSObject();
 
         bindOptionalContent(sourceDoc);
 
@@ -339,16 +422,12 @@ class PDFBoxAdapter {
         if (pageStream == null) {
             pageStream = new PDFStream();
         }
-
-        PDFFormXObject form = pdfDoc.addFormXObject(null, pageStream,
-                (pageResources != null ? pageResources.makeReference() : null), key);
-
         if (originalPageContents != null) {
             transferDict(originalPageContents, pageStream, filter);
         }
-        transferDict(page.getCOSDictionary(), pageStream, page2form, true);
 
-        AffineTransform at = form.getMatrix();
+        transferPageDict(fonts, uniqueName, sourcePageResources);
+
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();
         PDRectangle viewBox = (cropBox != null ? cropBox : mediaBox);
@@ -357,42 +436,92 @@ class PDFBoxAdapter {
         int rotation = PDFUtil.getNormalizedRotation(page);
 
         //Transform to FOP's user space
-        at.scale(1 / viewBox.getWidth(), 1 / viewBox.getHeight());
-        float tempX = viewBox.getLowerLeftX();
-        float tempY = viewBox.getLowerLeftY();
-        if (tempX != 0) {
-            tempX = -tempX;
+        float w = (float)pos.getWidth() / 1000f;
+        float h = (float)pos.getHeight() / 1000f;
+        if (rotation == 90 || rotation == 270) {
+            float tmp = w;
+            w = h;
+            h = tmp;
         }
-        if (tempY != 0) {
-            tempY = -tempY;
-        }
-        at.translate(tempX, tempY);
-        
-        switch (rotation) {
-        case 90:
-            at.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
-            at.translate(0, viewBox.getWidth());
-            at.rotate(-Math.PI / 2.0);
-            break;
-        case 180:
-            at.translate(viewBox.getWidth(), viewBox.getHeight());
-            at.rotate(-Math.PI);
-            break;
-        case 270:
-            at.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
-            at.translate(viewBox.getHeight(), 0);
-            at.rotate(-Math.PI * 1.5);
-        default:
-            //no additional transformations necessary
-        }
-        form.setMatrix(at);
+        atdoc.setTransform(AffineTransform.getScaleInstance(w / viewBox.getWidth(), h / viewBox.getHeight()));
+        atdoc.translate(0, viewBox.getHeight());
+        atdoc.rotate(-Math.PI);
+        atdoc.scale(-1, 1);
+        atdoc.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
 
-        form.setBBox(new Rectangle2D.Float(
-                viewBox.getLowerLeftX(), viewBox.getLowerLeftY(),
-                viewBox.getUpperRightX(), viewBox.getUpperRightY()));
-        return form;
+        switch (rotation) {
+            case 90:
+                atdoc.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
+                atdoc.translate(0, viewBox.getWidth());
+                atdoc.rotate(-Math.PI / 2.0);
+                atdoc.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
+                break;
+            case 180:
+                atdoc.translate(viewBox.getWidth(), viewBox.getHeight());
+                atdoc.rotate(-Math.PI);
+                break;
+            case 270:
+                atdoc.translate(0, viewBox.getHeight());
+                atdoc.rotate(Math.toRadians(270 + 180));
+                atdoc.translate(-viewBox.getWidth(), -viewBox.getHeight());
+                break;
+            default:
+                //no additional transformations necessary
+                break;
+        }
+        StringBuffer boxStr = new StringBuffer();
+        boxStr.append(0).append(' ').append(0).append(' ');
+        boxStr.append(PDFNumber.doubleOut(mediaBox.getWidth())).append(' ');
+        boxStr.append(PDFNumber.doubleOut(mediaBox.getHeight())).append(" re W n\n");
+        return boxStr.toString() + pdStream.getInputStreamAsString();
     }
 
+    private List<COSName> getResourceNames(COSDictionary sourcePageResources) {
+        List<COSName> resourceNames = new ArrayList<COSName>();
+        for (COSBase e : sourcePageResources.getValues()) {
+            if (e instanceof COSObject) {
+                e = ((COSObject) e).getObject();
+            }
+            if (e instanceof COSDictionary) {
+                COSDictionary d = (COSDictionary) e;
+                resourceNames.addAll(d.keySet());
+            }
+        }
+        return resourceNames;
+    }
+
+    private void transferPageDict(COSDictionary fonts, String uniqueName, PDResources sourcePageResources) throws IOException {
+        if (fonts != null) {
+            for (Map.Entry<COSName, COSBase> f : fonts.entrySet()) {
+                String name = f.getKey().getName() + uniqueName;
+                targetPage.getPDFResources().addFont(name, (PDFDictionary)cloneForNewDocument(f.getValue()));
+            }
+        }
+        for (Map.Entry<COSName, COSBase> e : sourcePageResources.getCOSDictionary().entrySet()) {
+            transferDict(e, uniqueName);
+        }
+    }
+
+    private void transferDict(Map.Entry<COSName, COSBase> dict, String uniqueName) throws IOException {
+        COSBase src;
+        if (dict.getValue() instanceof COSObject) {
+            src = ((COSObject) dict.getValue()).getObject();
+        } else {
+            src = dict.getValue();
+        }
+        if (dict.getKey() != COSName.FONT && src instanceof COSDictionary) {
+            String name = dict.getKey().getName();
+            PDFDictionary newDict = (PDFDictionary) targetPage.getPDFResources().get(name);
+            if (newDict == null) {
+                newDict = new PDFDictionary(targetPage.getPDFResources());
+            }
+            COSDictionary srcDict = (COSDictionary) src;
+            for (Map.Entry<COSName, COSBase> v : srcDict.entrySet()) {
+                newDict.put(v.getKey().getName() + uniqueName, cloneForNewDocument(v.getValue()));
+            }
+            targetPage.getPDFResources().put(name, newDict);
+        }
+    }
     private List getWidgets(PDPage page) throws IOException {
         List annots = page.getAnnotations();
         List widgets = new java.util.ArrayList();
