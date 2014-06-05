@@ -402,8 +402,6 @@ public class PDFBoxAdapter {
     }
 
     private static boolean isSubsetFont(String s) {
-        if (s == null)
-            log.info("");
         return SUBSET_PATTERN.matcher(s).matches();
     }
 
