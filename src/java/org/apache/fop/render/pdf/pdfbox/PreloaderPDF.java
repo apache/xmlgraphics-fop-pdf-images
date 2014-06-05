@@ -33,7 +33,6 @@ import javax.xml.transform.Source;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.encryption.BadSecurityHandlerException;
 import org.apache.pdfbox.pdmodel.encryption.DecryptionMaterial;
 import org.apache.pdfbox.pdmodel.encryption.StandardDecryptionMaterial;
 
@@ -119,13 +118,13 @@ public class PreloaderPDF extends AbstractImagePreloader {
         if (pddoc.isEncrypted()) {
             //Try decrypting with an empty password
             DecryptionMaterial dec = new StandardDecryptionMaterial("");
-            try {
+//            try {
                 pddoc.openProtection(dec);
-            } catch (org.apache.pdfbox.exceptions.CryptographyException e) {
-                notifyCouldNotDecrypt(e);
-            } catch (BadSecurityHandlerException e) {
-                notifyCouldNotDecrypt(e);
-            }
+//            } catch (org.apache.pdfbox.exceptions.CryptographyException e) {
+//                notifyCouldNotDecrypt(e);
+//            } catch (BadSecurityHandlerException e) {
+//                notifyCouldNotDecrypt(e);
+//            }
         }
 
         int pageCount = pddoc.getNumberOfPages();

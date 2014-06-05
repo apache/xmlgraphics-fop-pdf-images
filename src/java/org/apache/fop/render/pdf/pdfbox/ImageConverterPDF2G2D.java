@@ -26,11 +26,12 @@ import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.pdfbox.pdfviewer.PageDrawer;
+
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 
+import org.apache.pdfbox.rendering.PageDrawer;
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;
@@ -129,8 +130,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                         area.getHeight() / pageDimension.height);
                 g2d.transform(at);
 
-                PageDrawer drawer = new PageDrawer();
-                drawer.drawPage(g2d, page, pageDimension);
+                PageDrawer drawer = new PageDrawer(null);
+                drawer.drawPage(g2d, page, mediaBox);
             } catch (IOException ioe) {
                 //TODO Better exception handling
                 throw new RuntimeException("I/O error while painting PDF page", ioe);

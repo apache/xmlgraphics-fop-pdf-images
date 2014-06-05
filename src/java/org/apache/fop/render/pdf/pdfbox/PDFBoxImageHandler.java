@@ -26,6 +26,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.fop.fonts.FontInfo;
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;
 
@@ -67,9 +68,9 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
                 (float)(generator.getState().getTransform().getTranslateX()),
                 (float)(generator.getState().getTransform().getTranslateY() - h - y));
         }
-
-        String stream = createStreamForPDF(pdfImage, pdfContext.getPage(),
-                pdfContext.getUserAgent(), pageAdjust, pos);
+        FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
+        String stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
+                pageAdjust, fontinfo, pos);
         if (stream == null) {
             return;
         }
