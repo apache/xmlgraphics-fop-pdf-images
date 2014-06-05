@@ -1148,6 +1148,7 @@ public class PDFBoxAdapter {
                         readPDFArguments(op, arguments);
                         s.append("ID " + new String(op.getImageData(), "ISO-8859-1"));
                         arguments.clear();
+                        s.append("EI\n");
                     }
                 } else {
                     arguments.add((COSBase)o);
