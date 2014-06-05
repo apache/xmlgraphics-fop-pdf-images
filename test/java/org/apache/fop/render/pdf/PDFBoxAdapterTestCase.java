@@ -31,8 +31,6 @@ import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
-import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 
 import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
@@ -44,10 +42,7 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSource;
 import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
-import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 
-import org.apache.xmlgraphics.java2d.GraphicContext;
-import org.apache.xmlgraphics.ps.PSGenerator;
 import org.junit.Test;
 
 import javax.imageio.ImageIO;
@@ -55,11 +50,9 @@ import javax.imageio.ImageIO;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
