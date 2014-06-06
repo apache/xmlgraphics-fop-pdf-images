@@ -112,15 +112,62 @@
     </javac>
   </target>
 
-  <target name="junit" depends="junit-compile-java" description="Runs PDF Plugin's JUnit basic tests">
+  <property name="emma.dir" value="${basedir}/lib" />
+  <property name="coverage.dir" value="${basedir}/build/coverage" />
+  <path id="emma.lib">
+    <pathelement location="${emma.dir}/emma.jar" />
+    <pathelement location="${emma.dir}/emma_ant.jar" />
+  </path>
+  <available file="${emma.dir}/emma.jar" property="emma.present"/>
+
+  <target name="emma" if="emma.present">
+    <taskdef resource="emma_ant.properties" classpathref="emma.lib" />
+    <emma>
+        <instr instrpath="${build.classes.dir}"
+             destdir="${coverage.dir}"
+             metadatafile="${coverage.dir}/metadata.em"
+             merge="true"
+             mode="copy">
+        </instr>
+    </emma>  
+  </target>
+  
+  <target name="emma-report" if="emma.present">
+    <emma>
+        <report>
+            <sourcepath>
+                <dirset dir="${basedir}">
+                    <include name="src/java"/>
+                    <include name="test/java"/>
+                </dirset>
+             </sourcepath>
+            <fileset dir="${coverage.dir}">
+                <include name="*.em"/>
+                <include name="*.ec"/>
+            </fileset>
+        <xml outfile="${coverage.dir}/report.xml" />
+        <txt outfile="${coverage.dir}/report.txt" />
+        <html outfile="${coverage.dir}/report.html" />
+        </report>
+    </emma>
+    <taskdef name="emmacheck" classname="org.emmacheck.EmmaCheckTask" classpath="${emma.dir}/emmacheck-0.2.jar"/>
+    <emmacheck coveragefile="${coverage.dir}/coverage.ec"
+           metadatafile="${coverage.dir}/metadata.em"
+           output="${coverage.dir}/requiredcoverage.out"
+           overallcoverage="L76" />  
+  </target>
+  
+  <target name="junit" depends="junit-compile-java,emma" description="Runs PDF Plugin's JUnit basic tests">
     <property name="junit.reports.dir" value="${build.dir}/test-reports"/>
     <mkdir dir="${junit.reports.dir}"/>
-    <junit dir="${basedir}" haltonfailure="yes">
+    <junit dir="${basedir}" haltonfailure="yes" fork="true" forkmode="once">
       <sysproperty key="jawa.awt.headless" value="true"/>
       <formatter type="brief" usefile="false"/>
       <formatter type="plain" usefile="true"/>
       <formatter type="xml" usefile="true"/>
       <classpath>
+        <pathelement location="${coverage.dir}" />
+        <path refid="emma.lib"/>
         <path refid="standard-junit-classpath"/>
       </classpath>
       <assertions>
@@ -129,7 +176,9 @@
       <batchtest todir="${junit.reports.dir}">
         <fileset dir="${build.unit.tests.dir}" includes="**/*TestCase.class"/>
       </batchtest>
+      <jvmarg value="-Demma.coverage.out.file=${coverage.dir}/coverage.ec" />
     </junit>
+    <antcall target="emma-report"/>
   </target>
 
   <!-- =================================================================== -->
