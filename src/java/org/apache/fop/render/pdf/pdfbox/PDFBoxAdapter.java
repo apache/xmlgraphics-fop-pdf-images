@@ -46,7 +46,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFFontROS;
-import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.cff.charset.CFFCharset;
 import org.apache.fontbox.cff.encoding.CFFEncoding;
 import org.apache.fontbox.cmap.CMap;
@@ -91,6 +90,7 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
+import org.apache.pdfbox.util.operator.PDFOperator;
 
 import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.CIDFontType;
@@ -116,7 +116,6 @@ import org.apache.fop.pdf.PDFStream;
 import org.apache.fop.pdf.PDFText;
 import org.apache.fop.pdf.RefPDFFont;
 import org.apache.fop.util.CharUtilities;
-import org.apache.pdfbox.util.operator.PDFOperator;
 
 /**
  * This class provides an adapter for transferring content from a PDFBox PDDocument to
@@ -160,8 +159,7 @@ public class PDFBoxAdapter {
         return cloneForNewDocument(base, keyBase, Collections.EMPTY_LIST);
     }
 
-    private Object cloneForNewDocument(Object base, Object keyBase, Collection exclude)
-            throws IOException {
+    private Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
         if (base == null) {
             return null;
         }
@@ -246,7 +244,7 @@ public class PDFBoxAdapter {
             cacheClonedObject(keyBase, newDict);
             for (COSName key : keys) {
                 if (!exclude.contains(key)) {
-                    (newDict).put(key.getName(), cloneForNewDocument(dic.getItem(key), dic.getItem(key), exclude));
+                    newDict.put(key.getName(), cloneForNewDocument(dic.getItem(key), dic.getItem(key), exclude));
                 }
             }
             return newDict;
@@ -347,9 +345,11 @@ public class PDFBoxAdapter {
         if (font instanceof PDType0Font
                 && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType0Font
                 && ((PDCIDFontType0Font) ((PDType0Font) font).getDescendantFont()).getType1CFont() != null) {
-            CFFFont cffFont = ((PDCIDFontType0Font) ((PDType0Font) font).getDescendantFont()).getType1CFont().getCFFFont();
+            CFFFont cffFont =
+                    ((PDCIDFontType0Font) ((PDType0Font) font).getDescendantFont()).getType1CFont().getCFFFont();
             if (cffFont instanceof CFFFontROS
-                    && ((CFFFontROS)cffFont).getFdSelect().getClass().getName().equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
+                    && ((CFFFontROS)cffFont).getFdSelect().getClass().getName()
+                    .equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
                 extra += "format0";
             }
             return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName() + extra;
@@ -377,6 +377,9 @@ public class PDFBoxAdapter {
         if (font instanceof PDType1Font) {
             if (((PDType1Font) font).getType1CFont() == null
                     || ((PDType1Font) font).getType1CFont().getCFFFont() == null) {
+                if (font.getFontDescriptor() instanceof PDFontDescriptorDictionary) {
+                    return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
+                }
                 return null;
             }
             CFFEncoding encoding = ((PDType1Font)font).getType1CFont().getCFFFont().getEncoding();
@@ -541,7 +544,8 @@ public class PDFBoxAdapter {
         private Map<Integer, String> getMapping(PDSimpleFont font, CMap c, int len) throws IOException {
             Map<Integer, String> mapping = new HashMap<Integer, String>();
             if (font instanceof PDCIDFontType0Font) {
-                Collection<CFFFont.Mapping> mappings = ((PDCIDFontType0Font) font).getType1CFont().getCFFFont().getMappings();
+                Collection<CFFFont.Mapping> mappings =
+                        ((PDCIDFontType0Font) font).getType1CFont().getCFFFont().getMappings();
                 for (CFFFont.Mapping m : mappings) {
                     String character = Encoding.getCharacterForName(m.getName());
                     mapping.put(m.getSID(), character);
@@ -688,33 +692,30 @@ public class PDFBoxAdapter {
     }
 
     public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
-        private int fontCount = 0;
+        private int fontCount;
         private PDSimpleFont font;
         protected PDFDictionary ref;
         private Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
         private Map<Integer, Integer> newWidth = new HashMap<Integer, Integer>();
         private Map<String, byte[]> charStringsDict;
         private Cmap newCmap = new Cmap();
-        private byte[] fontCache;
         private Map<Integer, String> encodingMap = new TreeMap<Integer, String>();
         private int encodingSkip;
         private MergeTTFonts mergeTTFonts = new MergeTTFonts();
         private MergeCFFFonts mergeCFFFonts = new MergeCFFFonts();
+        private MergeType1Fonts mergeType1Fonts = new MergeType1Fonts();
         private String embedName;
 
         public FOPPDFSingleByteFont(COSDictionary fontData, String name) throws IOException {
-            super(null);
+            super(null, EmbeddingMode.FULL);
             if (fontData.getItem(COSName.SUBTYPE) == COSName.TRUE_TYPE) {
                 setFontType(FontType.TRUETYPE);
             }
             width = new int[0];
             font = getFont(fontData);
-            if (font instanceof PDType1Font) {
-                fontCache = ((PDFontDescriptorDictionary)font.getFontDescriptor()).getFontFile3().getByteArray();
-            }
             setFirstChar(font.getFirstChar());
             setLastChar(font.getLastChar());
-            readFontFile(font);
+            loadFontFile(font);
             float[] bBoxF = font.getFontBoundingBox().getCOSArray().toFloatArray();
             int[] bBox = new int[bBoxF.length];
             for (int i = 0; i < bBox.length; i++) {
@@ -737,7 +738,8 @@ public class PDFBoxAdapter {
                 //if width contains 0 we cant rely on codeToNameMap
                 boolean usesZero = font.getWidths().contains(0);
                 Set<Integer> codeToName = getCodeToName(font.getFontEncoding()).keySet();
-                for (int i = getFirstChar(); i <= Math.min(getLastChar(), getFirstChar() + font.getWidths().size()); i++) {
+                for (int i = getFirstChar();
+                     i <= Math.min(getLastChar(), getFirstChar() + font.getWidths().size()); i++) {
                     if (usesZero || codeToName.contains(i)) {
                         int w = font.getWidths().get(i - getFirstChar()).intValue();
                         newWidth.put(i, w);
@@ -791,7 +793,7 @@ public class PDFBoxAdapter {
             return font.getToUnicodeCMap();
         }
 
-        private void readFontFile(PDSimpleFont font) throws IOException {
+        private PDStream readFontFile(PDSimpleFont font) throws IOException {
             PDFontDescriptorDictionary fd = (PDFontDescriptorDictionary) font.getFontDescriptor();
             setFlags(fd.getFlags());
             PDStream ff = fd.getFontFile3();
@@ -806,7 +808,12 @@ public class PDFBoxAdapter {
             if (ff == null) {
                 throw new IOException(font.getBaseFont() + " no font file");
             }
-            mergeFontFile(ff.createInputStream());
+            return ff;
+        }
+
+        private void loadFontFile(PDSimpleFont font) throws IOException {
+            PDStream ff = readFontFile(font);
+            mergeFontFile(ff.createInputStream(), font);
             if (font instanceof PDTrueTypeFont) {
                 TrueTypeFont ttfont = ((PDTrueTypeFont) font).getTTFFont();
                 CMAPEncodingEntry[] cmapList = ttfont.getCMAP().getCmaps();
@@ -855,7 +862,7 @@ public class PDFBoxAdapter {
 
         public String addFont(COSDictionary fontData) throws IOException {
             PDSimpleFont font = getFont(fontData);
-            if (font instanceof PDType1Font && differentGlyphData(font)) {
+            if (font instanceof PDType1Font && differentGlyphData((PDType1Font) font)) {
                 return null;
             }
             mergeWidths(font);
@@ -867,7 +874,7 @@ public class PDFBoxAdapter {
                     setLastChar(w);
                 }
             }
-            readFontFile(font);
+            loadFontFile(font);
             addEncoding(font);
             return getFontName();
         }
@@ -876,26 +883,18 @@ public class PDFBoxAdapter {
             return fontCount;
         }
 
-        private Map<String, byte[]> getCharStringsDict(PDSimpleFont font, boolean cache) throws IOException {
-            if (font.getFontDescriptor() instanceof PDFontDescriptorDictionary) {
-                PDStream ff3Stream = ((PDFontDescriptorDictionary)font.getFontDescriptor()).getFontFile3();
-                if (ff3Stream != null) {
-                    byte[] data = fontCache;
-                    if (!cache) {
-                        data = ff3Stream.getByteArray();
-                    }
-                    CFFFont ff = new CFFParser().parse(data).get(0);
-                    return ff.getCharStringsDict();
-                }
+        private Map<String, byte[]> getCharStringsDict(PDType1Font font) throws IOException {
+            if (getFontType() == FontType.TYPE1) {
+                return font.getType1Font().getCharStringsDict();
             }
-            return new HashMap<String, byte[]>();
+            return font.getType1CFont().getCFFFont().getCharStringsDict();
         }
 
-        private boolean differentGlyphData(PDSimpleFont otherFont) throws IOException {
-            if (charStringsDict == null && font instanceof PDType1Font) {
-                charStringsDict = getCharStringsDict(font, true);
+        private boolean differentGlyphData(PDType1Font otherFont) throws IOException {
+            if (charStringsDict == null) {
+                charStringsDict = getCharStringsDict((PDType1Font) font);
             }
-            for (Map.Entry<String, byte[]> s : getCharStringsDict(otherFont, false).entrySet()) {
+            for (Map.Entry<String, byte[]> s : getCharStringsDict(otherFont).entrySet()) {
                 if (charStringsDict.containsKey(s.getKey())) {
                     int numberDiff = 0;
                     byte[] b1 = charStringsDict.get(s.getKey());
@@ -925,6 +924,7 @@ public class PDFBoxAdapter {
             int w = 0;
             int skipGlyphIndex = getLastChar() + 1;
             Object cmap = getCmap(font);
+            Set<Integer> codeToName = getCodeToName(font.getFontEncoding()).keySet();
             for (int i = font.getFirstChar(); i <= font.getLastChar(); i++) {
                 boolean addedWidth = false;
                 int glyphIndexPos = skipGlyphIndex;
@@ -935,7 +935,9 @@ public class PDFBoxAdapter {
                 if (font.getWidths() != null) {
                     neww = font.getWidths().get(i - font.getFirstChar()).intValue();
                     if (!newWidth.containsKey(i) || newWidth.get(i) == 0) {
-                        if (font instanceof PDTrueTypeFont || (font.getFontEncoding() != null && getCodeToName(font.getFontEncoding()).keySet().contains(i))) {
+                        if (getFontType() == FontType.TYPE1
+                                || font instanceof PDTrueTypeFont
+                                || codeToName.contains(i)) {
                             newWidth.put(i, neww);
                             glyphIndexPos = i;
                         } else {
@@ -1010,7 +1012,7 @@ public class PDFBoxAdapter {
         }
 
         class FOPPDFEncoding implements SingleByteEncoding {
-            private boolean cmap = false;
+            private boolean cmap;
 
             public String getName() {
                 return "FOPPDFEncoding";
@@ -1055,7 +1057,9 @@ public class PDFBoxAdapter {
                 char[] ret = new char[list.size()];
                 int i = 0;
                 for (String e : list) {
-                    ret[i++] = e.charAt(0);
+                    if (e.length() > 0) {
+                        ret[i++] = e.charAt(0);
+                    }
                 }
                 return ret;
             }
@@ -1086,11 +1090,13 @@ public class PDFBoxAdapter {
             return false;
         }
 
-        private void mergeFontFile(InputStream ff) throws IOException {
+        private void mergeFontFile(InputStream ff, PDSimpleFont pdSimpleFont) throws IOException {
             if (getFontType() == FontType.TRUETYPE) {
                 Map<Integer, Integer> chars = new HashMap<Integer, Integer>();
                 chars.put(0, 0);
                 mergeTTFonts.readFont(new FontFileReader(ff), chars, false);
+            } else if (getFontType() == FontType.TYPE1) {
+                mergeType1Fonts.readFont(ff, (PDType1Font) pdSimpleFont);
             } else {
                 mergeCFFFonts.readType1CFont(ff, getEmbedFontName());
             }
@@ -1105,6 +1111,9 @@ public class PDFBoxAdapter {
             if (getFontType() == FontType.TRUETYPE) {
                 mergeTTFonts.writeFont(newCmap);
                 return new ByteArrayInputStream(mergeTTFonts.getFontSubset());
+            }
+            if (getFontType() == FontType.TYPE1) {
+                return new ByteArrayInputStream(mergeType1Fonts.writeFont());
             }
             return null;
         }
@@ -1285,7 +1294,7 @@ public class PDFBoxAdapter {
                         return null;
                     }
                 }
-                newHex.append(String.format("%1$04x", (mapped & 0xFFFF)).toUpperCase(Locale.getDefault()));
+                newHex.append(String.format("%1$04x", mapped & 0xFFFF).toUpperCase(Locale.getDefault()));
                 PDFText.escapeStringChar((char)mapped.intValue(), newOct);
                 i++;
             }
@@ -1344,12 +1353,16 @@ public class PDFBoxAdapter {
      * @param sourceDoc the source PDF the given page to be copied belongs to
      * @param page the page to transform into a stream
      * @param key value to use as key for the stream
+     * @param eventBroadcaster events
      * @param atdoc adjustment for stream
+     * @param fontinfo fonts
+     * @param pos rectangle
      * @return the stream
      * @throws IOException if an I/O error occurs
      */
     public String createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
-            EventBroadcaster eventBroadcaster, AffineTransform atdoc, FontInfo fontinfo, Rectangle pos) throws IOException {
+            EventBroadcaster eventBroadcaster, AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
+        throws IOException {
         handleAcroForm(sourceDoc, page, eventBroadcaster, atdoc);
         PDResources sourcePageResources = page.findResources();
         PDFDictionary pageResources = null;
@@ -1360,7 +1373,8 @@ public class PDFBoxAdapter {
         String newStream = null;
         if (fonts != null && pdfDoc.isMergeFontsEnabled()) {
             fontsBackup = new COSDictionary(fonts);
-            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, getResourceNames(sourcePageResources.getCOSDictionary()));
+            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName,
+                    getResourceNames(sourcePageResources.getCOSDictionary()));
             newStream = m.writeText(pdStream);
             parentFonts = m.fontsToRemove.values();
 //            if (newStream != null) {
@@ -1373,7 +1387,8 @@ public class PDFBoxAdapter {
 //            }
         }
         if (newStream == null) {
-            newStream = new PDFWriter(uniqueName, getResourceNames(sourcePageResources.getCOSDictionary())).writeText(pdStream);
+            newStream = new PDFWriter(uniqueName,
+                    getResourceNames(sourcePageResources.getCOSDictionary())).writeText(pdStream);
         }
         pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
         mergeXObj(sourcePageResources.getCOSDictionary(), fontinfo, uniqueName);
@@ -1426,7 +1441,7 @@ public class PDFBoxAdapter {
 
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();
-        PDRectangle viewBox = (cropBox != null ? cropBox : mediaBox);
+        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
 
         //Handle the /Rotation entry on the page dict
         int rotation = PDFUtil.getNormalizedRotation(page);
@@ -1492,7 +1507,8 @@ public class PDFBoxAdapter {
                                 }
                             }
                         }
-                        PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName, getResourceNames(sourcePageResources));
+                        PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName,
+                                getResourceNames(sourcePageResources));
                         String c = writer.writeText(PDStream.createFromCOS(stream));
                         if (c != null) {
                             stream.removeItem(COSName.FILTER);
@@ -1538,7 +1554,8 @@ public class PDFBoxAdapter {
         return resourceNames;
     }
 
-    private void transferPageDict(COSDictionary fonts, String uniqueName, PDResources sourcePageResources) throws IOException {
+    private void transferPageDict(COSDictionary fonts, String uniqueName, PDResources sourcePageResources)
+        throws IOException {
         if (fonts != null) {
             for (Map.Entry<COSName, COSBase> f : fonts.entrySet()) {
                 String name = f.getKey().getName() + uniqueName;
@@ -1571,7 +1588,8 @@ public class PDFBoxAdapter {
         }
     }
 
-    private String getNewFont(COSDictionary fontData, FontInfo fontinfo, Collection<String> usedFonts) throws IOException {
+    private String getNewFont(COSDictionary fontData, FontInfo fontinfo, Collection<String> usedFonts)
+        throws IOException {
         String base = getUniqueFontName(fontData);
         if (base == null || usedFonts.contains(base) || (parentFonts != null && parentFonts.contains(base))) {
             return null;
@@ -1582,13 +1600,14 @@ public class PDFBoxAdapter {
                     return ((FOPPDFFont)t).addFont(fontData);
                 }
             }
-            if (base.endsWith("cid") || fontData.getItem(COSName.SUBTYPE) != COSName.TYPE1 && fontData.getItem(COSName.SUBTYPE) != COSName.TRUE_TYPE) {
+            if (base.endsWith("cid") || fontData.getItem(COSName.SUBTYPE) != COSName.TYPE1
+                    && fontData.getItem(COSName.SUBTYPE) != COSName.TRUE_TYPE) {
                 fontinfo.addMetrics(base, new FOPPDFMultiByteFont(fontData, base));
             } else {
                 fontinfo.addMetrics(base, new FOPPDFSingleByteFont(fontData, base));
             }
         } catch (IOException e) {
-            log.error(e);
+            log.warn(e.getMessage());
             return null;
         }
         fontinfo.useFont(base);
@@ -1615,7 +1634,7 @@ public class PDFBoxAdapter {
 
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();
-        PDRectangle viewBox = (cropBox != null ? cropBox : mediaBox);
+        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
 
         for (Object obj : pageAnnotations) {
             PDAnnotation annot = (PDAnnotation)obj;
@@ -1675,7 +1694,7 @@ public class PDFBoxAdapter {
             }
         }
 
-        boolean formAlreadyCopied = (getCachedClone(srcAcroForm) != null);
+        boolean formAlreadyCopied = getCachedClone(srcAcroForm) != null;
         PDFRoot catalog = this.pdfDoc.getRoot();
         PDFDictionary destAcroForm = (PDFDictionary)catalog.get(COSName.ACRO_FORM.getName());
         if (formAlreadyCopied) {
@@ -1695,7 +1714,7 @@ public class PDFBoxAdapter {
                 destAcroForm = new PDFDictionary(pdfDoc.getRoot());
             }
             pdfDoc.registerObject(destAcroForm);
-            catalog.put(COSName.ACRO_FORM.getName(), destAcroForm );
+            catalog.put(COSName.ACRO_FORM.getName(), destAcroForm);
         }
         PDFArray clonedFields = (PDFArray) destAcroForm.get(COSName.FIELDS.getName());
         if (clonedFields == null) {

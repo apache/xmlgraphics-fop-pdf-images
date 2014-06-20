@@ -26,11 +26,10 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.fop.fonts.FontInfo;
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;
 
-
+import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.render.ImageHandler;
 import org.apache.fop.render.RenderingContext;
 import org.apache.fop.render.pdf.PDFContentGenerator;

@@ -17,12 +17,36 @@
 
 package org.apache.fop.render.pdf;
 
-import junit.framework.Assert;
+import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Rectangle2D;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Set;
+import java.util.TreeSet;
+
+import javax.imageio.ImageIO;
+
+import org.junit.Test;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.ttf.TTFParser;
-import org.apache.fontbox.ttf.TrueTypeFont;
+import org.apache.fontbox.type1.Type1Font;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+
+import org.apache.xmlgraphics.image.loader.ImageInfo;
+import org.apache.xmlgraphics.image.loader.ImageSource;
+import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
+
 import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.FontType;
@@ -32,29 +56,9 @@ import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
-
 import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
-import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.xmlgraphics.image.loader.ImageInfo;
-import org.apache.xmlgraphics.image.loader.ImageSource;
-import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 
-import org.junit.Test;
-
-import javax.imageio.ImageIO;
-
-import java.awt.Rectangle;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Rectangle2D;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashMap;
+import junit.framework.Assert;
 
 public class PDFBoxAdapterTestCase {
     private Rectangle2D r = new Rectangle2D.Double();
@@ -70,6 +74,10 @@ public class PDFBoxAdapterTestCase {
     private static final String TTSubset5 = "test/resources/ttsubset5.pdf";
     private static final String CFFCID1 = "test/resources/cffcid1.pdf";
     private static final String CFFCID2 = "test/resources/cffcid2.pdf";
+    private static final String Type1Subset1 = "test/resources/t1subset.pdf";
+    private static final String Type1Subset2 = "test/resources/t1subset2.pdf";
+    private static final String Type1Subset3 = "test/resources/t1subset3.pdf";
+    private static final String Type1Subset4 = "test/resources/t1subset4.pdf";
     private static final String ROTATE = "test/resources/rotate.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
@@ -101,20 +109,29 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(msg, msg.contains("/Fm01700251251 Do"));
         msg = writeText(fi, CFFCID2);
         Assert.assertTrue(msg, msg.contains("/Fm01701174772 Do"));
+        msg = writeText(fi, Type1Subset1);
+        Assert.assertTrue(msg, msg.contains("/Verdana_Type1"));
+        msg = writeText(fi, Type1Subset2);
+        Assert.assertTrue(msg, msg.contains("[(2nd example)] TJ"));
+        msg = writeText(fi, Type1Subset3);
+        Assert.assertTrue(msg, msg.contains("/URWChanceryL-MediItal_Type1 20 Tf"));
+        msg = writeText(fi, Type1Subset4);
+        Assert.assertTrue(msg, msg.contains("/F15-1521012718 40 Tf"));
 
         for (Typeface font : fi.getUsedFonts().values()) {
             InputStream is = ((CustomFont) font).getInputStream();
-            if (font.getFontType() == FontType.TYPE1C ||
-                    font.getFontType() == FontType.CIDTYPE0) {
+            if (font.getFontType() == FontType.TYPE1C || font.getFontType() == FontType.CIDTYPE0) {
                 byte[] data = IOUtils.toByteArray(is);
                 CFFParser p = new CFFParser();
-                CFFFont ff = p.parse(data).get(0);
+                p.parse(data).get(0);
             } else if (font.getFontType() == FontType.TRUETYPE) {
                 TTFParser parser = new TTFParser();
-                TrueTypeFont ttf = parser.parseTTF(is);
+                parser.parseTTF(is);
             } else if (font.getFontType() == FontType.TYPE0) {
                 TTFParser parser = new TTFParser(true);
-                TrueTypeFont ttf = parser.parseTTF(is);
+                parser.parseTTF(is);
+            } else if (font.getFontType() == FontType.TYPE1) {
+                Type1Font.createWithPFB(is);
             }
             Assert.assertTrue(((CustomFont) font).isEmbeddable());
             if (font instanceof MultiByteFont) {
@@ -148,7 +165,8 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testCFF() throws Exception {
         PDDocument doc = PDDocument.load(CFF1);
-        PDFBoxAdapter.FOPPDFSingleByteFont sbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "R11"), "MyriadPro-Regular_Type1f0encstdcs");
+        PDFBoxAdapter.FOPPDFSingleByteFont sbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "R11"),
+                "MyriadPro-Regular_Type1f0encstdcs");
 
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("bracketright"));
         Assert.assertTrue(!Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("A"));
@@ -182,7 +200,8 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testCFF2() throws Exception {
         PDDocument doc = PDDocument.load(CFF3);
-        PDFBoxAdapter.FOPPDFSingleByteFont sbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "T1_0"), "Myriad_Pro_Type1f0encf1cs");
+        PDFBoxAdapter.FOPPDFSingleByteFont sbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "T1_0"),
+                "Myriad_Pro_Type1f0encf1cs");
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("uni004E"));
         Assert.assertEquals(sbfont.getFontName(), "Myriad_Pro_Type1f0encf1cs");
         Assert.assertEquals(sbfont.getEncodingName(), null);
@@ -199,7 +218,8 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testTTCID() throws Exception {
         PDDocument doc = PDDocument.load(TTCID1);
-        PDFBoxAdapter.FOPPDFMultiByteFont mbfont = getPDFBoxAdapter().new FOPPDFMultiByteFont(getFont(doc, "C2_0"), "ArialMT_Type0");
+        PDFBoxAdapter.FOPPDFMultiByteFont mbfont = getPDFBoxAdapter().new FOPPDFMultiByteFont(getFont(doc, "C2_0"),
+                "ArialMT_Type0");
         mbfont.addFont(getFont(doc, "C2_0"));
         Assert.assertEquals(mbfont.mapChar('t'), 67);
 
@@ -208,7 +228,7 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(name, "ArialMT_Type0");
         Assert.assertEquals(mbfont.getFontName(), "ArialMT_Type0");
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
-        Assert.assertEquals(is.length, 38940);
+        Assert.assertEquals(is.length, 38640);
         doc.close();
         doc2.close();
     }
@@ -216,7 +236,8 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testTTSubset() throws Exception {
         PDDocument doc = PDDocument.load(TTSubset1);
-        PDFBoxAdapter.FOPPDFSingleByteFont mbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "R9"), "TimesNewRomanPSMT_TrueType");
+        PDFBoxAdapter.FOPPDFSingleByteFont mbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "R9"),
+                "TimesNewRomanPSMT_TrueType");
         mbfont.addFont(getFont(doc, "R9"));
         Assert.assertEquals(mbfont.mapChar('t'), 116);
 
@@ -225,7 +246,24 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(name, "TimesNewRomanPSMT_TrueType");
         Assert.assertEquals(mbfont.getFontName(), "TimesNewRomanPSMT_TrueType");
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
-        Assert.assertEquals(is.length, 47888);
+        Assert.assertEquals(is.length, 34228);
+        doc.close();
+        doc2.close();
+    }
+
+    @Test
+    public void testType1Subset() throws Exception {
+        PDDocument doc = PDDocument.load(Type1Subset1);
+        PDFBoxAdapter.FOPPDFSingleByteFont mbfont =
+                getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "F15"), "");
+        mbfont.addFont(getFont(doc, "F15"));
+        PDDocument doc2 = PDDocument.load(Type1Subset2);
+        mbfont.addFont(getFont(doc2, "F15"));
+        Type1Font f = Type1Font.createWithPFB(mbfont.getInputStream());
+        Set<String> csDict = new TreeSet<String>(f.getCharStringsDict().keySet());
+        Assert.assertEquals(csDict.toString(), "[.notdef, a, d, e, hyphen, l, m, n, p, s, space, t, two, x]");
+        Assert.assertEquals(f.getSubrsArray().size(), 518);
+        Assert.assertEquals(f.getFamilyName(), "Verdana");
         doc.close();
         doc2.close();
     }
@@ -239,7 +277,8 @@ public class PDFBoxAdapterTestCase {
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", null, at, null, r);
-        Assert.assertEquals(at, new AffineTransform(-0.0, 1.0000000554888686, 1.0000000554888686, 0.0, 0.0, -2.0742416381835938E-5));
+        Assert.assertEquals(at, new AffineTransform(-0.0, 1.0000000554888686, 1.0000000554888686, 0.0, 0.0,
+                -2.0742416381835938E-5));
         Assert.assertTrue(stream.contains("/GS0106079 gs"));
         Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
         doc.close();

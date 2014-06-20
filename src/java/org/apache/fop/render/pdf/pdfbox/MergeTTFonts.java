@@ -31,9 +31,10 @@ import org.apache.fop.fonts.truetype.TTFSubSetFile;
 
 public class MergeTTFonts extends TTFSubSetFile {
     private Map<Integer, Glyph> added = new TreeMap<Integer, Glyph>();
-    private int origIndexesLen = 0;
-    private int size = 0;
+    private int origIndexesLen;
+    private int size;
     protected MaximumProfileTable maxp = new MaximumProfileTable();
+    private Integer nhmtxDiff = null;
 
     static class Glyph {
         final byte[] data;
@@ -46,6 +47,9 @@ public class MergeTTFonts extends TTFSubSetFile {
 
     /**
      * Create the glyf table and fill in loca table
+     * @param glyphs map of glyphs
+     * @param in fontfile
+     * @throws IOException on error
      */
     private void readGlyf(Map<Integer, Integer> glyphs, FontFileReader in) throws IOException {
         OFDirTabEntry entry = dirTabs.get(OFTableName.GLYF);
@@ -111,7 +115,7 @@ public class MergeTTFonts extends TTFSubSetFile {
                     writeULong(locaOffset + i * 4, currentPos - startPos);
                 }
                 if ((currentPos - startPos + glyphLength) > endOffset1) {
-                    endOffset1 = (currentPos - startPos + glyphLength);
+                    endOffset1 = currentPos - startPos + glyphLength;
                 }
 
                 // Store the glyph boundary positions relative to the start of the font
@@ -159,6 +163,7 @@ public class MergeTTFonts extends TTFSubSetFile {
      * font to subset font. The glyphs Map contains an
      * Integer key and Integer value that maps the original
      * metric (key) to the subset metric (value)
+     * @throws IOException on error
      */
     protected void createHmtx() throws IOException {
         OFTableName hmtx = OFTableName.HMTX;
@@ -167,8 +172,8 @@ public class MergeTTFonts extends TTFSubSetFile {
             pad4();
             // int offset = (int)entry.offset;
 
-            int longHorMetricSize = added.size() * 4;
-            int leftSideBearingSize = added.size() * 4;
+            int longHorMetricSize = added.size() * 2;
+            int leftSideBearingSize = added.size() * 2;
             int hmtxSize = longHorMetricSize + leftSideBearingSize;
 
             for (Map.Entry<Integer, Glyph> e : added.entrySet()) {
@@ -191,9 +196,10 @@ public class MergeTTFonts extends TTFSubSetFile {
     /**
      * Returns a subset of the original font.
      *
-     *
+     * @param fontFile font file
      * @param subsetGlyphs Map of glyphs (glyphs has old index as (Integer) key and
      * new index as (Integer) value)
+     * @param cid is cid
      * @throws IOException in case of an I/O problem
      */
     public void readFont(FontFileReader fontFile, Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
@@ -217,10 +223,12 @@ public class MergeTTFonts extends TTFSubSetFile {
         }
         scanGlyphs(fontFile, subsetGlyphs);
         readGlyf(subsetGlyphs, fontFile);
+        if (nhmtxDiff == null) {
+            nhmtxDiff = subsetGlyphs.size() - nhmtx;
+        }
     }
 
-    protected void scanGlyphs(FontFileReader in, Map<Integer, Integer> subsetGlyphs)
-            throws IOException {
+    protected void scanGlyphs(FontFileReader in, Map<Integer, Integer> subsetGlyphs) throws IOException {
         OFDirTabEntry glyfTableInfo = dirTabs.get(OFTableName.GLYF);
         if (glyfTableInfo == null) {
             throw new IOException("Glyf table could not be found");
@@ -229,8 +237,8 @@ public class MergeTTFonts extends TTFSubSetFile {
     }
 
     static class MergeGlyfTable extends GlyfTable {
-        public MergeGlyfTable(FontFileReader in, OFMtxEntry[] metrics, OFDirTabEntry dirTableEntry, Map<Integer, Integer> glyphs)
-                throws IOException {
+        public MergeGlyfTable(FontFileReader in, OFMtxEntry[] metrics, OFDirTabEntry dirTableEntry,
+                              Map<Integer, Integer> glyphs) throws IOException {
             super(in, metrics, dirTableEntry, glyphs);
             populateGlyphsWithComposites();
         }
@@ -266,7 +274,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         createHead(fontFile);
         createOS2(fontFile);                          // copy the OS/2 table
         if (!cid) {
-            createHhea(fontFile, sgsize - 2);    // Create the hhea table
+            createHhea(fontFile, sgsize - nhmtxDiff);    // Create the hhea table
         } else {
             createHhea(fontFile, sgsize);    // Create the hhea table
         }

@@ -43,14 +43,14 @@ public class MergeCFFFonts extends OTFSubSetFile {
     protected List<LinkedHashMap<Integer, Integer>> subsetGlyphsList = new ArrayList<LinkedHashMap<Integer, Integer>>();
     private boolean fallbackIndex;
     private int charsetOffset;
-    private int fontFileSize = 0;
+    private int fontFileSize;
     private Set<String> used = new HashSet<String>();
     private List<String> strings = new ArrayList<String>();
     private List<Integer> chars = new ArrayList<Integer>();
     private List<String> added = new ArrayList<String>();
     private Map<Integer, Integer> range = new LinkedHashMap<Integer, Integer>();
     private Set<String> stringsForRange = new HashSet<String>();
-    private int noOfFonts = 0;
+    private int noOfFonts;
     private CFFEncoding encoding = null;
 
     public MergeCFFFonts() throws IOException {
@@ -250,10 +250,12 @@ public class MergeCFFFonts extends OTFSubSetFile {
                 i++;
             }
 
-            updateCIDOffsets(topDictDataOffset, fdArrayOffset, fdSelectOffset, charsetOffset, charStringOffset, encodingOffset);
+            updateCIDOffsets(topDictDataOffset, fdArrayOffset, fdSelectOffset, charsetOffset, charStringOffset,
+                    encodingOffset);
         } else {
             //Update the offsets
-            updateOffsets(topDictOffset, charsetOffset, charStringOffset, privateDictOffset, localIndexOffset, encodingOffset);
+            updateOffsets(topDictOffset, charsetOffset, charStringOffset, privateDictOffset, localIndexOffset,
+                    encodingOffset);
         }
     }
 
@@ -361,7 +363,7 @@ public class MergeCFFFonts extends OTFSubSetFile {
                 if (cidFont && gid.getKey() == 0) {
                     continue;
                 }
-                writeCard16((cidFont) ? gid.getKey() : gid.getValue());
+                writeCard16(cidFont ? gid.getKey() : gid.getValue());
             }
         } else {
             writeFormat1CS(range, afterstringindex);
@@ -399,7 +401,7 @@ public class MergeCFFFonts extends OTFSubSetFile {
                 int last = -1;
                 boolean simpleRange = false;
                 for (int i : range.keySet()) {
-                    simpleRange = (last + 1 == i);
+                    simpleRange = last + 1 == i;
                     last = i;
                 }
                 if (simpleRange) {

@@ -26,12 +26,11 @@ import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.util.Map;
 
-
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-
 import org.apache.pdfbox.rendering.PageDrawer;
+
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;

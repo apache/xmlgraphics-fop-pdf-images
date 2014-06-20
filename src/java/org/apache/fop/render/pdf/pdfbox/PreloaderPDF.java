@@ -56,7 +56,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
     private static final String PDF_HEADER = "%PDF-";
 
     /** static PDDocument cache for faster multi-page processing */
-    private static final Cache.Type CACHE_TYPE =Cache.Type.valueOf(
+    private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
             System.getProperty("fop.pdfbox.preloader-cache", Cache.Type.WEAK.name()).toUpperCase());
 
     private static Map<Object, Cache<URI, PDDocument>> documentCacheMap
@@ -136,7 +136,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
         PDPage page = (PDPage)pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();
-        PDRectangle viewBox = (cropBox != null ? cropBox : mediaBox);
+        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
         int w = Math.round(viewBox.getWidth() * 1000);
         int h = Math.round(viewBox.getHeight() * 1000);
 
