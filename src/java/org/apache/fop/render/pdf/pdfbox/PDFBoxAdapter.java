@@ -171,8 +171,8 @@ public class PDFBoxAdapter {
             PDFArray array = new PDFArray();
             cacheClonedObject(keyBase, array);
             List list = (List)base;
-            for (int i = 0; i < list.size(); i++) {
-                array.add(cloneForNewDocument(list.get(i), list.get(i), exclude));
+            for (Object o : list) {
+                array.add(cloneForNewDocument(o, o, exclude));
             }
             return array;
         } else if (base instanceof COSObjectable && !(base instanceof COSBase)) {
@@ -180,29 +180,7 @@ public class PDFBoxAdapter {
             Object retval = cloneForNewDocument(o, o, exclude);
             return cacheClonedObject(keyBase, retval);
         } else if (base instanceof COSObject) {
-            COSObject object = (COSObject)base;
-            if (log.isTraceEnabled()) {
-                log.trace("Cloning indirect object: "
-                        + object.getObjectNumber().longValue()
-                        + " " + object.getGenerationNumber().longValue());
-            }
-            Object obj = cloneForNewDocument(object.getObject(), object, exclude);
-            if (obj instanceof PDFObject) {
-                PDFObject pdfobj = (PDFObject)obj;
-                //pdfDoc.registerObject(pdfobj);
-                if (!pdfobj.hasObjectNumber()) {
-                    throw new IllegalStateException("PDF object was not registered!");
-                }
-                if (log.isTraceEnabled()) {
-                    log.trace("Object registered: "
-                            + pdfobj.getObjectNumber()
-                            + " " + pdfobj.getGeneration()
-                            + " for COSObject: "
-                            + object.getObjectNumber().longValue()
-                            + " " + object.getGenerationNumber().longValue());
-                }
-            }
-            return obj;
+            return readCOSObject((COSObject) base, exclude);
         } else if (base instanceof COSArray) {
             PDFArray newArray = new PDFArray();
             cacheClonedObject(keyBase, newArray);
@@ -220,34 +198,9 @@ public class PDFBoxAdapter {
             }
             return newArray;
         } else if (base instanceof COSStream) {
-            COSStream originalStream = (COSStream)base;
-
-            InputStream in;
-            Set filter;
-            if (pdfDoc.isEncryptionActive()) {
-                in = originalStream.getUnfilteredStream();
-                filter = FILTER_FILTER;
-            } else {
-                //transfer encoded data (don't reencode)
-                in = originalStream.getFilteredStream();
-                filter = Collections.EMPTY_SET;
-            }
-            PDFStream stream = new PDFStream();
-            OutputStream out = stream.getBufferOutputStream();
-            IOUtils.copyLarge(in, out);
-            transferDict(originalStream, stream, filter);
-            return cacheClonedObject(keyBase, stream);
+            return readCOSStream((COSStream) base, keyBase);
         } else if (base instanceof COSDictionary) {
-            COSDictionary dic = (COSDictionary)base;
-            Set<COSName> keys = dic.keySet();
-            PDFDictionary newDict = new PDFDictionary();
-            cacheClonedObject(keyBase, newDict);
-            for (COSName key : keys) {
-                if (!exclude.contains(key)) {
-                    newDict.put(key.getName(), cloneForNewDocument(dic.getItem(key), dic.getItem(key), exclude));
-                }
-            }
-            return newDict;
+            return readCOSDictionary((COSDictionary) base, keyBase, exclude);
         } else if (base instanceof COSName) {
             PDFName newName = new PDFName(((COSName)base).getName());
             return cacheClonedObject(keyBase, newName);
@@ -263,31 +216,88 @@ public class PDFBoxAdapter {
             //TODO Do we need a PDFBoolean here?
             Boolean retval = ((COSBoolean)base).getValueAsObject();
             if (keyBase instanceof COSObject) {
-                return cacheClonedObject(keyBase, new PDFBoolean(retval.booleanValue()));
+                return cacheClonedObject(keyBase, new PDFBoolean(retval));
             } else {
                 return cacheClonedObject(keyBase, retval);
             }
         } else if (base instanceof COSString) {
-            COSString string = (COSString)base;
-            //retval = ((COSString)base).getString(); //this is unsafe for binary content
-            byte[] bytes = string.getBytes();
-            //Be on the safe side and use the byte array to avoid encoding problems
-            //as PDFBox doesn't indicate whether the string is just
-            //a string (PDF 1.4, 3.2.3) or a text string (PDF 1.4, 3.8.1).
-            if (keyBase instanceof COSObject) {
-                return cacheClonedObject(keyBase, new PDFString(bytes));
-            } else {
-                if (PDFString.isUSASCII(bytes)) {
-                    return cacheClonedObject(keyBase, string.getString());
-                } else {
-                    return cacheClonedObject(keyBase, bytes);
-                }
-            }
+            return readCOSString((COSString) base, keyBase);
         } else if (base instanceof COSNull) {
             return cacheClonedObject(keyBase, null);
         } else {
             throw new UnsupportedOperationException("NYI: " + base.getClass().getName());
         }
+    }
+
+    private PDFDictionary readCOSDictionary(COSDictionary dic, Object keyBase, Collection exclude) throws IOException {
+        PDFDictionary newDict = new PDFDictionary();
+        cacheClonedObject(keyBase, newDict);
+        for (Map.Entry<COSName, COSBase> e : dic.entrySet()) {
+            if (!exclude.contains(e.getKey())) {
+                newDict.put(e.getKey().getName(), cloneForNewDocument(e.getValue(), e.getValue(), exclude));
+            }
+        }
+        return newDict;
+    }
+
+    private Object readCOSObject(COSObject object, Collection exclude) throws IOException {
+        if (log.isTraceEnabled()) {
+            log.trace("Cloning indirect object: "
+                    + object.getObjectNumber().longValue()
+                    + " " + object.getGenerationNumber().longValue());
+        }
+        Object obj = cloneForNewDocument(object.getObject(), object, exclude);
+        if (obj instanceof PDFObject) {
+            PDFObject pdfobj = (PDFObject)obj;
+            //pdfDoc.registerObject(pdfobj);
+            if (!pdfobj.hasObjectNumber()) {
+                throw new IllegalStateException("PDF object was not registered!");
+            }
+            if (log.isTraceEnabled()) {
+                log.trace("Object registered: "
+                        + pdfobj.getObjectNumber()
+                        + " " + pdfobj.getGeneration()
+                        + " for COSObject: "
+                        + object.getObjectNumber().longValue()
+                        + " " + object.getGenerationNumber().longValue());
+            }
+        }
+        return obj;
+    }
+
+    private Object readCOSString(COSString string, Object keyBase) {
+        //retval = ((COSString)base).getString(); //this is unsafe for binary content
+        byte[] bytes = string.getBytes();
+        //Be on the safe side and use the byte array to avoid encoding problems
+        //as PDFBox doesn't indicate whether the string is just
+        //a string (PDF 1.4, 3.2.3) or a text string (PDF 1.4, 3.8.1).
+        if (keyBase instanceof COSObject) {
+            return cacheClonedObject(keyBase, new PDFString(bytes));
+        } else {
+            if (PDFString.isUSASCII(bytes)) {
+                return cacheClonedObject(keyBase, string.getString());
+            } else {
+                return cacheClonedObject(keyBase, bytes);
+            }
+        }
+    }
+
+    private Object readCOSStream(COSStream originalStream, Object keyBase) throws IOException {
+        InputStream in;
+        Set filter;
+        if (pdfDoc.isEncryptionActive()) {
+            in = originalStream.getUnfilteredStream();
+            filter = FILTER_FILTER;
+        } else {
+            //transfer encoded data (don't reencode)
+            in = originalStream.getFilteredStream();
+            filter = Collections.EMPTY_SET;
+        }
+        PDFStream stream = new PDFStream();
+        OutputStream out = stream.getBufferOutputStream();
+        IOUtils.copyLarge(in, out);
+        transferDict(originalStream, stream, filter);
+        return cacheClonedObject(keyBase, stream);
     }
 
     private Object getCachedClone(Object base) {
@@ -342,6 +352,7 @@ public class PDFBoxAdapter {
     private String getUniqueFontName(COSDictionary fontData) throws IOException {
         PDSimpleFont font = getFont(fontData);
         String extra = "";
+        String name = getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
         if (font instanceof PDType0Font
                 && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType0Font
                 && ((PDCIDFontType0Font) ((PDType0Font) font).getDescendantFont()).getType1CFont() != null) {
@@ -352,7 +363,7 @@ public class PDFBoxAdapter {
                     .equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
                 extra += "format0";
             }
-            return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName() + extra;
+            return name + extra;
         }
         if (font instanceof PDType0Font
                 && font.getToUnicode() != null
@@ -360,7 +371,7 @@ public class PDFBoxAdapter {
             if (!isSubsetFont(font.getBaseFont())) {
                 extra = "f3";
             }
-            return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName() + extra;
+            return name + extra;
         }
         if (font instanceof PDTrueTypeFont && isSubsetFont(font.getBaseFont())) {
             TrueTypeFont tt = ((PDTrueTypeFont) font).getTTFFont();
@@ -369,7 +380,7 @@ public class PDFBoxAdapter {
                     extra = "cid";
                 }
             }
-            return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName() + extra;
+            return name + extra;
         }
 //        if (!isSubsetFont(font.getBaseFont())) {
 //            return font.getBaseFont() + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
@@ -378,7 +389,7 @@ public class PDFBoxAdapter {
             if (((PDType1Font) font).getType1CFont() == null
                     || ((PDType1Font) font).getType1CFont().getCFFFont() == null) {
                 if (font.getFontDescriptor() instanceof PDFontDescriptorDictionary) {
-                    return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
+                    return name;
                 }
                 return null;
             }
@@ -390,16 +401,13 @@ public class PDFBoxAdapter {
                 extra = "f0enc";
             }
             CFFCharset cs = ((PDType1Font)font).getType1CFont().getCFFFont().getCharset();
-            for (CFFCharset.Entry e : cs.getEntries()) {
-                if (e.getSID() < OTFSubSetFile.NUM_STANDARD_STRINGS) {
-                    extra += "stdcs";
-                }
-                break;
+            if (cs.getEntries().get(0).getSID() < OTFSubSetFile.NUM_STANDARD_STRINGS) {
+                extra += "stdcs";
             }
             if (cs.getClass().getName().equals("org.apache.fontbox.cff.CFFParser$Format1Charset")) {
                 extra += "f1cs";
             }
-            return getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName() + extra;
+            return name + extra;
         }
         return null;
     }
@@ -484,6 +492,19 @@ public class PDFBoxAdapter {
                     gidToGlyph.put(i, mappedChar);
                 }
             }
+            readCharMap(font, gidToGlyph, glyphData, mainFont, oldToNewGIMap);
+            FontFileReader ffr = readFontFile(mainFont);
+            if (ttf != null) {
+                mergeMaxp(ttf);
+                mergeTTFonts.readFont(ffr, oldToNewGIMap, true);
+            } else {
+                mergeCFFFonts.readType1CFont(new ByteArrayInputStream(ffr.getAllBytes()), getEmbedFontName());
+            }
+            return getFontName();
+        }
+
+        private void readCharMap(PDSimpleFont font, Map<Integer, String> gidToGlyph, GlyphData[] glyphData,
+                                 PDSimpleFont mainFont, Map<Integer, Integer> oldToNewGIMap) {
             int widthPos = font.getFirstChar() + 1;
             for (Map.Entry<Integer, String> i : gidToGlyph.entrySet()) {
                 String mappedChar = i.getValue();
@@ -531,14 +552,6 @@ public class PDFBoxAdapter {
                     widthPos++;
                 }
             }
-            FontFileReader ffr = readFontFile(mainFont);
-            if (ttf != null) {
-                mergeMaxp(ttf);
-                mergeTTFonts.readFont(ffr, oldToNewGIMap, true);
-            } else {
-                mergeCFFFonts.readType1CFont(new ByteArrayInputStream(ffr.getAllBytes()), getEmbedFontName());
-            }
-            return getFontName();
         }
 
         private Map<Integer, String> getMapping(PDSimpleFont font, CMap c, int len) throws IOException {

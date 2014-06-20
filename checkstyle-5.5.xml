@@ -262,13 +262,13 @@
 
     <module name="JavadocMethod">
       <property name="allowMissingJavadoc" value="true"/>
-      <property name="allowMissingParamTags" value="true"/>
-      <property name="allowMissingReturnTag" value="true"/>
-      <property name="allowMissingThrowsTags" value="true"/>
     </module>
     
 <!--    <module name="Indentation"/>-->
     <module name="UnnecessaryParentheses"/>
+    <module name="CyclomaticComplexity">
+        <property name="max" value="22"/>
+    </module>
     
   </module>
   <!-- ===================================================================================================== -->
