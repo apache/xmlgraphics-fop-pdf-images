@@ -495,8 +495,12 @@ public class PDFBoxAdapter {
             readCharMap(font, gidToGlyph, glyphData, mainFont, oldToNewGIMap);
             FontFileReader ffr = readFontFile(mainFont);
             if (ttf != null) {
-                mergeMaxp(ttf);
+                mergeMaxp(ttf, mergeTTFonts.maxp);
+                int sizeNoCompGlyphs = oldToNewGIMap.size();
                 mergeTTFonts.readFont(ffr, oldToNewGIMap, true);
+                if (oldToNewGIMap.size() > sizeNoCompGlyphs) {
+                    cidSet.mapChar(256 * 256, (char) 0);
+                }
             } else {
                 mergeCFFFonts.readType1CFont(new ByteArrayInputStream(ffr.getAllBytes()), getEmbedFontName());
             }
@@ -581,26 +585,6 @@ public class PDFBoxAdapter {
                 }
             }
             return mapping;
-        }
-
-        private void mergeMaxp(TrueTypeFont ttf) {
-            MaximumProfileTable mp = ttf.getMaximumProfile();
-            MaximumProfileTable outMaxp = mergeTTFonts.maxp;
-            outMaxp.setVersion(mp.getVersion());
-            outMaxp.setNumGlyphs(outMaxp.getNumGlyphs() + mp.getNumGlyphs());
-            outMaxp.setMaxPoints(outMaxp.getMaxPoints() + mp.getMaxPoints());
-            outMaxp.setMaxContours(outMaxp.getMaxContours() + mp.getMaxContours());
-            outMaxp.setMaxCompositePoints(outMaxp.getMaxCompositePoints() + mp.getMaxCompositePoints());
-            outMaxp.setMaxCompositeContours(outMaxp.getMaxCompositeContours() + mp.getMaxCompositeContours());
-            outMaxp.setMaxZones(outMaxp.getMaxZones() + mp.getMaxZones());
-            outMaxp.setMaxTwilightPoints(outMaxp.getMaxTwilightPoints() + mp.getMaxTwilightPoints());
-            outMaxp.setMaxStorage(outMaxp.getMaxStorage() + mp.getMaxStorage());
-            outMaxp.setMaxFunctionDefs(outMaxp.getMaxFunctionDefs() + mp.getMaxFunctionDefs());
-            outMaxp.setMaxInstructionDefs(outMaxp.getMaxInstructionDefs() + mp.getMaxInstructionDefs());
-            outMaxp.setMaxStackElements(outMaxp.getMaxStackElements() + mp.getMaxStackElements());
-            outMaxp.setMaxSizeOfInstructions(outMaxp.getMaxSizeOfInstructions() + mp.getMaxSizeOfInstructions());
-            outMaxp.setMaxComponentElements(outMaxp.getMaxComponentElements() + mp.getMaxComponentElements());
-            outMaxp.setMaxComponentDepth(outMaxp.getMaxComponentDepth() + mp.getMaxComponentDepth());
         }
 
         private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping) throws IOException {
@@ -830,17 +814,16 @@ public class PDFBoxAdapter {
             if (font instanceof PDTrueTypeFont) {
                 TrueTypeFont ttfont = ((PDTrueTypeFont) font).getTTFFont();
                 CMAPEncodingEntry[] cmapList = ttfont.getCMAP().getCmaps();
-                CMAPEncodingEntry c = cmapList[0];
-                if (cmapList.length > 1) {
-                    c = cmapList[1];
-                }
-                newCmap.platformId = c.getPlatformId();
-                newCmap.platformEncodingId = c.getPlatformEncodingId();
-                for (int i = 0; i < 256 * 256; i++) {
-                    if (c.getGlyphId(i) != 0) {
-                        newCmap.glyphIdToCharacterCode.put(i, c.getGlyphId(i));
+                for (CMAPEncodingEntry c : cmapList) {
+                    newCmap.platformId = c.getPlatformId();
+                    newCmap.platformEncodingId = c.getPlatformEncodingId();
+                    for (int i = 0; i < 256 * 256; i++) {
+                        if (c.getGlyphId(i) != 0) {
+                            newCmap.glyphIdToCharacterCode.put(i, c.getGlyphId(i));
+                        }
                     }
                 }
+                mergeMaxp(ttfont, mergeTTFonts.maxp);
             }
         }
 
@@ -1140,6 +1123,25 @@ public class PDFBoxAdapter {
             cFont.setXHeight((int)font.getFontDescriptor().getXHeight());
             cFont.setStemV((int)font.getFontDescriptor().getStemV());
         }
+    }
+
+    private void mergeMaxp(TrueTypeFont ttf, MaximumProfileTable outMaxp) {
+        MaximumProfileTable mp = ttf.getMaximumProfile();
+        outMaxp.setVersion(mp.getVersion());
+        outMaxp.setNumGlyphs(outMaxp.getNumGlyphs() + mp.getNumGlyphs());
+        outMaxp.setMaxPoints(outMaxp.getMaxPoints() + mp.getMaxPoints());
+        outMaxp.setMaxContours(outMaxp.getMaxContours() + mp.getMaxContours());
+        outMaxp.setMaxCompositePoints(outMaxp.getMaxCompositePoints() + mp.getMaxCompositePoints());
+        outMaxp.setMaxCompositeContours(outMaxp.getMaxCompositeContours() + mp.getMaxCompositeContours());
+        outMaxp.setMaxZones(outMaxp.getMaxZones() + mp.getMaxZones());
+        outMaxp.setMaxTwilightPoints(outMaxp.getMaxTwilightPoints() + mp.getMaxTwilightPoints());
+        outMaxp.setMaxStorage(outMaxp.getMaxStorage() + mp.getMaxStorage());
+        outMaxp.setMaxFunctionDefs(outMaxp.getMaxFunctionDefs() + mp.getMaxFunctionDefs());
+        outMaxp.setMaxInstructionDefs(outMaxp.getMaxInstructionDefs() + mp.getMaxInstructionDefs());
+        outMaxp.setMaxStackElements(outMaxp.getMaxStackElements() + mp.getMaxStackElements());
+        outMaxp.setMaxSizeOfInstructions(outMaxp.getMaxSizeOfInstructions() + mp.getMaxSizeOfInstructions());
+        outMaxp.setMaxComponentElements(outMaxp.getMaxComponentElements() + mp.getMaxComponentElements());
+        outMaxp.setMaxComponentDepth(outMaxp.getMaxComponentDepth() + mp.getMaxComponentDepth());
     }
 
     public class PDFWriter {

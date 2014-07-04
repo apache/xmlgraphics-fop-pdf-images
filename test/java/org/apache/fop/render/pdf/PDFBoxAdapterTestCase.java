@@ -246,7 +246,7 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(name, "TimesNewRomanPSMT_TrueType");
         Assert.assertEquals(mbfont.getFontName(), "TimesNewRomanPSMT_TrueType");
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
-        Assert.assertEquals(is.length, 34228);
+        Assert.assertEquals(is.length, 34264);
         doc.close();
         doc2.close();
     }

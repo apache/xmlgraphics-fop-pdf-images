@@ -101,16 +101,18 @@ public class MergeType1Fonts extends Type1SubsetFile {
             subByteMap.put(i, subArray.get(i));
         }
         Map<String, byte[]> cs = font.getType1Font().getCharStringsDict();
-        int skipBytes = 4;
-        PostscriptParser.PSElement element = getElement("lenIV", mainSection);
+        int lenIV = 4;
+        PostscriptParser.PSElement element = getElement("/lenIV", mainSection);
         if (element != null && element instanceof PostscriptParser.PSVariable) {
-            PostscriptParser.PSVariable lenIV = (PostscriptParser.PSVariable)element;
-            skipBytes = Integer.parseInt(lenIV.getValue());
+            PostscriptParser.PSVariable lenIVVar = (PostscriptParser.PSVariable)element;
+            lenIV = Integer.parseInt(lenIVVar.getValue());
         }
         for (String e : cs.keySet()) {
             byte[] charStringEntry = getBinaryEntry(charStrings.getBinaryEntries().get("/" + e), decoded);
-            charStringEntry = BinaryCoder.decodeBytes(charStringEntry, 4330, skipBytes);
-            charStringEntry = BinaryCoder.encodeBytes(charStringEntry, 4330, 4);
+            if (lenIV != 4) {
+                charStringEntry = BinaryCoder.decodeBytes(charStringEntry, 4330, lenIV);
+                charStringEntry = BinaryCoder.encodeBytes(charStringEntry, 4330, 4);
+            }
             subsetCharStrings.put("/" + e, charStringEntry);
         }
     }
@@ -216,6 +218,7 @@ public class MergeType1Fonts extends Type1SubsetFile {
         String nd = findVariable(decoded, mainSection, new String[] {"def", "noaccess def"}, "noaccess def");
         String np = findVariable(decoded, mainSection, new String[] {"put", "noaccess put"}, "noaccess put");
         main.write(subrsBeforeStream.toByteArray());
+        writeString("/lenIV 4 def", main);
         writeString("/Subrs " + subByteMap.size() + " array" + eol, main);
         for (Map.Entry<Integer, byte[]> e : subByteMap.entrySet()) {
             byte[] encoded = BinaryCoder.encodeBytes(e.getValue(), 4330, 4);

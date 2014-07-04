@@ -216,6 +216,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         readHorizontalHeader();
         readHorizontalMetrics();
         readIndexToLocation();
+        int sgsize = subsetGlyphs.size();
         if (!cid && subsetGlyphs.size() <= 1) {
             for (int i = 0; i < mtxTab.length; i++) {
                 subsetGlyphs.put(i, i);
@@ -224,7 +225,10 @@ public class MergeTTFonts extends TTFSubSetFile {
         scanGlyphs(fontFile, subsetGlyphs);
         readGlyf(subsetGlyphs, fontFile);
         if (nhmtxDiff == null) {
-            nhmtxDiff = subsetGlyphs.size() - nhmtx;
+            nhmtxDiff = sgsize - nhmtx;
+            if (nhmtxDiff < 0) {
+                nhmtxDiff = 0;
+            }
         }
     }
 
