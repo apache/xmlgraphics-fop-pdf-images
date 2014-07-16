@@ -24,7 +24,9 @@ import org.apache.pdfbox.pdmodel.PDPage;
 /**
  * Common utility functions for PDF access.
  */
-public class PDFUtil {
+public final class PDFUtil {
+
+    private PDFUtil() { }
 
     /**
      * Determines the rotation of a given page and normalizes the returned value to the values
@@ -40,12 +42,12 @@ public class PDFUtil {
             rotation += 360;
         }
         switch (rotation) {
-        case 90:
-        case 180:
-        case 270:
-            return rotation;
-        default:
-            return 0;
+            case 90:
+            case 180:
+            case 270:
+                return rotation;
+            default:
+                return 0;
         }
     }
 

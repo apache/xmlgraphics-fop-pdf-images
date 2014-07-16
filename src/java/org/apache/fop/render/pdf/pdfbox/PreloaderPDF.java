@@ -33,7 +33,6 @@ import javax.xml.transform.Source;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.encryption.BadSecurityHandlerException;
 import org.apache.pdfbox.pdmodel.encryption.DecryptionMaterial;
 import org.apache.pdfbox.pdmodel.encryption.StandardDecryptionMaterial;
 
@@ -57,7 +56,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
     private static final String PDF_HEADER = "%PDF-";
 
     /** static PDDocument cache for faster multi-page processing */
-    private static final Cache.Type CACHE_TYPE =Cache.Type.valueOf(
+    private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
             System.getProperty("fop.pdfbox.preloader-cache", Cache.Type.WEAK.name()).toUpperCase());
 
     private static Map<Object, Cache<URI, PDDocument>> documentCacheMap
@@ -119,13 +118,13 @@ public class PreloaderPDF extends AbstractImagePreloader {
         if (pddoc.isEncrypted()) {
             //Try decrypting with an empty password
             DecryptionMaterial dec = new StandardDecryptionMaterial("");
-            try {
+//            try {
                 pddoc.openProtection(dec);
-            } catch (org.apache.pdfbox.exceptions.CryptographyException e) {
-                notifyCouldNotDecrypt(e);
-            } catch (BadSecurityHandlerException e) {
-                notifyCouldNotDecrypt(e);
-            }
+//            } catch (org.apache.pdfbox.exceptions.CryptographyException e) {
+//                notifyCouldNotDecrypt(e);
+//            } catch (BadSecurityHandlerException e) {
+//                notifyCouldNotDecrypt(e);
+//            }
         }
 
         int pageCount = pddoc.getNumberOfPages();
@@ -137,7 +136,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
         PDPage page = (PDPage)pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
         PDRectangle mediaBox = page.findMediaBox();
         PDRectangle cropBox = page.findCropBox();
-        PDRectangle viewBox = (cropBox != null ? cropBox : mediaBox);
+        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
         int w = Math.round(viewBox.getWidth() * 1000);
         int h = Math.round(viewBox.getHeight() * 1000);
 

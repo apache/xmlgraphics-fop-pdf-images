@@ -15,7 +15,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<project default="all" basedir="." name="fop-pdf-images">
+<project default="all" basedir="." name="fop-pdf-images" xmlns:jacoco="antlib:org.jacoco.ant">
 
   <!-- See build.properties and build-local.properties for overriding build settings. -->
   <!-- build-local.properties is not stored in SVN and overrides values from build.properties -->
@@ -111,16 +111,22 @@
       </classpath>
     </javac>
   </target>
+  
+  <property name="jacoco.report.dir" value="${build.dir}/coverage"/>
+  <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" classpathref="libs-build-classpath"/>
 
   <target name="junit" depends="junit-compile-java" description="Runs PDF Plugin's JUnit basic tests">
     <property name="junit.reports.dir" value="${build.dir}/test-reports"/>
     <mkdir dir="${junit.reports.dir}"/>
-    <junit dir="${basedir}" haltonfailure="yes">
+    
+    <jacoco:coverage destfile="${jacoco.report.dir}/jacoco.exec">
+    <junit dir="${basedir}" haltonfailure="yes" fork="true" forkmode="once">
       <sysproperty key="jawa.awt.headless" value="true"/>
       <formatter type="brief" usefile="false"/>
       <formatter type="plain" usefile="true"/>
       <formatter type="xml" usefile="true"/>
       <classpath>
+        <pathelement location="${coverage.dir}" />
         <path refid="standard-junit-classpath"/>
       </classpath>
       <assertions>
@@ -130,6 +136,27 @@
         <fileset dir="${build.unit.tests.dir}" includes="**/*TestCase.class"/>
       </batchtest>
     </junit>
+    </jacoco:coverage>
+    <jacoco:report>
+      <executiondata>
+        <file file="${jacoco.report.dir}/jacoco.exec"/>
+      </executiondata>
+      <structure name="Apache FOP">
+        <classfiles>
+          <fileset dir="${build.classes.dir}"/>
+        </classfiles>
+        <sourcefiles>
+          <fileset dir="${src.java.dir}"/>
+        </sourcefiles>
+      </structure>
+      <html destdir="${jacoco.report.dir}"/>
+      <xml destfile="${jacoco.report.dir}/report.xml"/>
+      <check>
+          <rule element="PACKAGE">
+              <limit counter="LINE" value="COVEREDRATIO" minimum="0.76"/>
+          </rule>
+      </check>      
+    </jacoco:report>    
   </target>
 
   <!-- =================================================================== -->
@@ -392,4 +419,35 @@
 
   <target name="all" depends="package,junit"/>
 
+  <target name="checkstyle" description="Runs Checkstyle for a code quality report">
+    <taskdef name="checkstyle" classname="com.puppycrawl.tools.checkstyle.CheckStyleTask" classpathref="libs-build-tools-classpath"/>
+    <checkstyle config="checkstyle-5.5.xml" failonviolation="true" maxWarnings="0">
+      <fileset dir="${src.java.dir}" includes="**/*.java"/>
+      <formatter type="plain"/>
+    </checkstyle>
+  </target>
+  
+  <property name="findbugs.lib" value="${findbugs.home.dir}/lib"/>
+  <path id="libs-findbugs">
+    <fileset dir="${findbugs.lib}">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+  <target name="findbugs">
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" classpathref="libs-findbugs"/>
+    <findbugs home="${findbugs.home.dir}" output="text" reportLevel="low" effort="max" jvmargs="-Xmx1024m" warningsProperty="findbugs.warnings">
+      <sourcePath path="${src.java.dir}"/>
+      <class location="${build.classes.dir}"/>
+      <auxClasspath>
+        <path refid="libs-build-classpath"/>
+        <path>
+          <fileset dir="${ant.library.dir}">
+            <include name="ant.jar"/>
+            <include name="ant-launcher.jar"/>
+          </fileset>
+        </path>
+      </auxClasspath>
+    </findbugs>
+    <fail if="findbugs.warnings"/>
+  </target>
 </project>

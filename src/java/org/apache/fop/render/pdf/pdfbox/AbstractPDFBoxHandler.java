@@ -34,6 +34,7 @@ import org.apache.xmlgraphics.image.loader.util.ImageUtil;
 
 import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.events.EventBroadcaster;
+import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
@@ -54,18 +55,17 @@ public abstract class AbstractPDFBoxHandler {
         return Cache.createCache(CACHE_TYPE);
     }
 
-    private static final ValueMaker<Map<Object, Object>> MAP_MAKER
-            = new ValueMaker<Map<Object, Object>>() {
+    private static final ValueMaker<Map<Object, Object>> MAP_MAKER = new ValueMaker<Map<Object, Object>>() {
         public Map<Object, Object> make() throws Exception {
             return new HashMap<Object, Object>();
         }
     };
 
     private static Map<Object, Cache<String, Map<Object, Object>>> objectCacheMap
-            = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
+        = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
-    protected String createStreamForPDF(ImagePDF image,
-            PDFPage targetPage, FOUserAgent userAgent, AffineTransform at, Rectangle pos) throws IOException {
+    protected String createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
+            AffineTransform at, FontInfo fontinfo, Rectangle pos) throws IOException {
 
         EventBroadcaster eventBroadcaster = userAgent.getEventBroadcaster();
         String originalImageUri = image.getInfo().getOriginalURI();
@@ -112,7 +112,7 @@ public abstract class AbstractPDFBoxHandler {
 
         PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache);
         String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri,
-                eventBroadcaster, at, pos);
+                eventBroadcaster, at, fontinfo, pos);
         return stream;
     }
 
