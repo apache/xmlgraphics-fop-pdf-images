@@ -107,6 +107,7 @@ public abstract class AbstractPDFBoxHandler {
         if (targetPage.getPDFResources().getParentResources() == null) {
             PDFResources res = pdfDoc.getFactory().makeResources();
             res.setParentResources(pdfDoc.getResources());
+            res.addContext(targetPage);
             targetPage.put("Resources", res);
         }
 

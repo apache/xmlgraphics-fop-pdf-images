@@ -1215,6 +1215,8 @@ public class PDFBoxAdapter {
                 s.append("<<");
                 readPDFArguments(op, dictArgs);
                 s.append(">>");
+            } else if (c instanceof COSBoolean) {
+                s.append(((COSBoolean) c).getValue());
             } else {
                 throw new IOException(c + " not supported");
             }
@@ -1382,6 +1384,9 @@ public class PDFBoxAdapter {
         PDResources sourcePageResources = page.findResources();
         PDFDictionary pageResources = null;
         PDStream pdStream = page.getContents();
+        if (pdStream == null) {
+            return "";
+        }
         COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSDictionary().getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
         String uniqueName = Integer.toString(key.hashCode());
