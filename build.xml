@@ -153,7 +153,7 @@
       <xml destfile="${jacoco.report.dir}/report.xml"/>
       <check>
           <rule element="PACKAGE">
-              <limit counter="LINE" value="COVEREDRATIO" minimum="0.76"/>
+              <limit counter="LINE" value="COVEREDRATIO" minimum="0.8"/>
           </rule>
       </check>      
     </jacoco:report>    

@@ -20,9 +20,11 @@ package org.apache.fop.render.pdf;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
@@ -30,6 +32,9 @@ import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
 
+import org.apache.fop.pdf.PDFGState;
+import org.apache.fop.render.pdf.pdfbox.ImagePDF;
+import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
 import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
@@ -79,6 +84,7 @@ public class PDFBoxAdapterTestCase {
     private static final String Type1Subset3 = "test/resources/t1subset3.pdf";
     private static final String Type1Subset4 = "test/resources/t1subset4.pdf";
     private static final String ROTATE = "test/resources/rotate.pdf";
+    private static final String SHADING = "test/resources/shading.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
@@ -291,4 +297,23 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
     }
 
+
+    @Test
+    public void testPDFBoxImageHandler() throws Exception {
+        ImageInfo imgi = new ImageInfo("a", "b");
+        PDDocument doc = PDDocument.load(SHADING);
+        ImagePDF img = new ImagePDF(imgi, doc);
+        PDFDocument pdfdoc = new PDFDocument("");
+        pdfpage.setDocument(pdfdoc);
+        PDFGState g = new PDFGState();
+        pdfdoc.assignObjectNumber(g);
+        pdfpage.addGState(g);
+        PDFContentGenerator con = new PDFContentGenerator(pdfdoc, null, null);
+        PDFRenderingContext c = new PDFRenderingContext(null, con, pdfpage, null);
+        new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
+        PDFResources res = c.getPage().getPDFResources();
+        OutputStream bos = new ByteArrayOutputStream();
+        res.output(bos);
+        Assert.assertTrue(bos.toString().contains("/ExtGState << /GS5"));
+    }
 }

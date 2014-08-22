@@ -67,7 +67,10 @@ public abstract class AbstractPDFBoxHandler {
     protected String createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
             AffineTransform at, FontInfo fontinfo, Rectangle pos) throws IOException {
 
-        EventBroadcaster eventBroadcaster = userAgent.getEventBroadcaster();
+        EventBroadcaster eventBroadcaster = null;
+        if (userAgent != null) {
+            eventBroadcaster = userAgent.getEventBroadcaster();
+        }
         String originalImageUri = image.getInfo().getOriginalURI();
         final int selectedPage = ImageUtil.needPageIndexFromURI(originalImageUri);
 
