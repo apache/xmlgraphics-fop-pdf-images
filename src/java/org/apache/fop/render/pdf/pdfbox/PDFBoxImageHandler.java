@@ -43,7 +43,7 @@ import org.apache.fop.render.pdf.PDFRenderingContext;
 public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHandler {
 
     /** logging instance */
-    protected static Log log = LogFactory.getLog(PDFBoxImageHandler.class);
+    protected static final Log log = LogFactory.getLog(PDFBoxImageHandler.class);
 
     private static final ImageFlavor[] FLAVORS = new ImageFlavor[] {
         ImagePDF.PDFBOX_IMAGE
@@ -53,6 +53,7 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
             throws IOException {
         PDFRenderingContext pdfContext = (PDFRenderingContext)context;
         PDFContentGenerator generator = pdfContext.getGenerator();
+        assert image instanceof ImagePDF;
         ImagePDF pdfImage = (ImagePDF)image;
 
         float x = (float)pos.getX() / 1000f;
@@ -98,7 +99,7 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
 
     /** {@inheritDoc} */
     public ImageFlavor[] getSupportedImageFlavors() {
-        return FLAVORS;
+        return FLAVORS.clone();
     }
 
 }

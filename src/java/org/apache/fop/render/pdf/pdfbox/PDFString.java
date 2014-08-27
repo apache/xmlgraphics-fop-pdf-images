@@ -50,7 +50,7 @@ public class PDFString extends PDFObject {
      * @param data the text data as byte array
      */
     public PDFString(byte[] data) {
-        this.binary = data;
+        this.binary = data.clone();
     }
 
     /**
@@ -111,7 +111,10 @@ public class PDFString extends PDFObject {
                 throw new RuntimeException("Incompatible JVM: " + e.getMessage());
             }
         }
-        return this.binary;
+        if (binary == null) {
+            return new byte[0];
+        }
+        return this.binary.clone();
     }
 
     @Override

@@ -36,12 +36,12 @@ public class ImageLoaderFactoryPDF extends AbstractImageLoaderFactory {
 
     /** {@inheritDoc} */
     public String[] getSupportedMIMETypes() {
-        return MIMES;
+        return MIMES.clone();
     }
 
     /** {@inheritDoc} */
     public ImageFlavor[] getSupportedFlavors(String mime) {
-        return FLAVORS;
+        return FLAVORS.clone();
     }
 
     /** {@inheritDoc} */

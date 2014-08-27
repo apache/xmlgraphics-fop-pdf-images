@@ -436,7 +436,7 @@ public class PDFBoxAdapter {
         private Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
         private MergeTTFonts mergeTTFonts = new MergeTTFonts();
         private MergeCFFFonts mergeCFFFonts = new MergeCFFFonts();
-        private Map<String, GlyphData> glyphs = new HashMap<String, GlyphData>();
+//        private Map<String, GlyphData> glyphs = new HashMap<String, GlyphData>();
 
         public FOPPDFMultiByteFont(COSDictionary fontData, String name) throws IOException {
             super(null, EmbeddingMode.SUBSET);
@@ -479,9 +479,9 @@ public class PDFBoxAdapter {
                 c = font.getToUnicodeCMap();
             }
             Map<Integer, String> mapping = getMapping(mainFont, c, glyphData.length);
-            if (glyphData.length > 0 && differentGlyphData(glyphData, mapping)) {
+//            if (glyphData.length > 0 && differentGlyphData(glyphData, mapping)) {
 //                return null;
-            }
+//            }
             Map<Integer, String> gidToGlyph = new TreeMap<Integer, String>(mapping);
             if (mainFont instanceof PDTrueTypeFont) {
                 CMAPEncodingEntry cmap = ttf.getCMAP().getCmaps()[0];
@@ -587,28 +587,28 @@ public class PDFBoxAdapter {
             return mapping;
         }
 
-        private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping) throws IOException {
-            Map<String, Integer> tmpMap = new HashMap<String, Integer>();
-            for (Map.Entry<Integer, String> entry : mapping.entrySet()) {
-                if (!tmpMap.containsKey(entry.getValue())) {
-                    tmpMap.put(entry.getValue(), entry.getKey());
-                }
-            }
-            mapping.clear();
-            for (Map.Entry<String, Integer> entry : tmpMap.entrySet()) {
-                mapping.put(entry.getValue(), entry.getKey());
-            }
-
-            for (Map.Entry<Integer, String> n : mapping.entrySet()) {
-                if (data[n.getKey()] != null) {
-                    if (glyphs.containsKey(n.getValue()) && !glyphs.get(n.getValue()).equals(data[n.getKey()])) {
-                        return true;
-                    }
-                    glyphs.put(n.getValue(), data[n.getKey()]);
-                }
-            }
-            return false;
-        }
+//        private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping) throws IOException {
+//            Map<String, Integer> tmpMap = new HashMap<String, Integer>();
+//            for (Map.Entry<Integer, String> entry : mapping.entrySet()) {
+//                if (!tmpMap.containsKey(entry.getValue())) {
+//                    tmpMap.put(entry.getValue(), entry.getKey());
+//                }
+//            }
+//            mapping.clear();
+//            for (Map.Entry<String, Integer> entry : tmpMap.entrySet()) {
+//                mapping.put(entry.getValue(), entry.getKey());
+//            }
+//
+//            for (Map.Entry<Integer, String> n : mapping.entrySet()) {
+//                if (data[n.getKey()] != null) {
+//                    if (glyphs.containsKey(n.getValue()) && !glyphs.get(n.getValue()).equals(data[n.getKey()])) {
+//                        return true;
+//                    }
+//                    glyphs.put(n.getValue(), data[n.getKey()]);
+//                }
+//            }
+//            return false;
+//        }
 
         private FontFileReader readFontFile(PDFont font) throws IOException {
             PDFontDescriptorDictionary fd = (PDFontDescriptorDictionary) font.getFontDescriptor();

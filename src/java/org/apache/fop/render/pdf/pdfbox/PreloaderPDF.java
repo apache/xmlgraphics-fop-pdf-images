@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collections;
+import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -57,7 +58,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
 
     /** static PDDocument cache for faster multi-page processing */
     private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
-            System.getProperty("fop.pdfbox.preloader-cache", Cache.Type.WEAK.name()).toUpperCase());
+            System.getProperty("fop.pdfbox.preloader-cache", Cache.Type.WEAK.name()).toUpperCase(Locale.ENGLISH));
 
     private static Map<Object, Cache<URI, PDDocument>> documentCacheMap
             = Collections.synchronizedMap(new WeakHashMap<Object, Cache<URI, PDDocument>>());
@@ -102,7 +103,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
 
     private ImageInfo loadPDF(String uri, Source src, ImageContext context) throws IOException,
             ImageException {
-        InputStream in = ImageUtil.needInputStream(src);
+//        InputStream in = ImageUtil.needInputStream(src);
 
         int selectedPage = ImageUtil.needPageIndexFromURI(uri);
 
@@ -166,13 +167,13 @@ public class PreloaderPDF extends AbstractImagePreloader {
         return info;
     }
 
-    private void notifyCouldNotDecrypt(Exception e)
-            throws ImageException {
-        throw new ImageException("Error decrypting PDF: "
-                + e.getMessage()
-                + "\nPlease use an OnLoadInterceptor to provide "
-                + "suitable decryption material (ex. a password).", e);
-    }
+//    private void notifyCouldNotDecrypt(Exception e)
+//            throws ImageException {
+//        throw new ImageException("Error decrypting PDF: "
+//                + e.getMessage()
+//                + "\nPlease use an OnLoadInterceptor to provide "
+//                + "suitable decryption material (ex. a password).", e);
+//    }
 
     private PDDocument getDocument(Object context, URI uri, Source src)
             throws IOException {
@@ -197,7 +198,18 @@ public class PreloaderPDF extends AbstractImagePreloader {
     }
 
     private ValueMaker<PDDocument> createDocumentMaker(final Source src, final URI docURI) {
-        return new ValueMaker<PDDocument>() {
+        return new DocumentMaker(src, docURI);
+    }
+
+    static class DocumentMaker implements ValueMaker<PDDocument> {
+        private Source src;
+        private URI docURI;
+
+        public DocumentMaker(Source src, URI docURI) {
+            this.src = src;
+            this.docURI = docURI;
+        }
+
             public PDDocument make() throws Exception {
                 final InputStream in = ImageUtil.needInputStream(src);
                 try {
@@ -208,5 +220,4 @@ public class PreloaderPDF extends AbstractImagePreloader {
                 }
             }
         };
-    }
 }

@@ -48,6 +48,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
     public Image convert(Image src, Map hints) throws ImageException,
             IOException {
         checkSourceFlavor(src);
+        assert src instanceof ImagePDF;
         ImagePDF imgPDF = (ImagePDF)src;
 
         final int selectedPage = ImageUtil.needPageIndexFromURI(
@@ -119,8 +120,10 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                         at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
                         at.translate(area.getHeight(), 0);
                         at.rotate(-Math.PI * 1.5);
+                            break;
                     default:
                         //no additional transformations necessary
+                            break;
                     }
                 }
 

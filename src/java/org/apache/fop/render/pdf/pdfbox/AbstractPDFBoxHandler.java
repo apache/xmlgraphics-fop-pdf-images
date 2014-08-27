@@ -24,6 +24,7 @@ import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -49,7 +50,7 @@ import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 public abstract class AbstractPDFBoxHandler {
 
     private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
-            System.getProperty("fop.pdfbox.doc-cache", Cache.Type.WEAK.name()).toUpperCase());
+            System.getProperty("fop.pdfbox.doc-cache", Cache.Type.WEAK.name()).toUpperCase(Locale.ENGLISH));
 
     private static Cache<String, Map<Object, Object>> createDocumentCache() {
         return Cache.createCache(CACHE_TYPE);
