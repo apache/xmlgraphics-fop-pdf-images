@@ -36,6 +36,7 @@ import org.apache.xmlgraphics.image.loader.util.ImageUtil;
 import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.FontInfo;
+import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
@@ -66,8 +67,8 @@ public abstract class AbstractPDFBoxHandler {
         = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
     protected String createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
-            AffineTransform at, FontInfo fontinfo, Rectangle pos) throws IOException {
-
+            AffineTransform at, FontInfo fontinfo, Rectangle pos, Map<Integer, PDFArray> pageNumbers)
+        throws IOException {
         EventBroadcaster eventBroadcaster = null;
         if (userAgent != null) {
             eventBroadcaster = userAgent.getEventBroadcaster();
@@ -115,9 +116,8 @@ public abstract class AbstractPDFBoxHandler {
             targetPage.put("Resources", res);
         }
 
-        PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache);
-        String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri,
-                eventBroadcaster, at, fontinfo, pos);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache, pageNumbers);
+        String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri, at, fontinfo, pos);
         return stream;
     }
 

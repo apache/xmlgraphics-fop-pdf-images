@@ -25,11 +25,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,6 +41,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
@@ -92,7 +95,6 @@ import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.util.operator.PDFOperator;
 
-import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.CIDFontType;
 import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.EmbeddingMode;
@@ -127,7 +129,7 @@ public class PDFBoxAdapter {
     /** logging instance */
     protected static final Log log = LogFactory.getLog(PDFBoxAdapter.class);
 
-    private static final Set FILTER_FILTER = new java.util.HashSet(
+    private static final Set FILTER_FILTER = new HashSet(
             Arrays.asList(new String[] {"Filter", "DecodeParms"}));
     private static final Pattern SUBSET_PATTERN = Pattern.compile("[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]\\+.+");
 
@@ -139,16 +141,19 @@ public class PDFBoxAdapter {
     private final Map<COSDictionary, PDSimpleFont> fontMap = new HashMap<COSDictionary, PDSimpleFont>();
     private Map<COSName, String> newXObj = new HashMap<COSName, String>();
     private Collection<String> parentFonts;
+    private Map<Integer, PDFArray> pageNumbers;
 
     /**
      * Creates a new PDFBoxAdapter.
      * @param targetPage The target FOP PDF page object
      * @param objectCache the object cache for reusing objects shared by multiple pages.
+     * @param pageNumbers references to page object numbers
      */
-    public PDFBoxAdapter(PDFPage targetPage, Map objectCache) {
+    public PDFBoxAdapter(PDFPage targetPage, Map objectCache, Map<Integer, PDFArray> pageNumbers) {
         this.targetPage = targetPage;
         this.pdfDoc = this.targetPage.getDocument();
         this.clonedVersion = objectCache;
+        this.pageNumbers = pageNumbers;
     }
 
     private Object cloneForNewDocument(Object base) throws IOException {
@@ -1370,7 +1375,6 @@ public class PDFBoxAdapter {
      * @param sourceDoc the source PDF the given page to be copied belongs to
      * @param page the page to transform into a stream
      * @param key value to use as key for the stream
-     * @param eventBroadcaster events
      * @param atdoc adjustment for stream
      * @param fontinfo fonts
      * @param pos rectangle
@@ -1378,11 +1382,14 @@ public class PDFBoxAdapter {
      * @throws IOException if an I/O error occurs
      */
     public String createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
-            EventBroadcaster eventBroadcaster, AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
+                                             AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
         throws IOException {
-        handleAcroForm(sourceDoc, page, eventBroadcaster, atdoc);
+        handleAnnotations(sourceDoc, page, atdoc);
+        if (pageNumbers.containsKey(targetPage.getPageIndex())) {
+            pageNumbers.get(targetPage.getPageIndex()).set(0, targetPage.makeReference());
+        }
         PDResources sourcePageResources = page.findResources();
-        PDFDictionary pageResources = null;
+        PDFDictionary pageResources;
         PDStream pdStream = page.getContents();
         if (pdStream == null) {
             return "";
@@ -1500,7 +1507,7 @@ public class PDFBoxAdapter {
                 //no additional transformations necessary
                 break;
         }
-        StringBuffer boxStr = new StringBuffer();
+        StringBuilder boxStr = new StringBuilder();
         boxStr.append(0).append(' ').append(0).append(' ');
         boxStr.append(PDFNumber.doubleOut(mediaBox.getWidth())).append(' ');
         boxStr.append(PDFNumber.doubleOut(mediaBox.getHeight())).append(" re W n\n");
@@ -1643,8 +1650,7 @@ public class PDFBoxAdapter {
          */
     }
 
-    private void handleAcroForm(PDDocument sourceDoc, PDPage page,
-            EventBroadcaster eventBroadcaster, AffineTransform at) throws IOException {
+    private void handleAnnotations(PDDocument sourceDoc, PDPage page, AffineTransform at) throws IOException {
         PDDocumentCatalog srcCatalog = sourceDoc.getDocumentCatalog();
         PDAcroForm srcAcroForm = srcCatalog.getAcroForm();
         List pageAnnotations = page.getAnnotations();
@@ -1652,67 +1658,38 @@ public class PDFBoxAdapter {
             return;
         }
 
-        PDRectangle mediaBox = page.findMediaBox();
-        PDRectangle cropBox = page.findCropBox();
-        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
-
-        for (Object obj : pageAnnotations) {
-            PDAnnotation annot = (PDAnnotation)obj;
-            PDRectangle rect = annot.getRectangle();
-            rect.move((float)(at.getTranslateX() - viewBox.getLowerLeftX()),
-                    (float)at.getTranslateY() - viewBox.getLowerLeftY());
-        }
+        moveAnnotations(page, pageAnnotations, at);
 
         //Pseudo-cache the target page in place of the original source page.
         //This essentially replaces the original page reference with the target page.
         COSObject cosPage = null;
         if (page.getCOSObject() instanceof COSObject) {
-            cosPage = (COSObject)page.getCOSObject();
+            cosPage = (COSObject) page.getCOSObject();
+            cacheClonedObject(cosPage, this.targetPage);
         } else {
             PDPageNode pageNode = page.getParent();
-
-            COSArray kids = (COSArray)pageNode.getDictionary().getDictionaryObject(COSName.KIDS);
-            Iterator iter = kids.iterator();
-            while (iter.hasNext()) {
+            COSArray kids = (COSArray) pageNode.getDictionary().getDictionaryObject(COSName.KIDS);
+            for (int i = 0; i < kids.size(); i++) {
                 //Hopefully safe to cast, as kids need to be indirect objects
-                COSObject kid = (COSObject)iter.next();
+                COSObject kid = (COSObject) kids.get(i);
+                if (!pageNumbers.containsKey(i)) {
+                    PDFArray a = new PDFArray();
+                    a.add(null);
+                    pdfDoc.assignObjectNumber(a);
+                    pdfDoc.addTrailerObject(a);
+                    pageNumbers.put(i, a);
+                }
+                cacheClonedObject(kid, pageNumbers.get(i));
                 if (kid.getObject() == page.getCOSObject()) {
                     cosPage = kid;
-                    break;
                 }
             }
             if (cosPage == null) {
                 throw new IOException("Illegal PDF. Page not part of parent page node.");
             }
         }
-        cacheClonedObject(cosPage, this.targetPage);
 
-        COSArray annots = (COSArray) page.getCOSDictionary().getDictionaryObject(COSName.ANNOTS);
-        Set<COSObject> fields = Collections.emptySet();
-        if (annots != null) {
-            fields = new HashSet();
-            Iterator iter = annots.iterator();
-            while (iter.hasNext()) {
-                COSObject annot = (COSObject) iter.next();
-                COSObject fieldObject = annot;
-                COSDictionary field = (COSDictionary) fieldObject.getObject();
-                if ("Widget".equals(field.getNameAsString(COSName.SUBTYPE))) {
-                    COSObject parent;
-                    while ((parent = (COSObject) field.getItem(COSName.PARENT)) != null) {
-                        fieldObject = parent;
-                        field = (COSDictionary) fieldObject.getObject();
-                    }
-                    fields.add(fieldObject);
-                    Collection<COSName> exclude = new ArrayList<COSName>();
-                    exclude.add(COSName.P);
-                    if (((COSDictionary)annot.getObject()).getItem(COSName.getPDFName("StructParent")) != null) {
-                        exclude.add(COSName.PARENT);
-                    }
-                    PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot, annot, exclude);
-                    targetPage.addAnnotation(clonedAnnot);
-                }
-            }
-        }
+        Set<COSObject> fields = copyAnnotations(page);
 
         boolean formAlreadyCopied = getCachedClone(srcAcroForm) != null;
         PDFRoot catalog = this.pdfDoc.getRoot();
@@ -1744,6 +1721,91 @@ public class PDFBoxAdapter {
         for (COSObject field : fields) {
             PDFDictionary clone = (PDFDictionary) cloneForNewDocument(field, field, Arrays.asList(COSName.KIDS));
             clonedFields.add(clone);
+        }
+    }
+
+    private void updateAnnotationLink(PDFDictionary clonedAnnot) {
+        PDFDictionary a = (PDFDictionary) clonedAnnot.get("A");
+        if (a != null) {
+            PDFArray oldarray = (PDFArray) a.get("D");
+            if (oldarray != null) {
+                PDFArray newarray = (PDFArray) oldarray.get(0);
+                if (newarray != null) {
+                    for (int i = 1; i < oldarray.length(); i++) {
+                        newarray.add(oldarray.get(i));
+                    }
+                    a.put("D", oldarray.get(0));
+                }
+            }
+        }
+    }
+
+    private Set<COSObject> copyAnnotations(PDPage page) throws IOException {
+        COSArray annots = (COSArray) page.getCOSDictionary().getDictionaryObject(COSName.ANNOTS);
+        Set<COSObject> fields = Collections.emptySet();
+        if (annots != null) {
+            fields = new TreeSet<COSObject>(new CompareFields());
+            for (Object annot1 : annots) {
+                Collection<COSName> exclude = new ArrayList<COSName>();
+                exclude.add(COSName.P);
+                if (annot1 instanceof COSObject) {
+                    COSObject annot = (COSObject) annot1;
+                    COSObject fieldObject = annot;
+                    COSDictionary field = (COSDictionary) fieldObject.getObject();
+                    COSObject parent;
+                    while ((parent = (COSObject) field.getItem(COSName.PARENT)) != null) {
+                        fieldObject = parent;
+                        field = (COSDictionary) fieldObject.getObject();
+                    }
+                    fields.add(fieldObject);
+
+                    if (((COSDictionary) annot.getObject()).getItem(COSName.getPDFName("StructParent")) != null) {
+                        exclude.add(COSName.PARENT);
+                    }
+                }
+
+                PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot1, annot1, exclude);
+                if (clonedAnnot instanceof PDFDictionary) {
+                    clonedAnnot.setParent(targetPage);
+                    updateAnnotationLink((PDFDictionary) clonedAnnot);
+                }
+                targetPage.addAnnotation(clonedAnnot);
+            }
+        }
+        return fields;
+    }
+
+    private void moveAnnotations(PDPage page, List pageAnnotations, AffineTransform at) {
+        PDRectangle mediaBox = page.findMediaBox();
+        PDRectangle cropBox = page.findCropBox();
+        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
+        for (Object obj : pageAnnotations) {
+            PDAnnotation annot = (PDAnnotation)obj;
+            PDRectangle rect = annot.getRectangle();
+            float translateX = (float) (at.getTranslateX() - viewBox.getLowerLeftX());
+            float translateY = (float) (at.getTranslateY() - viewBox.getLowerLeftY());
+            if (rect != null) {
+                rect.move(translateX, translateY);
+                annot.setRectangle(rect);
+            }
+            COSArray vertices = (COSArray) annot.getDictionary().getDictionaryObject("Vertices");
+            if (vertices != null) {
+                Iterator iter = vertices.iterator();
+                while (iter.hasNext()) {
+                    COSFloat x = (COSFloat) iter.next();
+                    COSFloat y = (COSFloat) iter.next();
+                    x.setValue(x.floatValue() + translateX);
+                    y.setValue(y.floatValue() + translateY);
+                }
+            }
+        }
+    }
+
+    static class CompareFields implements Comparator<COSObject>, Serializable {
+        private static final long serialVersionUID = -6081505461660440801L;
+
+        public int compare(COSObject o1, COSObject o2) {
+            return o1.getObjectNumber().intValue() - o2.getObjectNumber().intValue();
         }
     }
 }

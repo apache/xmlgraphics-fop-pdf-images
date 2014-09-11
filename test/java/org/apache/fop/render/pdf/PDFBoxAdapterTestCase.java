@@ -25,13 +25,17 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
 
+import org.apache.fop.pdf.PDFAnnotList;
+import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
@@ -85,12 +89,14 @@ public class PDFBoxAdapterTestCase {
     private static final String Type1Subset4 = "test/resources/t1subset4.pdf";
     private static final String ROTATE = "test/resources/rotate.pdf";
     private static final String SHADING = "test/resources/shading.pdf";
+    private static final String LINK = "test/resources/link.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
         doc.setMergeFontsEnabled(true);
         pdfpage.setDocument(doc);
-        return new PDFBoxAdapter(pdfpage, new HashMap());
+        pdfpage.setObjectNumber(1);
+        return new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
     }
 
     @Test
@@ -152,7 +158,7 @@ public class PDFBoxAdapterTestCase {
         PDDocument doc = PDDocument.load(pdf);
         PDPage page = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
         AffineTransform at = new AffineTransform();
-        String c = getPDFBoxAdapter().createStreamFromPDFBoxPage(doc, page, pdf, null, at, fi, new Rectangle());
+        String c = getPDFBoxAdapter().createStreamFromPDFBoxPage(doc, page, pdf, at, fi, new Rectangle());
 //        PDResources sourcePageResources = page.findResources();
 //        COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSDictionary().getDictionaryObject(COSName.FONT);
 //        PDFBoxAdapter.PDFWriter w = adapter. new MergeFontsPDFWriter(fonts, fi, "", new ArrayList<COSName>());
@@ -277,16 +283,36 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testStream() throws Exception {
         pdfpage.setDocument(new PDFDocument(""));
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
         PDDocument doc = PDDocument.load(ROTATE);
         PDPage page = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", null, at, null, r);
+        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
         Assert.assertEquals(at, new AffineTransform(-0.0, 1.0000000554888686, 1.0000000554888686, 0.0, 0.0,
                 -2.0742416381835938E-5));
         Assert.assertTrue(stream.contains("/GS0106079 gs"));
         Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
+        doc.close();
+    }
+
+    @Test
+    public void testLink() throws Exception {
+        pdfpage.setObjectNumber(1);
+        PDFDocument pdfdoc = new PDFDocument("");
+        pdfpage.setDocument(pdfdoc);
+        Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
+        PDDocument doc = PDDocument.load(LINK);
+        PDPage page = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        Assert.assertTrue(stream.contains("/Link <</MCID 5 >>BDC"));
+        Assert.assertTrue(pageNumbers.size() == 4);
+        PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
+        Assert.assertEquals(annots.toPDFString(), "[\n9 0 R\n12 0 R\n]");
+//        pdfdoc.output(System.out);
         doc.close();
     }
 
@@ -310,6 +336,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.addGState(g);
         PDFContentGenerator con = new PDFContentGenerator(pdfdoc, null, null);
         PDFRenderingContext c = new PDFRenderingContext(null, con, pdfpage, null);
+        c.setPageNumbers(new HashMap<Integer, PDFArray>());
         new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
         PDFResources res = c.getPage().getPDFResources();
         OutputStream bos = new ByteArrayOutputStream();
