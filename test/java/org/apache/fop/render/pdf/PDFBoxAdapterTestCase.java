@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +36,8 @@ import javax.imageio.ImageIO;
 import org.apache.fop.pdf.PDFAnnotList;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFGState;
+import org.apache.fop.render.pdf.pdfbox.FOPPDFMultiByteFont;
+import org.apache.fop.render.pdf.pdfbox.FOPPDFSingleByteFont;
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
 import org.junit.Test;
@@ -177,7 +178,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testCFF() throws Exception {
         PDDocument doc = PDDocument.load(CFF1);
-        PDFBoxAdapter.FOPPDFSingleByteFont sbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "R11"),
+        FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "R11"),
                 "MyriadPro-Regular_Type1f0encstdcs");
 
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("bracketright"));
@@ -212,7 +213,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testCFF2() throws Exception {
         PDDocument doc = PDDocument.load(CFF3);
-        PDFBoxAdapter.FOPPDFSingleByteFont sbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "T1_0"),
+        FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "T1_0"),
                 "Myriad_Pro_Type1f0encf1cs");
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("uni004E"));
         Assert.assertEquals(sbfont.getFontName(), "Myriad_Pro_Type1f0encf1cs");
@@ -230,7 +231,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testTTCID() throws Exception {
         PDDocument doc = PDDocument.load(TTCID1);
-        PDFBoxAdapter.FOPPDFMultiByteFont mbfont = getPDFBoxAdapter().new FOPPDFMultiByteFont(getFont(doc, "C2_0"),
+        FOPPDFMultiByteFont mbfont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"),
                 "ArialMT_Type0");
         mbfont.addFont(getFont(doc, "C2_0"));
         Assert.assertEquals(mbfont.mapChar('t'), 67);
@@ -248,7 +249,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testTTSubset() throws Exception {
         PDDocument doc = PDDocument.load(TTSubset1);
-        PDFBoxAdapter.FOPPDFSingleByteFont mbfont = getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "R9"),
+        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "R9"),
                 "TimesNewRomanPSMT_TrueType");
         mbfont.addFont(getFont(doc, "R9"));
         Assert.assertEquals(mbfont.mapChar('t'), 116);
@@ -266,8 +267,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testType1Subset() throws Exception {
         PDDocument doc = PDDocument.load(Type1Subset1);
-        PDFBoxAdapter.FOPPDFSingleByteFont mbfont =
-                getPDFBoxAdapter().new FOPPDFSingleByteFont(getFont(doc, "F15"), "");
+        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "F15"), "");
         mbfont.addFont(getFont(doc, "F15"));
         PDDocument doc2 = PDDocument.load(Type1Subset2);
         mbfont.addFont(getFont(doc2, "F15"));

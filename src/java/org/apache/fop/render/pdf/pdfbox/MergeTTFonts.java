@@ -261,7 +261,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         }
     }
 
-    public void writeFont(PDFBoxAdapter.Cmap cmap) throws IOException {
+    public void writeFont(Cmap cmap) throws IOException {
         output = new byte[size * 2];
         createDirectory();     // Create the TrueType header and directory
         int sgsize = added.size();
@@ -334,7 +334,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         realSize += currentPos - startPos;
     }
 
-    private void writeCMAP(PDFBoxAdapter.Cmap cmap) {
+    private void writeCMAP(Cmap cmap) {
         int checksum = currentPos;
         pad4();
         int cmapPos = currentPos;
@@ -415,5 +415,11 @@ public class MergeTTFonts extends TTFSubSetFile {
             origIndexes[subsetIndex] = origIndex;
         }
         return origIndexes;
+    }
+
+    public static class Cmap {
+        int platformId;
+        int platformEncodingId;
+        Map<Integer, Integer> glyphIdToCharacterCode = new TreeMap<Integer, Integer>();
     }
 }
