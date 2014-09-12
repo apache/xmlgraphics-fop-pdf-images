@@ -1725,16 +1725,19 @@ public class PDFBoxAdapter {
     }
 
     private void updateAnnotationLink(PDFDictionary clonedAnnot) {
-        PDFDictionary a = (PDFDictionary) clonedAnnot.get("A");
-        if (a != null) {
-            PDFArray oldarray = (PDFArray) a.get("D");
-            if (oldarray != null) {
-                PDFArray newarray = (PDFArray) oldarray.get(0);
-                if (newarray != null) {
+        Object a = clonedAnnot.get("A");
+        if (a instanceof PDFDictionary) {
+            PDFDictionary annot = (PDFDictionary) a;
+            Object oldarrayObj = annot.get("D");
+            if (oldarrayObj instanceof PDFArray) {
+                PDFArray oldarray = (PDFArray) oldarrayObj;
+                Object newarrayObj = oldarray.get(0);
+                if (newarrayObj instanceof PDFArray) {
+                    PDFArray newarray = (PDFArray) newarrayObj;
                     for (int i = 1; i < oldarray.length(); i++) {
                         newarray.add(oldarray.get(i));
                     }
-                    a.put("D", oldarray.get(0));
+                    annot.put("D", oldarray.get(0));
                 }
             }
         }
