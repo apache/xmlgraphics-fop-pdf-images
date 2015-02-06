@@ -42,6 +42,9 @@ import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
 import org.junit.Test;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
@@ -57,6 +60,7 @@ import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSource;
 import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 
+import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.FontType;
@@ -312,7 +316,6 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(pageNumbers.size() == 4);
         PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
         Assert.assertEquals(annots.toPDFString(), "[\n9 0 R\n12 0 R\n]");
-//        pdfdoc.output(System.out);
         doc.close();
     }
 
@@ -335,7 +338,9 @@ public class PDFBoxAdapterTestCase {
         pdfdoc.assignObjectNumber(g);
         pdfpage.addGState(g);
         PDFContentGenerator con = new PDFContentGenerator(pdfdoc, null, null);
-        PDFRenderingContext c = new PDFRenderingContext(null, con, pdfpage, null);
+        FOUserAgent mockedAgent = mock(FOUserAgent.class);
+        when(mockedAgent.isAccessibilityEnabled()).thenReturn(false);
+        PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, pdfpage, null);
         c.setPageNumbers(new HashMap<Integer, PDFArray>());
         new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
         PDFResources res = c.getPage().getPDFResources();

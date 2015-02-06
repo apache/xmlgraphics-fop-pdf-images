@@ -68,7 +68,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
     private Collection<String> parentFonts;
 
     public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, String key, List<COSName> resourceNames) {
-        super(key, resourceNames);
+        super(key, resourceNames, 0);
         this.fonts = fonts;
         this.fontInfo = fontInfo;
     }

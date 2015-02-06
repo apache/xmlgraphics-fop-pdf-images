@@ -70,7 +70,9 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         }
         FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
         String stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
-                pageAdjust, fontinfo, pos, pdfContext.getPageNumbers());
+                pageAdjust, fontinfo, pos, pdfContext.getPageNumbers(),
+                pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem());
+
         if (stream == null) {
             return;
         }

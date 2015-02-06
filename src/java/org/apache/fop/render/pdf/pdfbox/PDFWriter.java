@@ -40,10 +40,12 @@ public class PDFWriter {
     protected StringBuilder s = new StringBuilder();
     private String key;
     private List<COSName> resourceNames;
+    private int currentMCID;
 
-    public PDFWriter(String key, List<COSName> resourceNames) {
+    public PDFWriter(String key, List<COSName> resourceNames, int currentMCID) {
         this.key = key;
         this.resourceNames = resourceNames;
+        this.currentMCID = currentMCID;
     }
 
     public String writeText(PDStream pdStream) throws IOException {
@@ -100,9 +102,20 @@ public class PDFWriter {
             s.append("] ");
         } else if (c instanceof COSDictionary) {
             Collection<COSBase> dictArgs = new ArrayList<COSBase>();
-            for (Map.Entry<COSName, COSBase> cn : ((COSDictionary)c).entrySet()) {
-                dictArgs.add(cn.getKey());
-                dictArgs.add(cn.getValue());
+            if (currentMCID != 0 && op.getOperation().equals("BDC")) {
+                for (Map.Entry<COSName, COSBase> cn : ((COSDictionary)c).entrySet()) {
+                    if (cn.getKey().getName().equals("MCID")) {
+                        updateMCID(cn, dictArgs);
+                    } else {
+                        dictArgs.add(cn.getKey());
+                        dictArgs.add(cn.getValue());
+                    }
+                }
+            } else {
+                for (Map.Entry<COSName, COSBase> cn : ((COSDictionary)c).entrySet()) {
+                    dictArgs.add(cn.getKey());
+                    dictArgs.add(cn.getValue());
+                }
             }
             s.append("<<");
             readPDFArguments(op, dictArgs);
@@ -114,9 +127,21 @@ public class PDFWriter {
         }
     }
 
+    private void updateMCID(Map.Entry<COSName, COSBase> cn, Collection<COSBase> dictArgs) {
+        COSBase cosMCID = cn.getValue();
+        assert cosMCID instanceof COSInteger;
+        COSInteger mcid = (COSInteger) cosMCID;
+        COSInteger updatedID = COSInteger.get(mcid.intValue() + currentMCID);
+        dictArgs.add(cn.getKey());
+        dictArgs.add(updatedID);
+    }
+
     protected void addKey(COSName cn) {
         if (resourceNames.contains(cn)) {
             s.append(key);
         }
+    }
+    protected int getCurrentMCID() {
+        return currentMCID;
     }
 }
