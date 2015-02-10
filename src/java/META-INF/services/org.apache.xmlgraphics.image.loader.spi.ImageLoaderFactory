@@ -1,1 +1,2 @@
 org.apache.fop.render.pdf.pdfbox.ImageLoaderFactoryPDF
+org.apache.fop.render.pdf.pdfbox.ImageLoaderFactoryImageRawData

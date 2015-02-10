@@ -49,8 +49,8 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         ImagePDF.PDFBOX_IMAGE
     };
 
-    public void handleImage(RenderingContext context, Image image, Rectangle pos)
-            throws IOException {
+    public void handleImage(RenderingContext context, Image image, Rectangle pos) throws IOException {
+        assert context instanceof PDFRenderingContext;
         PDFRenderingContext pdfContext = (PDFRenderingContext)context;
         PDFContentGenerator generator = pdfContext.getGenerator();
         assert image instanceof ImagePDF;

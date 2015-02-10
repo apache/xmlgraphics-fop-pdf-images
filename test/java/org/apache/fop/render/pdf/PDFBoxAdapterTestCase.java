@@ -20,11 +20,16 @@ package org.apache.fop.render.pdf;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.DataBufferInt;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,15 +37,13 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.imageio.ImageIO;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 
-import org.apache.fop.pdf.PDFAnnotList;
-import org.apache.fop.pdf.PDFArray;
-import org.apache.fop.pdf.PDFGState;
-import org.apache.fop.render.pdf.pdfbox.FOPPDFMultiByteFont;
-import org.apache.fop.render.pdf.pdfbox.FOPPDFSingleByteFont;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
-import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
 import org.junit.Test;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
@@ -53,20 +56,40 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 
+import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSource;
 import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
+import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
+import org.apache.xmlgraphics.image.loader.impl.ImageRendered;
+import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
+import org.apache.xmlgraphics.java2d.GraphicContext;
+import org.apache.xmlgraphics.ps.PSGenerator;
 
+import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.FontType;
 import org.apache.fop.fonts.MultiByteFont;
 import org.apache.fop.fonts.Typeface;
+import org.apache.fop.pdf.PDFAnnotList;
+import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
+import org.apache.fop.render.pdf.pdfbox.FOPPDFMultiByteFont;
+import org.apache.fop.render.pdf.pdfbox.FOPPDFSingleByteFont;
+import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
+import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
+import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
+import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
+import org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData;
 import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
+import org.apache.fop.render.ps.PSDocumentHandler;
+import org.apache.fop.render.ps.PSImageFormResource;
+import org.apache.fop.render.ps.PSRenderingUtil;
 
 import junit.framework.Assert;
 
@@ -91,6 +114,7 @@ public class PDFBoxAdapterTestCase {
     private static final String ROTATE = "test/resources/rotate.pdf";
     private static final String SHADING = "test/resources/shading.pdf";
     private static final String LINK = "test/resources/link.pdf";
+    private static final String IMAGE = "test/resources/image.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
@@ -323,6 +347,69 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
     }
 
+    @Test
+    public void testPSPDFGraphics2D() throws Exception {
+        ByteArrayOutputStream stream = pdfToPS(IMAGE);
+        Assert.assertTrue(stream.toString("UTF-8"),
+                stream.toString("UTF-8").contains("%%IncludeResource: form FOPForm:0\nFOPForm:0 execform"));
+    }
+
+    private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
+        ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
+        ImageInfo imgi = new ImageInfo("a", "b");
+        PDDocument doc = PDDocument.load(pdf);
+        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
+        GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        PSPDFGraphics2D g2d = (PSPDFGraphics2D) g.getGraphics(true, new FOPPSGeneratorImpl(stream));
+        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+        GraphicContext gc = new GraphicContext();
+        g2d.setGraphicContext(gc);
+        ig.getGraphics2DImagePainter().paint(g2d, rect);
+        doc.close();
+        return stream;
+    }
+
+    @Test
+    public void testPreloaderImageRawData() throws IOException, ImageException {
+        PreloaderImageRawData p = new PreloaderImageRawData();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        dos.writeInt(1);
+        dos.writeInt(1);
+        dos.writeInt(1);
+        InputStream is = new ByteArrayInputStream(bos.toByteArray());
+        ImageSource src = new ImageSource(new MemoryCacheImageInputStream(is), "", true);
+        ImageInfo img = p.preloadImage(DataBufferInt.class.getName(), src, new DefaultImageContext());
+        Assert.assertTrue(img.getOriginalImage() instanceof ImageRendered);
+    }
+
+    static class FOPPSGeneratorImpl extends PSGenerator implements PSDocumentHandler.FOPPSGenerator {
+        public FOPPSGeneratorImpl(OutputStream out) {
+            super(out);
+        }
+
+        public PSDocumentHandler getHandler() {
+            PSDocumentHandler handler = mock(PSDocumentHandler.class);
+            PSRenderingUtil util = mock(PSRenderingUtil.class);
+            when(util.isOptimizeResources()).thenReturn(true);
+            when(handler.getPSUtil()).thenReturn(util);
+            FOUserAgent mockedAgent = mock(FOUserAgent.class);
+            when(handler.getUserAgent()).thenReturn(mockedAgent);
+            when(mockedAgent.getTargetResolution()).thenReturn(72f);
+            when(handler.getFormForImage(any(String.class))).thenReturn(new PSImageFormResource(0, ""));
+            return handler;
+        }
+
+        public BufferedOutputStream getTempStream(URI uri) throws IOException {
+            return new BufferedOutputStream(new ByteArrayOutputStream());
+        }
+
+        public Map<Integer, URI> getImages() {
+            return new HashMap<Integer, URI>();
+        }
+    }
 
     @Test
     public void testPDFBoxImageHandler() throws Exception {

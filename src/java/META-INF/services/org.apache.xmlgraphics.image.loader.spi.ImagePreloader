@@ -1,1 +1,2 @@
 org.apache.fop.render.pdf.pdfbox.PreloaderPDF
+org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData

@@ -37,7 +37,9 @@ import org.apache.xmlgraphics.image.loader.ImageFlavor;
 import org.apache.xmlgraphics.image.loader.impl.AbstractImageConverter;
 import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
+import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.Graphics2DImagePainter;
+import org.apache.xmlgraphics.ps.PSGenerator;
 
 /**
  * Image converter implementation to convert PDF pages into Java2D images.
@@ -80,7 +82,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         return 1000; //Use only if no native embedding is possible
     }
 
-    private static class Graphics2DImagePainterPDF implements Graphics2DImagePainter {
+    private static class Graphics2DImagePainterPDF implements GeneralGraphics2DImagePainter {
 
         private final PDPage page;
 
@@ -140,6 +142,10 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
             }
         }
 
+        public Graphics2D getGraphics(boolean textAsShapes, PSGenerator gen) {
+            PSPDFGraphics2D graphics = new PSPDFGraphics2D(textAsShapes, gen);
+            return graphics;
+        }
     }
 
 }
