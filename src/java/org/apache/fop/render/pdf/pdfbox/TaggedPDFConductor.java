@@ -36,7 +36,6 @@ import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
 public class TaggedPDFConductor {
 
     private PDPage srcPage;
-    private PDFDocument pdfDoc;
     private PDFPage targetPage;
     private DocumentRootModifier rootMod;
     private StructureTreeMerger merger;
@@ -46,7 +45,7 @@ public class TaggedPDFConductor {
                               PDFBoxAdapter adapter) {
         this.srcPage = srcPage;
         this.targetPage = adapter.getTargetPage();
-        this.pdfDoc = targetPage.getDocument();
+        PDFDocument pdfDoc = targetPage.getDocument();
         this.rootMod = new DocumentRootModifier(adapter, pdfDoc);
         merger = new StructureTreeMerger(currentSessionElem, logicalStructHandler, adapter, srcPage);
     }
@@ -78,6 +77,7 @@ public class TaggedPDFConductor {
             merger.currentSessionElem.put(COSName.PG.getName(), targetPage.makeReference());
         } else {
             merger.currentSessionElem.put("S", new PDFName("Div"));
+            merger.currentSessionElem.remove("Alt");
         }
     }
     private boolean isInputPDFTagged(PDDocument srcDoc) {

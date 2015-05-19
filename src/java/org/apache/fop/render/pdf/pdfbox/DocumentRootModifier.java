@@ -37,7 +37,7 @@ public class DocumentRootModifier {
 
     public void structTreeRootEntriesToCopy(COSDictionary structRootDict) throws IOException {
         checkForMap(structRootDict, COSName.ROLE_MAP.getName());
-        checkForMap(structRootDict, "CLASS_MAP");
+        checkForMap(structRootDict, "ClassMap");
     }
 
     private void checkForMap(COSDictionary structRootDict, String mapName) throws IOException {

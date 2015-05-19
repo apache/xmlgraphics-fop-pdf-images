@@ -47,8 +47,7 @@ public class PageParentTreeFinder {
         }
         if (position != -1) {
             PDNumberTreeNode srcNumberTreeNode = srcDoc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
-            COSArray parentTreeKids = traverseParentTree(srcNumberTreeNode.getCOSDictionary(), position);
-            return removeNonCOSObjects(parentTreeKids);
+            return traverseParentTree(srcNumberTreeNode.getCOSDictionary(), position);
         }
         return new COSArray();
     }
@@ -105,7 +104,6 @@ public class PageParentTreeFinder {
                         COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
                         pageParentTree = (COSArray) nums.getObject(((position - lowerLimit) * 2) + 1);
                         numList.add(pageParentTree);
-                        return;
                     }
                 } else {
                     COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
@@ -135,15 +133,5 @@ public class PageParentTreeFinder {
             }
         }
         return new COSArray();
-    }
-    private COSArray removeNonCOSObjects(COSArray pageParentTreeArray) {
-        COSArray objectList = new COSArray();
-        for (COSBase entry : pageParentTreeArray) {
-            if (entry instanceof COSObject) {
-                COSObject entryObj = (COSObject)entry;
-                objectList.add(entryObj);
-            }
-        }
-        return objectList;
     }
 }

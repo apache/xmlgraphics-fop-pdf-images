@@ -31,9 +31,11 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSNull;
 import org.apache.pdfbox.cos.COSObject;
-
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.documentinterchange.taggedpdf.StandardStructureTypes;
+
 
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
@@ -42,6 +44,8 @@ import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFReference;
 import org.apache.fop.pdf.PDFStructElem;
+
+
 import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
 
 public class StructureTreeMerger {
@@ -58,6 +62,7 @@ public class StructureTreeMerger {
     private int currentMCID;
     private List<COSObject> topElems = new ArrayList<COSObject>();
     private COSArray extra = new COSArray();
+    private COSArray originalParentTree = new COSArray();
 
     public StructureTreeMerger(PDFStructElem currentSessionElem, PDFLogicalStructureHandler logicalStructHandler,
                                PDFBoxAdapter adapter, PDPage srcPage) {
@@ -75,6 +80,8 @@ public class StructureTreeMerger {
     }
 
     public void copyStructure(COSArray pageParentTreeArray) throws IOException {
+        originalParentTree = pageParentTreeArray;
+        pageParentTreeArray = removeNonCOSObjects(pageParentTreeArray);
         for (COSBase entry : pageParentTreeArray) {
             COSObject entryObj = (COSObject)entry;
             createPageStructElements(entryObj);
@@ -146,7 +153,7 @@ public class StructureTreeMerger {
         for (COSName name : names) {
             if (baseDic.keySet().contains(name)) {
                 if (name.equals(COSName.PG)) {
-                    elem.put("Pg", targetPage.makeReference());
+                    elem.put(COSName.PG.getName(), targetPage.makeReference());
                 } else {
                     elem.put(name.getName(), adapter.cloneForNewDocument(baseDic.getItem(name)));
                 }
@@ -176,20 +183,19 @@ public class StructureTreeMerger {
             elem.setParent(currentSessionElem);
             currentSessionElem.addKid(elem);
             topElems.add(cosElem);
-            return;
         } else if (elemParent != null) {
-            checkIlfStructureTypeIsPresent(parentElemDictionary, "TR");
-            if (!checkIlfStructureTypeIsPresent(parentElemDictionary, "TR")) {
+            if (!checkIfStructureTypeIsPresent(parentElemDictionary, StandardStructureTypes.TR)) {
                 elem.setParent(elemParent);
                 int position = StructureTreeMergerUtil.findObjectPositionInKidsArray(cosElem);
                 elemParent.addKidInSpecificOrder(position, elem);
             }
-        } else if (!checkIlfStructureTypeIsPresent(parentElemDictionary, "Document")) {
+        } else if (!checkIfStructureTypeIsPresent(parentElemDictionary, StandardStructureTypes.DOCUMENT)) {
             elemParent = createAndRegisterStructElem(cosParentElem);
             copyElemEntries(cosParentElem, elemParent);
             elem.setParent(elemParent);
             fillKidsWithNull(elemParent, (COSDictionary)cosParentElem.getObject());
-            if (((COSName)parentElemDictionary.getDictionaryObject(COSName.S)).getName().equals("TR")) {
+            if (((COSName)parentElemDictionary.getDictionaryObject(COSName.S)).getName()
+                .equals(StandardStructureTypes.TR)) {
                 COSBase rowKids = parentElemDictionary.getItem(COSName.K);
                 createKids(rowKids, parentElemDictionary, elemParent, true);
             } else {
@@ -293,14 +299,19 @@ public class StructureTreeMerger {
     private void createKidFromCOSDictionary(COSDictionary mcrDict, PDFStructElem parent, COSDictionary baseDict)
         throws IOException {
         Collection<COSName> exclude = Arrays.asList(COSName.PG);
+        PDFReference referenceObj;
         if (isElementFromSourcePage(mcrDict, baseDict)) {
             PDFDictionary contentItem = (PDFDictionary)adapter.cloneForNewDocument(mcrDict, mcrDict, exclude);
             if (mcrDict.keySet().contains(COSName.TYPE)) {
                 String type = ((COSName) mcrDict.getDictionaryObject(COSName.TYPE)).getName();
                 if (type.equals("OBJR")) {
                     COSObject obj = (COSObject) mcrDict.getItem(COSName.OBJ);
-                    PDFReference referenceObj = ((PDFObject) adapter.getCachedClone(obj)).makeReference();
-                    contentItem.put("Obj", referenceObj);
+                    if (adapter.getCachedClone(obj) == null) {
+                        referenceObj = null;
+                    } else {
+                        referenceObj = ((PDFObject) adapter.getCachedClone(obj)).makeReference();
+                    }
+                    contentItem.put(COSName.OBJ.getName(), referenceObj);
                     updateStructParentAndAddToPageParentTree(referenceObj, parent);
                 } else if (type.equals("MCR")) {
                     updateMCIDEntry(contentItem);
@@ -309,9 +320,9 @@ public class StructureTreeMerger {
                 }
             }
             if (mcrDict.keySet().contains(COSName.PG)) {
-                contentItem.put("Pg", targetPage.makeReference());
+                contentItem.put(COSName.PG.getName(), targetPage.makeReference());
             } else {
-                parent.put("Pg", targetPage.makeReference());
+                parent.put(COSName.PG.getName(), targetPage.makeReference());
             }
             parent.addKid(contentItem);
         } else {
@@ -327,10 +338,10 @@ public class StructureTreeMerger {
 
     private void updateMCIDEntry(PDFDictionary mcrDictionary) {
         if (currentMCID > 0) {
-            int oldMCID = (((PDFNumber)mcrDictionary.get("MCID")).getNumber()).intValue();
+            int oldMCID = (((PDFNumber)mcrDictionary.get(COSName.MCID.getName())).getNumber()).intValue();
             PDFNumber number = new PDFNumber();
             number.setNumber(oldMCID + currentMCID);
-            mcrDictionary.put("MCID", number);
+            mcrDictionary.put(COSName.MCID.getName(), number);
         }
     }
 
@@ -352,26 +363,39 @@ public class StructureTreeMerger {
         return false;
     }
 
+
     public void addToPageParentTreeArray() {
-        for (PDFStructElem entry : markedContentMap.values()) {
+        List<PDFStructElem> complete = restoreNullValuesInParentTree();
+        for (PDFStructElem entry : complete) {
             logicalStructHandler.getPageParentTree().add(entry);
         }
     }
 
-    private void updateStructParentAndAddToPageParentTree(PDFReference obj, PDFStructElem elem) {
-        PDFObject referenceObj = obj.getObject();
-        assert referenceObj instanceof PDFDictionary;
-        int nextParentTreeKey;
-        PDFDictionary objDict = (PDFDictionary)referenceObj;
-        nextParentTreeKey = logicalStructHandler.getNextParentTreeKey();
-        objDict.put("StructParent", nextParentTreeKey);
-        logicalStructHandler.getParentTree().addToNums(nextParentTreeKey, elem);
+    private List<PDFStructElem> restoreNullValuesInParentTree() {
+        int total = markedContentMap.size();
+        List<PDFStructElem> list = new ArrayList<PDFStructElem>(markedContentMap.values());
+        List<PDFStructElem> complete = new ArrayList<PDFStructElem>(total);
+        for (COSBase base : originalParentTree) {
+            if (base instanceof COSNull || base == null) {
+                complete.add(null);
+            } else {
+                complete.add(list.get(0));
+                list.remove(0);
+            }
+        }
+        return complete;
     }
 
-    public void setCurrentSessionElemKid() {
-        PDFNumber num = new PDFNumber();
-        createKidEntryFromInt(num, currentSessionElem);
-        addToPageParentTreeArray();
+    private void updateStructParentAndAddToPageParentTree(PDFReference obj, PDFStructElem elem) {
+        int nextParentTreeKey = logicalStructHandler.getNextParentTreeKey();
+        if (obj != null) {
+            PDFObject referenceObj = obj.getObject();
+            assert referenceObj instanceof PDFDictionary;
+            PDFDictionary objDict = (PDFDictionary)referenceObj;
+            objDict.put((COSName.STRUCT_PARENT).getName(), nextParentTreeKey);
+        }
+
+        logicalStructHandler.getParentTree().addToNums(nextParentTreeKey, elem);
     }
 
     private void findLeafNodesInPageFromStructElemObjects(COSBase entry) throws IOException {
@@ -437,7 +461,7 @@ public class StructureTreeMerger {
         }
     }
 
-    private boolean checkIlfStructureTypeIsPresent(COSDictionary elemDictionary, String type) {
+    private boolean checkIfStructureTypeIsPresent(COSDictionary elemDictionary, String type) {
         String potentialCustomElemType = ((COSName)elemDictionary.getDictionaryObject(COSName.S)).getName();
         if (type.equals(potentialCustomElemType)) {
             return true;
@@ -447,4 +471,19 @@ public class StructureTreeMerger {
         }
     }
 
+    private COSArray removeNonCOSObjects(COSArray pageParentTreeArray) {
+        COSArray objectList = new COSArray();
+        for (COSBase entry : pageParentTreeArray) {
+            if (entry instanceof COSObject) {
+                COSObject entryObj = (COSObject)entry;
+                objectList.add(entryObj);
+            }
+        }
+        return objectList;
+    }
+    public void setCurrentSessionElemKid() {
+        PDFNumber num = new PDFNumber();
+        createKidEntryFromInt(num, currentSessionElem);
+        addToPageParentTreeArray();
+    }
 }

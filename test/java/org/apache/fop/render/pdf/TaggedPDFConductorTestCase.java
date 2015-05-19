@@ -66,8 +66,10 @@ public class TaggedPDFConductorTestCase {
         Assert.assertEquals(print(elem), "/Div/Part/Sect/Table/TBody/TR/TD/P/TD/P/TR/TD/TD");
 
         elem = new PDFStructElem();
+        elem.put("Alt", "alt-text");
         runConductor(OTF, elem);
         Assert.assertEquals(print(elem), "/Div/Part/Art/P/Span");
+        Assert.assertNull(elem.get("Alt"));
     }
 
     private String print(PDFStructElem x) throws IOException {
@@ -93,7 +95,7 @@ public class TaggedPDFConductorTestCase {
 
     private void setUp() {
         Rectangle2D r = new Rectangle2D.Double();
-        pdfPage = new PDFPage(new PDFResources(0), 0, r, r, r, r);
+        pdfPage = new PDFPage(new PDFResources(pdfDoc), 0, r, r, r, r);
         pdfDoc = new PDFDocument(" ");
         pdfDoc.makeStructTreeRoot(null);
         pdfPage.setObjectNumber(1);

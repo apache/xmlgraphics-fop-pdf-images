@@ -76,7 +76,6 @@ import junit.framework.Assert;
 
 public class PDFBoxAdapterTestCase {
     private Rectangle2D r = new Rectangle2D.Double();
-    private PDFPage pdfpage = new PDFPage(new PDFResources(0), 0, r, r, r, r);
     private static final String CFF1 = "test/resources/2fonts.pdf";
     private static final String CFF2 = "test/resources/2fonts2.pdf";
     private static final String CFF3 = "test/resources/simpleh.pdf";
@@ -98,6 +97,7 @@ public class PDFBoxAdapterTestCase {
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
+        PDFPage pdfpage = new PDFPage(new PDFResources(doc), 0, r, r, r, r);
         doc.setMergeFontsEnabled(true);
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
@@ -286,7 +286,9 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testStream() throws Exception {
-        pdfpage.setDocument(new PDFDocument(""));
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        pdfpage.setDocument(pdfdoc);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
         PDDocument doc = PDDocument.load(ROTATE);
         PDPage page = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
@@ -302,9 +304,10 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testLink() throws Exception {
-        pdfpage.setObjectNumber(1);
         PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
         pdfpage.setDocument(pdfdoc);
+        pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
         PDDocument doc = PDDocument.load(LINK);
@@ -315,7 +318,7 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(stream.contains("/Link <</MCID 5 >>BDC"));
         Assert.assertTrue(pageNumbers.size() == 4);
         PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
-        Assert.assertEquals(annots.toPDFString(), "[\n9 0 R\n12 0 R\n]");
+        Assert.assertEquals(annots.toPDFString(), "[\n1 0 R\n2 0 R\n]");
         doc.close();
     }
 
@@ -333,6 +336,7 @@ public class PDFBoxAdapterTestCase {
         PDDocument doc = PDDocument.load(SHADING);
         ImagePDF img = new ImagePDF(imgi, doc);
         PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
         pdfpage.setDocument(pdfdoc);
         PDFGState g = new PDFGState();
         pdfdoc.assignObjectNumber(g);
@@ -346,6 +350,6 @@ public class PDFBoxAdapterTestCase {
         PDFResources res = c.getPage().getPDFResources();
         OutputStream bos = new ByteArrayOutputStream();
         res.output(bos);
-        Assert.assertTrue(bos.toString().contains("/ExtGState << /GS5"));
+        Assert.assertTrue(bos.toString().contains("/ExtGState << /GS1"));
     }
 }

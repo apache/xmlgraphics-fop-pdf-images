@@ -19,13 +19,20 @@ package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+
 
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSInteger;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObject;
+
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -49,6 +56,7 @@ import junit.framework.Assert;
 public class StructureTreeMergerTestCase {
     private static final String LINK = "test/resources/linkTagged.pdf";
     private static final String NoParentTree = "test/resources/NoParentTree.pdf";
+    private static final String BrokenLink = "test/resources/brokenLink.pdf";
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
     private PDFBoxAdapter adapter;
@@ -121,7 +129,7 @@ public class StructureTreeMergerTestCase {
 
     private void setUp() {
         Rectangle2D r = new Rectangle2D.Double();
-        pdfPage = new PDFPage(new PDFResources(0), 0, r, r, r, r);
+        pdfPage = new PDFPage(new PDFResources(pdfDoc), 0, r, r, r, r);
         pdfDoc = new PDFDocument(" ");
         pdfDoc.makeStructTreeRoot(null);
         pdfPage.setObjectNumber(1);
@@ -145,5 +153,49 @@ public class StructureTreeMergerTestCase {
             index++;
             checkNoParentTree(kid, index);
         }
+    }
+
+
+    @Test
+    public void testNullEntriesInParentTree() throws IOException {
+        setUp();
+        PDDocument doc = PDDocument.load(LINK);
+        PDPage srcPage = doc.getPage(0);
+        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+        markedContentParents.add(0, null);
+        PDFStructElem elem = new PDFStructElem();
+        elem.setObjectNumber(2);
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+        merger.copyStructure(markedContentParents);
+        PDFArray array = handler.getPageParentTree();
+        Assert.assertNull(array.get(0));
+    }
+    @Test
+    public void checkNullCOSObject() throws IOException {
+        setUp();
+        PDDocument doc = PDDocument.load(BrokenLink);
+        PDPage srcPage = doc.getPage(0);
+        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+        COSObject nullObj = new COSObject(null);
+        nullObj.setObjectNumber(COSInteger.get(100));
+        nullObj.setGenerationNumber(COSInteger.ZERO);
+        PDFStructElem elem = new PDFStructElem();
+        elem.setObjectNumber(2);
+        COSObject parent = (COSObject)markedContentParents.get(1);
+        COSArray kids = (COSArray) parent.getDictionaryObject(COSName.K);
+        COSDictionary kid = (COSDictionary) kids.get(1);
+        kid.setItem(COSName.OBJ, nullObj);
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+        merger.copyStructure(markedContentParents);
+        PDFArray array = handler.getPageParentTree();
+        PDFStructElem parentElem = (PDFStructElem)array.get(1);
+        PDFDictionary objrDict = (PDFDictionary) parentElem.getKids().get(1);
+        Assert.assertNull(objrDict.get("Obj"));
     }
 }
