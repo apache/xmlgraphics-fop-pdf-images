@@ -100,6 +100,8 @@ public class PDFBoxAdapter {
     private Map<COSName, String> newXObj = new HashMap<COSName, String>();
     private Map<Integer, PDFArray> pageNumbers;
 
+    private int currentMCID;
+
     /**
      * Creates a new PDFBoxAdapter.
      * @param targetPage The target FOP PDF page object
@@ -113,15 +115,27 @@ public class PDFBoxAdapter {
         this.pageNumbers = pageNumbers;
     }
 
-    private Object cloneForNewDocument(Object base) throws IOException {
+    public PDFPage getTargetPage() {
+        return targetPage;
+    }
+
+    public int getCurrentMCID() {
+        return currentMCID;
+    }
+
+    public void setCurrentMCID(int currentMCID) {
+        this.currentMCID = currentMCID;
+    }
+
+    protected Object cloneForNewDocument(Object base) throws IOException {
         return cloneForNewDocument(base, base);
     }
 
-    private Object cloneForNewDocument(Object base, Object keyBase) throws IOException {
+    protected Object cloneForNewDocument(Object base, Object keyBase) throws IOException {
         return cloneForNewDocument(base, keyBase, Collections.EMPTY_LIST);
     }
 
-    private Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
+    protected Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
         if (base == null) {
             return null;
         }
@@ -262,11 +276,11 @@ public class PDFBoxAdapter {
         return cacheClonedObject(keyBase, stream);
     }
 
-    private Object getCachedClone(Object base) {
+    protected Object getCachedClone(Object base) {
         return clonedVersion.get(getBaseKey(base));
     }
 
-    private Object cacheClonedObject(Object base, Object cloned) {
+    protected Object cacheClonedObject(Object base, Object cloned) {
         Object key = getBaseKey(base);
         if (key == null) {
             return cloned;
@@ -276,7 +290,7 @@ public class PDFBoxAdapter {
             pdfDoc.registerObject(pdfobj);
             if (log.isTraceEnabled()) {
                 log.trace(key + ": " + pdfobj.getClass().getName() + " registered as "
-                            + pdfobj.getObjectNumber() + " " + pdfobj.getGeneration());
+                        + pdfobj.getObjectNumber() + " " + pdfobj.getGeneration());
             }
         }
         clonedVersion.put(key, cloned);
@@ -292,13 +306,12 @@ public class PDFBoxAdapter {
         }
     }
 
-    private void transferDict(COSDictionary orgDict, PDFStream targetDict,
-            Set filter) throws IOException {
+    private void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter) throws IOException {
         transferDict(orgDict, targetDict, filter, false);
     }
 
-    private void transferDict(COSDictionary orgDict, PDFStream targetDict,
-            Set filter, boolean inclusive) throws IOException {
+    private void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter, boolean inclusive)
+        throws IOException {
         Set<COSName> keys = orgDict.keySet();
         for (COSName key : keys) {
             if (inclusive && !filter.contains(key.getName())) {
@@ -354,8 +367,11 @@ public class PDFBoxAdapter {
 //            }
         }
         if (newStream == null) {
-            newStream = new PDFWriter(uniqueName,
-                    getResourceNames(sourcePageResources.getCOSDictionary())).writeText(pdStream);
+            PDFWriter writer = new PDFWriter(uniqueName, getResourceNames(sourcePageResources.getCOSDictionary()),
+                    currentMCID);
+            newStream = writer.writeText(pdStream);
+            currentMCID = writer.getCurrentMCID();
+
         }
         pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
         mergeXObj(sourcePageResources.getCOSDictionary(), fontinfo, uniqueName);

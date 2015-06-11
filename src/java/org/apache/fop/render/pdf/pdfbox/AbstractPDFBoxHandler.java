@@ -40,7 +40,9 @@ import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
+import org.apache.fop.pdf.PDFStructElem;
 import org.apache.fop.pdf.Version;
+import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
 import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 
 /**
@@ -67,8 +69,11 @@ public abstract class AbstractPDFBoxHandler {
         = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
     protected String createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
-            AffineTransform at, FontInfo fontinfo, Rectangle pos, Map<Integer, PDFArray> pageNumbers)
-        throws IOException {
+                                        AffineTransform at, FontInfo fontinfo, Rectangle pos,
+                                        Map<Integer, PDFArray> pageNumbers,
+                                        PDFLogicalStructureHandler handler,
+                                        PDFStructElem curentSessionElem) throws IOException {
+
         EventBroadcaster eventBroadcaster = null;
         if (userAgent != null) {
             eventBroadcaster = userAgent.getEventBroadcaster();
@@ -117,7 +122,15 @@ public abstract class AbstractPDFBoxHandler {
         }
 
         PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache, pageNumbers);
-        String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri, at, fontinfo, pos);
+        if (handler != null) {
+            adapter.setCurrentMCID(handler.getPageParentTree().length());
+        }
+        String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri,
+                 at, fontinfo, pos);
+        if (userAgent.isAccessibilityEnabled()) {
+            TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, page, adapter);
+            conductor.handleLogicalStructure(pddoc);
+        }
         return stream;
     }
 
