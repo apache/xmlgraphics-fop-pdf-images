@@ -18,10 +18,12 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -87,7 +89,7 @@ public class PDFWriter {
             s.append(" ");
         } else if (c instanceof COSFloat) {
             float f = ((COSFloat) c).floatValue();
-            s.append(new DecimalFormat("#.####").format(f));
+            s.append(new DecimalFormat("#.####", new DecimalFormatSymbols(Locale.US)).format(f));
             s.append(" ");
         } else if (c instanceof COSName) {
             COSName cn = (COSName)c;
