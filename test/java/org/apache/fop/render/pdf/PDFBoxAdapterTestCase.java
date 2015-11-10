@@ -62,6 +62,7 @@ import org.apache.xmlgraphics.image.loader.ImageSource;
 import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 import org.apache.xmlgraphics.image.loader.impl.ImageRendered;
+import org.apache.xmlgraphics.image.loader.util.SoftMapCache;
 import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.GraphicContext;
 import org.apache.xmlgraphics.ps.PSGenerator;
@@ -427,6 +428,7 @@ public class PDFBoxAdapterTestCase {
         PDFContentGenerator con = new PDFContentGenerator(pdfdoc, null, null);
         FOUserAgent mockedAgent = mock(FOUserAgent.class);
         when(mockedAgent.isAccessibilityEnabled()).thenReturn(false);
+        when(mockedAgent.getPDFObjectCache()).thenReturn(new SoftMapCache(true));
         PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, pdfpage, null);
         c.setPageNumbers(new HashMap<Integer, PDFArray>());
         new PDFBoxImageHandler().handleImage(c, img, new Rectangle());

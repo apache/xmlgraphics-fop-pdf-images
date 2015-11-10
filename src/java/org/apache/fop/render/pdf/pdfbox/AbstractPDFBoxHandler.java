@@ -22,16 +22,14 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
-import java.util.WeakHashMap;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
+import org.apache.xmlgraphics.image.loader.util.SoftMapCache;
 
 import org.apache.fop.apps.FOUserAgent;
 import org.apache.fop.events.EventBroadcaster;
@@ -43,7 +41,6 @@ import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStructElem;
 import org.apache.fop.pdf.Version;
 import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
-import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 
 /**
  * Abstract base class for implementation of FOP's image handler interfaces (old and new)
@@ -51,22 +48,6 @@ import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
  * target PDF as a Form XObject.
  */
 public abstract class AbstractPDFBoxHandler {
-
-    private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
-            System.getProperty("fop.pdfbox.doc-cache", Cache.Type.WEAK.name()).toUpperCase(Locale.ENGLISH));
-
-    private static Cache<String, Map<Object, Object>> createDocumentCache() {
-        return Cache.createCache(CACHE_TYPE);
-    }
-
-    private static final ValueMaker<Map<Object, Object>> MAP_MAKER = new ValueMaker<Map<Object, Object>>() {
-        public Map<Object, Object> make() throws Exception {
-            return new HashMap<Object, Object>();
-        }
-    };
-
-    private static Map<Object, Cache<String, Map<Object, Object>>> objectCacheMap
-        = Collections.synchronizedMap(new WeakHashMap<Object, Cache<String, Map<Object, Object>>>());
 
     protected String createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
                                         AffineTransform at, FontInfo fontinfo, Rectangle pos,
@@ -134,25 +115,13 @@ public abstract class AbstractPDFBoxHandler {
         return stream;
     }
 
-    private Map<Object, Object> getObjectCache(String originalImageUri,
-            Object documentScopedReference) {
-        String fileUri = getImagePath(originalImageUri);
-        try {
-            return getDocumentCache(documentScopedReference)
-                        .getValue(fileUri, MAP_MAKER);
-        } catch (Exception e) {
-            // We cannot recover from this
-            throw new RuntimeException(e);
+    private Map<Object, Object> getObjectCache(String originalImageUri, FOUserAgent userAgent) {
+        SoftMapCache objectCache = userAgent.getPDFObjectCache();
+        String path = getImagePath(originalImageUri);
+        if (objectCache.get(path) == null) {
+            objectCache.put(path, new HashMap<Object, Object>());
         }
-    }
-
-    private Cache<String, Map<Object, Object>> getDocumentCache(Object documentScopedReference) {
-        Cache<String, Map<Object, Object>> documentCache = objectCacheMap.get(documentScopedReference);
-        if (documentCache == null) {
-            documentCache = createDocumentCache();
-            objectCacheMap.put(documentScopedReference, documentCache);
-        }
-        return documentCache;
+        return (Map<Object, Object>) objectCache.get(path);
     }
 
     private String getImagePath(String originalImageUri) {
