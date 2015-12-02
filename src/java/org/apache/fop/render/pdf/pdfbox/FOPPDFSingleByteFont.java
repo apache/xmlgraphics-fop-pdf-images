@@ -37,7 +37,6 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
-import org.apache.pdfbox.encoding.DictionaryEncoding;
 import org.apache.pdfbox.encoding.Encoding;
 import org.apache.pdfbox.encoding.EncodingManager;
 import org.apache.pdfbox.pdmodel.common.PDStream;
@@ -61,7 +60,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     protected Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
     private Map<Integer, Integer> newWidth = new HashMap<Integer, Integer>();
     private Map<String, byte[]> charStringsDict;
-    private MergeTTFonts.Cmap newCmap = new MergeTTFonts.Cmap();
+    private List<MergeTTFonts.Cmap> newCmap = new ArrayList<MergeTTFonts.Cmap>();
     private Map<Integer, String> encodingMap = new TreeMap<Integer, String>();
     private int encodingSkip;
     private MergeTTFonts mergeTTFonts = new MergeTTFonts();
@@ -183,16 +182,25 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             TrueTypeFont ttfont = ((PDTrueTypeFont) font).getTTFFont();
             CMAPEncodingEntry[] cmapList = ttfont.getCMAP().getCmaps();
             for (CMAPEncodingEntry c : cmapList) {
-                newCmap.platformId = c.getPlatformId();
-                newCmap.platformEncodingId = c.getPlatformEncodingId();
+                MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
                 for (int i = 0; i < 256 * 256; i++) {
                     if (c.getGlyphId(i) != 0) {
-                        newCmap.glyphIdToCharacterCode.put(i, c.getGlyphId(i));
+                        tempCmap.glyphIdToCharacterCode.put(i, c.getGlyphId(i));
                     }
                 }
+                newCmap.add(tempCmap);
             }
             FOPPDFMultiByteFont.mergeMaxp(ttfont, mergeTTFonts.maxp);
         }
+    }
+
+    private MergeTTFonts.Cmap getNewCmap(int platformID, int platformEncodingID) {
+        for (MergeTTFonts.Cmap cmap : newCmap) {
+            if (cmap.platformId == platformID && cmap.platformEncodingId == platformEncodingID) {
+                return cmap;
+            }
+        }
+        return new MergeTTFonts.Cmap(platformID, platformEncodingID);
     }
 
     @Override
@@ -329,10 +337,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             return c.lookup(i, size);
         }
         Encoding enc = (Encoding)cmap;
-        if (enc instanceof DictionaryEncoding) {
-            return enc.getName(i);
-        }
-        return enc.getCharacter(i);
+        return enc.getName(i);
     }
 
     public String getEncodingName() {
@@ -360,7 +365,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         for (int i = fontForEnc.getFirstChar(); i <= fontForEnc.getLastChar(); i++) {
             if (codeToName.keySet().contains(i)) {
                 String s = codeToName.get(i);
-                if (!added.contains(s)) {
+                if (!added.contains(s) || (added.contains(s) && !encodingMap.containsKey(i))) {
                     if (!encodingMap.containsKey(i)) {
                         encodingMap.put(i, s);
                     } else {

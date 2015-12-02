@@ -49,9 +49,7 @@ public class MergeCFFFonts extends OTFSubSetFile {
     private List<Integer> chars = new ArrayList<Integer>();
     private List<String> added = new ArrayList<String>();
     private Map<Integer, Integer> range = new LinkedHashMap<Integer, Integer>();
-    private Set<String> stringsForRange = new HashSet<String>();
     private int noOfFonts;
-    private CFFEncoding encoding = null;
 
     public MergeCFFFonts() throws IOException {
         gidToSID = new LinkedHashMap<Integer, Integer>();
@@ -63,23 +61,24 @@ public class MergeCFFFonts extends OTFSubSetFile {
         FontFileReader fontFile = new FontFileReader(stream);
         CFFParser p = new CFFParser();
         CFFFont ff = p.parse(fontFile.getAllBytes()).get(0);
-        if (used.containsAll(ff.getCharStringsDict().keySet())) {
+
+        if (used.containsAll(getStrings(ff).keySet())) {
             return;
         }
         fontFileSize += fontFile.getFileSize();
         this.fontFile = fontFile;
-        used.addAll(ff.getCharStringsDict().keySet());
+        used.addAll(getStrings(ff).keySet());
         if (fileFont == null) {
             fileFont = ff;
         }
         LinkedHashMap<Integer, Integer> sg = new LinkedHashMap<Integer, Integer>();
-        for (int i = 0; i < ff.getCharset().getEntries().size() + 1; i++) {
+        for (int i = 0; i < ff.getCharStringsDict().size() + 1; i++) {
             sg.put(i, i);
         }
         subsetGlyphsList.add(sg);
         cffReader = new CFFDataReader(fontFile);
-        for (CFFCharset.Entry e : ff.getCharset().getEntries()) {
-            int sid = e.getSID();
+
+        for (int sid : getSids(ff.getCharset())) {
             if (sid >= NUM_STANDARD_STRINGS) {
                 int index = sid - NUM_STANDARD_STRINGS;
                 if (index <= cffReader.getStringIndex().getNumObjects()) {
@@ -91,36 +90,18 @@ public class MergeCFFFonts extends OTFSubSetFile {
             }
         }
 
-        encoding = ff.getEncoding();
+        CFFEncoding encoding = ff.getEncoding();
         if (!(encoding instanceof CFFStandardEncoding)) {
             for (CFFEncoding.Entry e : encoding.getEntries()) {
                 int c = e.getCode();
-                if (!chars.contains(c)) {
+                if (!chars.contains(c) && c != 0) {
                     chars.add(c);
                 }
             }
         }
+        setupMapping(ff.getCharset(), sg);
 
-        int subsetGlyphIndex = 0;
-        for (CFFCharset.Entry e : ff.getCharset().getEntries()) {
-            int sid = e.getSID();
-            int gid = sg.get(subsetGlyphIndex);
-
-            //Check whether the SID falls into the standard string set
-            if (sid < NUM_STANDARD_STRINGS) {
-                gidToSID.put(sg.get(gid), sid);
-            } else {
-                int index = sid - NUM_STANDARD_STRINGS;
-                if (index <= cffReader.getStringIndex().getNumObjects()) {
-                    gidToSID.put(sg.get(gid), stringIndexData.size() + NUM_STANDARD_STRINGS - 1);
-                } else {
-                    gidToSID.put(sg.get(gid), index);
-                }
-            }
-            subsetGlyphIndex++;
-        }
-
-        for (Map.Entry<String, byte[]> s : ff.getCharStringsDict().entrySet()) {
+        for (Map.Entry<String, byte[]> s : getStrings(ff).entrySet()) {
             if (!added.contains(s.getKey())) {
                 subsetCharStringsIndex.add(s.getValue());
                 added.add(s.getKey());
@@ -131,14 +112,47 @@ public class MergeCFFFonts extends OTFSubSetFile {
         String cClass = cSet.getClass().getName();
         if (cClass.equals("org.apache.fontbox.cff.CFFParser$Format1Charset")
                 || cClass.equals("org.apache.fontbox.cff.CFFParser$Format0Charset")) {
-            for (CFFCharset.Entry m : cSet.getEntries()) {
-                if (!stringsForRange.contains(m.getName())) {
-                    range.put(m.getSID(), 0);
-                    stringsForRange.add(m.getName());
-                }
+            for (int sid : getSids(cSet)) {
+                range.put(sid, 0);
             }
         }
         noOfFonts++;
+    }
+
+    private void setupMapping(CFFCharset charset, LinkedHashMap<Integer, Integer> sg) {
+        int subsetGlyphIndex = 0;
+        for (int sid : getSids(charset)) {
+            if (sg.containsKey(subsetGlyphIndex)) {
+                int gid = sg.get(subsetGlyphIndex);
+
+                //Check whether the SID falls into the standard string set
+                if (sid < NUM_STANDARD_STRINGS) {
+                    gidToSID.put(sg.get(gid), sid);
+                } else {
+                    int index = sid - NUM_STANDARD_STRINGS;
+                    if (index <= cffReader.getStringIndex().getNumObjects()) {
+                        gidToSID.put(sg.get(gid), stringIndexData.size() + NUM_STANDARD_STRINGS - 1);
+                    } else {
+                        gidToSID.put(sg.get(gid), index);
+                    }
+                }
+                subsetGlyphIndex++;
+            }
+        }
+    }
+
+    public static List<Integer> getSids(CFFCharset cSet) {
+        List<Integer> sids = new ArrayList<Integer>();
+        for (CFFCharset.Entry x : cSet.getEntries()) {
+            if (x.getSID() != 0) {
+                sids.add(x.getSID());
+            }
+        }
+        return sids;
+    }
+
+    public static Map<String, byte[]> getStrings(CFFFont ff) throws IOException {
+        return ff.getCharStringsDict();
     }
 
     public void writeFont() throws IOException {
@@ -260,26 +274,6 @@ public class MergeCFFFonts extends OTFSubSetFile {
     }
 
     protected void writeEncoding() throws IOException {
-        if (encoding instanceof CFFStandardEncoding) {
-            LinkedHashMap<String, CFFDataReader.DICTEntry> topDICT = cffReader.getTopDictEntries();
-            final CFFDataReader.DICTEntry encodingEntry = topDICT.get("Encoding");
-            if (encodingEntry != null && encodingEntry.getOperands().get(0).intValue() != 0
-                    && encodingEntry.getOperands().get(0).intValue() != 1) {
-                int len = encoding.getEntries().size();
-                if (len != gidToSID.size() - 1) {
-                    return;
-                }
-                writeByte(0);
-                writeByte(len);
-                for (Map.Entry<Integer, Integer> gid : gidToSID.entrySet()) {
-                    if (gid.getKey() == 0) {
-                        continue;
-                    }
-                    int code = encoding.getCode(gid.getValue());
-                    writeByte(code);
-                }
-            }
-        }
         if (!chars.isEmpty()) {
             writeCard16(chars.size());
             for (int i : chars) {
@@ -289,6 +283,7 @@ public class MergeCFFFonts extends OTFSubSetFile {
     }
 
     protected void writeStringIndex() throws IOException {
+        int stringIndexSize = stringIndexData.size();
         for (String s : strings) {
             stringIndexData.add(s.getBytes("US-ASCII"));
         }
@@ -296,8 +291,10 @@ public class MergeCFFFonts extends OTFSubSetFile {
         //Write the String Index
         if (!stringIndexData.isEmpty()) {
             if (!strings.isEmpty() && !new String(stringIndexData.get(0), "UTF-8").equals(strings.get(0))) {
-                //Move copyright string to end
-                stringIndexData.add(stringIndexData.remove(0));
+                //Keep strings in order as they are referenced from the TopDICT
+                for (int i = 0; i < stringIndexSize; i++) {
+                    stringIndexData.add(stringIndexData.remove(0));
+                }
             } else {
                 String notice = (String)fileFont.getProperty("Notice");
                 if (notice != null && !(fileFont instanceof CFFFontROS)) {

@@ -17,6 +17,7 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -107,6 +108,9 @@ public class MergeTTFonts extends TTFSubSetFile {
                 byte[] glyphData = gly.getValue().data;
                 int glyphLength = glyphData.length;
                 int i = gly.getKey();
+                if (i >= origIndexesLen) {
+                    continue;
+                }
                 int endOffset1 = endOffset;
                 // Copy glyph
                 writeBytes(glyphData);
@@ -261,7 +265,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         }
     }
 
-    public void writeFont(Cmap cmap) throws IOException {
+    public void writeFont(List<Cmap> cmap) throws IOException {
         output = new byte[size * 2];
         createDirectory();     // Create the TrueType header and directory
         int sgsize = added.size();
@@ -270,11 +274,7 @@ public class MergeTTFonts extends TTFSubSetFile {
 //            copyTable(fontFile, OFTableName.CMAP);
         }
         createHmtx();           // Create hmtx table
-        if (cid || locaFormat == 1) {
-            createLoca(sgsize);    // create empty loca table
-        } else {
-            createLoca(numberOfGlyphs / 2);    // create empty loca table
-        }
+        createLoca(sgsize);    // create empty loca table
         createHead(fontFile);
         createOS2(fontFile);                          // copy the OS/2 table
         if (!cid) {
@@ -287,23 +287,10 @@ public class MergeTTFonts extends TTFSubSetFile {
         } else {
             writeMaxp();
         }
-        boolean optionalTableFound;
-        optionalTableFound = createCvt(fontFile);    // copy the cvt table
-        if (!optionalTableFound) {
-            // cvt is optional (used in TrueType fonts only)
-            log.debug("TrueType: ctv table not present. Skipped.");
-        }
-        optionalTableFound = createFpgm(fontFile);    // copy fpgm table
-        if (!optionalTableFound) {
-            // fpgm is optional (used in TrueType fonts only)
-            log.debug("TrueType: fpgm table not present. Skipped.");
-        }
+        createCvt(fontFile);    // copy the cvt table
+        createFpgm(fontFile);    // copy fpgm table
         createPost(fontFile);                         // copy the post table
-        optionalTableFound = createPrep(fontFile);    // copy prep table
-        if (!optionalTableFound) {
-            // prep is optional (used in TrueType fonts only)
-            log.debug("TrueType: prep table not present. Skipped.");
-        }
+        createPrep(fontFile);    // copy prep table
         createName(fontFile);                         // copy the name table
         createGlyf(); //create glyf table and update loca table
         pad4();
@@ -334,35 +321,40 @@ public class MergeTTFonts extends TTFSubSetFile {
         realSize += currentPos - startPos;
     }
 
-    private void writeCMAP(Cmap cmap) {
+    private void writeCMAP(List<Cmap> cmaps) {
         int checksum = currentPos;
         pad4();
         int cmapPos = currentPos;
         writeUShort(0); //version
-        writeUShort(1); //number of tables
+        writeUShort(cmaps.size()); //number of tables
 
-        Map<Integer, Integer> glyphIdToCharacterCode = cmap.glyphIdToCharacterCode;
-        writeUShort(cmap.platformId); //platformid
-        writeUShort(cmap.platformEncodingId); //platformEncodingId
-        writeULong(currentPos, currentPos - cmapPos + 12); //subTableOffset
-        currentPos += 12;
+        int tablesSize = 8 * cmaps.size();
+        for (int i = 0; i < cmaps.size(); i++) {
+            Cmap cmap = cmaps.get(i);
+            writeUShort(cmap.platformId); //platformid
+            writeUShort(cmap.platformEncodingId); //platformEncodingId
+            writeULong(currentPos, 4 + tablesSize + getCmapOffset(cmaps, i)); //subTableOffset
+            currentPos += 4;
+        }
 
-        writeUShort(12); //subtableFormat
-        writeUShort(0);
-        writeULong(currentPos, (glyphIdToCharacterCode.size() * 12) + 16);
-        currentPos += 4;
-        writeULong(currentPos, 0);
-        currentPos += 4;
-        writeULong(currentPos, glyphIdToCharacterCode.size());
-        currentPos += 4;
+        for (Cmap cmap : cmaps) {
+            writeUShort(12); //subtableFormat
+            writeUShort(0);
+            writeULong(currentPos, (cmap.glyphIdToCharacterCode.size() * 12) + 16);
+            currentPos += 4;
+            writeULong(currentPos, 0);
+            currentPos += 4;
+            writeULong(currentPos, cmap.glyphIdToCharacterCode.size());
+            currentPos += 4;
 
-        for (Map.Entry<Integer, Integer> g : glyphIdToCharacterCode.entrySet()) {
-            writeULong(currentPos, g.getKey());
-            currentPos += 4;
-            writeULong(currentPos, g.getKey());
-            currentPos += 4;
-            writeULong(currentPos, g.getValue());
-            currentPos += 4;
+            for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
+                writeULong(currentPos, g.getKey());
+                currentPos += 4;
+                writeULong(currentPos, g.getKey());
+                currentPos += 4;
+                writeULong(currentPos, g.getValue());
+                currentPos += 4;
+            }
         }
 
 //            writeUShort(6); //subtableFormat
@@ -396,6 +388,15 @@ public class MergeTTFonts extends TTFSubSetFile {
         realSize += currentPos - cmapPos;
     }
 
+    private int getCmapOffset(List<Cmap> cmaps, int index) {
+        int result = 0;
+        for (int i = 0; i < index; i++) {
+            Cmap curCmap = cmaps.get(i);
+            result += (curCmap.glyphIdToCharacterCode.size() * 12) + 16;
+        }
+        return result;
+    }
+
     /**
      * Get index from starting at lowest glyph position
      * @param glyphs map
@@ -421,5 +422,10 @@ public class MergeTTFonts extends TTFSubSetFile {
         int platformId;
         int platformEncodingId;
         Map<Integer, Integer> glyphIdToCharacterCode = new TreeMap<Integer, Integer>();
+
+        public Cmap(int platformID, int platformEncodingID) {
+            this.platformId = platformID;
+            this.platformEncodingId = platformEncodingID;
+        }
     }
 }
