@@ -18,15 +18,20 @@
 package org.apache.fop.render.pdf;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
+
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 
@@ -58,5 +63,18 @@ public class PageParentTreeFinderTestCase {
         test = secondKid.getInt("MCID");
         expected = 1;
         Assert.assertEquals(test, expected);
+    }
+
+    @Test
+    public void testNoparentTreePresent() {
+        PDPage srcPage = new PDPage();
+        srcPage.getCOSDictionary().setItem(COSName.STRUCT_PARENTS, COSInteger.get(-1));
+        PDResources res = new PDResources();
+        res.setXObjects(new HashMap<String, PDXObject>());
+        srcPage.setResources(res);
+        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+        COSArray parentTree = finder.getPageParentTreeArray(null);
+        int test = parentTree.size();
+        Assert.assertEquals(test, 0);
     }
 }

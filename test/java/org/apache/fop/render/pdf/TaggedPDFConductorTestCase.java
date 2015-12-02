@@ -46,6 +46,8 @@ public class TaggedPDFConductorTestCase {
     private static final String HELLO = "test/resources/helloWorld.pdf";
     private static final String TABLE = "test/resources/emptyRowTable.pdf";
     private static final String OTF = "test/resources/otf.pdf";
+    private static final String IMAGE = "test/resources/hello2.pdf";
+    private static final String NOPARENTTREE = "test/resources/NoParentTree.pdf";
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
 
@@ -74,12 +76,15 @@ public class TaggedPDFConductorTestCase {
 
     private String print(PDFStructElem x) throws IOException {
         StringBuilder sb = new StringBuilder(x.get("S").toString());
-        for (PDFObject k : x.getKids()) {
-            if (k instanceof PDFStructElem) {
-                sb.append(print((PDFStructElem) k));
+        if (x.getKids() != null) {
+            for (PDFObject k : x.getKids()) {
+                if (k instanceof PDFStructElem) {
+                    sb.append(print((PDFStructElem) k));
+                }
             }
+            return sb.toString();
         }
-        return sb.toString();
+        return "";
     }
 
     private void runConductor(String pdf, PDFStructElem elem) throws IOException {
@@ -137,5 +142,19 @@ public class TaggedPDFConductorTestCase {
             expected = 1;
             Assert.assertEquals(test, expected);
         }
+    }
+
+    @Test
+    public void testTaggedImagePDF() throws IOException {
+        PDFStructElem elem = new PDFStructElem();
+        runConductor(IMAGE, elem);
+        Assert.assertEquals(print(elem), "/Div/Part/Sect/P/Image");
+    }
+
+    @Test
+    public void testCreateDirectDescendants() throws IOException {
+        PDFStructElem elem = new PDFStructElem();
+        runConductor(NOPARENTTREE, elem);
+        Assert.assertEquals(print(elem), "/Div/Document");
     }
 }

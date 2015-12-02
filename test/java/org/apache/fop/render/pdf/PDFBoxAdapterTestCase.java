@@ -115,6 +115,7 @@ public class PDFBoxAdapterTestCase {
     private static final String SHADING = "test/resources/shading.pdf";
     private static final String LINK = "test/resources/link.pdf";
     private static final String IMAGE = "test/resources/image.pdf";
+    private static final String HELLOTagged = "test/resources/taggedWorld.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
@@ -324,6 +325,20 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
+    public void testTaggedPDFWriter() throws IOException {
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        pdfpage.setDocument(pdfdoc);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter.setCurrentMCID(5);
+        PDDocument doc = PDDocument.load(HELLOTagged);
+        PDPage page = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        Assert.assertTrue(stream, stream.contains("/P <</MCID 5 >>BDC"));
+        doc.close();
+    }
     public void testLink() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);

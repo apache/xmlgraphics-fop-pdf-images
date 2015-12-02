@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-
-
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -32,7 +30,6 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
-
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -42,6 +39,7 @@ import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFName;
 import org.apache.fop.pdf.PDFNumber;
+import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFReference;
 import org.apache.fop.pdf.PDFResources;
@@ -55,8 +53,8 @@ import junit.framework.Assert;
 
 public class StructureTreeMergerTestCase {
     private static final String LINK = "test/resources/linkTagged.pdf";
-    private static final String NoParentTree = "test/resources/NoParentTree.pdf";
     private static final String BrokenLink = "test/resources/brokenLink.pdf";
+    private static final String MissingOBJR = "test/resources/missingOBJR.pdf";
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
     private PDFBoxAdapter adapter;
@@ -71,6 +69,7 @@ public class StructureTreeMergerTestCase {
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
         adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter.setCurrentMCID(1);
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -79,82 +78,6 @@ public class StructureTreeMergerTestCase {
         PDFStructElem first = (PDFStructElem)array.get(0);
         checkParentForLinkTest(first, 0);
     }
-
-    @Test
-    public void testCreateDirectDescendants() throws IOException {
-        setUp();
-        PDDocument doc = PDDocument.load(NoParentTree);
-        PDPage srcPage = doc.getPage(0);
-        PDFStructElem elem = new PDFStructElem();
-        elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
-        COSDictionary strucRootDict = (COSDictionary)doc.getDocumentCatalog().getStructureTreeRoot()
-            .getCOSObject();
-        merger.createDirectDescendants(strucRootDict, elem);
-        checkNoParentTree(elem, 0);
-    }
-
-    private void checkMarkedContentsParentsForLinkTest(PDFArray array) {
-        PDFStructElem first = (PDFStructElem)array.get(0);
-        List firstKids = first.getKids();
-        PDFDictionary firstKid = (PDFDictionary) firstKids.get(0);
-        int test = ((PDFNumber)firstKid.get("MCID")).getNumber().intValue();
-        int expected = 0;
-        Assert.assertEquals(test, expected);
-        PDFDictionary firstKidSibling = (PDFDictionary) firstKids.get(2);
-        test = ((PDFNumber)firstKidSibling.get("MCID")).getNumber().intValue();
-        expected = 2;
-        Assert.assertEquals(test, expected);
-        PDFStructElem second = (PDFStructElem)array.get(1);
-        List secondKids = second.getKids();
-        PDFDictionary secKid = (PDFDictionary) secondKids.get(0);
-        test = ((PDFNumber)secKid.get("MCID")).getNumber().intValue();
-        expected = 1;
-        Assert.assertEquals(test, expected);
-    }
-
-    private void checkParentForLinkTest(PDFStructElem elem, int index) {
-        String [] types = {"Sect", "Part"};
-        PDFStructElem parent = (PDFStructElem)((PDFReference)elem.get("P")).getObject();
-        if (index != 2) {
-            String test = ((PDFName)parent.get("S")).getName();
-            String expected = types[index];
-            Assert.assertEquals(test, expected);
-            index++;
-            checkParentForLinkTest(parent, index);
-        }
-    }
-
-    private void setUp() {
-        Rectangle2D r = new Rectangle2D.Double();
-        pdfPage = new PDFPage(new PDFResources(pdfDoc), 0, r, r, r, r);
-        pdfDoc = new PDFDocument(" ");
-        pdfDoc.makeStructTreeRoot(null);
-        pdfPage.setObjectNumber(1);
-        pdfPage.setDocument(pdfDoc);
-    }
-
-    private PDFLogicalStructureHandler setUpPDFLogicalStructureHandler() {
-        PDFLogicalStructureHandler handler = new PDFLogicalStructureHandler(pdfDoc);
-        handler.getParentTree().setDocument(pdfDoc);
-        handler.startPage(pdfPage);
-        return handler;
-    }
-
-    private void checkNoParentTree(PDFStructElem elem, int index) {
-        String [] types = {"Document", "Part"};
-        if (index != 2) {
-            PDFStructElem kid = (PDFStructElem)elem.getKids().get(0);
-            String test = ((PDFName)kid.get("S")).getName();
-            String expected = types[index];
-            Assert.assertEquals(test, expected);
-            index++;
-            checkNoParentTree(kid, index);
-        }
-    }
-
 
     @Test
     public void testNullEntriesInParentTree() throws IOException {
@@ -173,8 +96,85 @@ public class StructureTreeMergerTestCase {
         PDFArray array = handler.getPageParentTree();
         Assert.assertNull(array.get(0));
     }
+
     @Test
-    public void checkNullCOSObject() throws IOException {
+    public void testOBJRCorrectPosition() throws IOException {
+        setUp();
+        PDDocument doc = PDDocument.load(MissingOBJR);
+        PDPage srcPage = doc.getPage(0);
+        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+        PDFStructElem elem = new PDFStructElem();
+        elem.setObjectNumber(2);
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+        merger.copyStructure(markedContentParents);
+//        PDFArray array = handler.getPageParentTree();
+
+//        PDFStructElem kid = (PDFStructElem)array.get(0);
+//        PDFReference reference = (PDFReference) kid.get("P");
+//        PDFStructElem parent = (PDFStructElem)reference.getObject();
+//        List<PDFObject> kids = parent.getKids();
+//        PDFDictionary first = (PDFDictionary) kids.get(0);
+
+//        Assert.assertEquals(first.get("Type").toString(), "/OBJR");
+//        PDFDictionary last = (PDFDictionary) kids.get(2);
+//        Assert.assertEquals(last.get("Type").toString(), "/OBJR");
+
+//        PDFStructElem middle = (PDFStructElem) kids.get(1);
+//        Assert.assertEquals(middle.get("Type").toString(), "/StructElem");
+    }
+
+    private void checkMarkedContentsParentsForLinkTest(PDFArray array) {
+        PDFStructElem first = (PDFStructElem)array.get(0);
+        List firstKids = first.getKids();
+        PDFDictionary firstKid = (PDFDictionary) firstKids.get(0);
+        int test = ((PDFNumber)firstKid.get("MCID")).getNumber().intValue();
+        int expected = 1;
+        Assert.assertEquals(test, expected);
+        PDFDictionary firstKidSibling = (PDFDictionary) firstKids.get(2);
+        test = ((PDFNumber)firstKidSibling.get("MCID")).getNumber().intValue();
+        expected = 3;
+        Assert.assertEquals(test, expected);
+        PDFStructElem second = (PDFStructElem)array.get(1);
+        List secondKids = second.getKids();
+        PDFDictionary secKid = (PDFDictionary) secondKids.get(0);
+        test = ((PDFNumber)secKid.get("MCID")).getNumber().intValue();
+        expected = 2;
+        Assert.assertEquals(test, expected);
+    }
+
+    private void checkParentForLinkTest(PDFStructElem elem, int index) {
+        String [] types = {"Sect", "Part"};
+        PDFStructElem parent = (PDFStructElem)((PDFReference)elem.get("P")).getObject();
+        if (index != 2) {
+            String test = ((PDFName)parent.get("S")).getName();
+            String expected = types[index];
+            Assert.assertEquals(test, expected);
+            index++;
+            checkParentForLinkTest(parent, index);
+        }
+    }
+
+    private void setUp() {
+        Rectangle2D r = new Rectangle2D.Double();
+        pdfDoc = new PDFDocument(" ");
+        pdfPage = new PDFPage(new PDFResources(pdfDoc), 0, r, r, r, r);
+        pdfDoc.makeStructTreeRoot(null);
+        pdfPage.setObjectNumber(1);
+        pdfPage.setDocument(pdfDoc);
+    }
+
+    private PDFLogicalStructureHandler setUpPDFLogicalStructureHandler() {
+        PDFLogicalStructureHandler handler = new PDFLogicalStructureHandler(pdfDoc);
+        handler.getParentTree().setDocument(pdfDoc);
+        handler.startPage(pdfPage);
+        return handler;
+    }
+
+    @Test
+    public void testCheckNullCOSObject() throws IOException {
         setUp();
         PDDocument doc = PDDocument.load(BrokenLink);
         PDPage srcPage = doc.getPage(0);
@@ -197,5 +197,29 @@ public class StructureTreeMergerTestCase {
         PDFStructElem parentElem = (PDFStructElem)array.get(1);
         PDFDictionary objrDict = (PDFDictionary) parentElem.getKids().get(1);
         Assert.assertNull(objrDict.get("Obj"));
+    }
+
+    @Test
+    public void testDirectDescedants() throws IOException {
+        PDFStructElem elem = new PDFStructElem();
+        elem.setObjectNumber(100);
+        setUp();
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+        PDPage srcPage = new PDPage();
+        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+        COSArray array = new COSArray();
+        COSDictionary dict = new COSDictionary();
+        dict.setItem(COSName.S, COSName.P);
+        COSObject obj = new COSObject(dict);
+        obj.setObjectNumber(COSInteger.get(200));
+        obj.setGenerationNumber(COSInteger.ZERO);
+        array.add(0, obj);
+        merger.createDirectDescendants(array, elem);
+        List<PDFObject> list = elem.getKids();
+        PDFStructElem kid = (PDFStructElem)list.get(0);
+        PDFName name = (PDFName)kid.get("S");
+        String test = name.getName();
+        Assert.assertEquals(test, "P");
     }
 }
