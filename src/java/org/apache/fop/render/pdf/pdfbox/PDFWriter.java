@@ -36,7 +36,7 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.common.PDStream;
-import org.apache.pdfbox.util.operator.PDFOperator;
+import org.apache.pdfbox.util.operator.Operator;
 
 public class PDFWriter {
     protected StringBuilder s = new StringBuilder();
@@ -55,8 +55,8 @@ public class PDFWriter {
         List<COSBase> arguments = new ArrayList<COSBase>();
         while (it.hasNext()) {
             Object o = it.next();
-            if (o instanceof PDFOperator) {
-                PDFOperator op = (PDFOperator)o;
+            if (o instanceof Operator) {
+                Operator op = (Operator)o;
                 readPDFArguments(op, arguments);
                 s.append(op.getOperation() + "\n");
                 arguments.clear();
@@ -77,13 +77,13 @@ public class PDFWriter {
         return s.toString();
     }
 
-    protected void readPDFArguments(PDFOperator op, Collection<COSBase> arguments) throws IOException {
+    protected void readPDFArguments(Operator op, Collection<COSBase> arguments) throws IOException {
         for (COSBase c : arguments) {
             processArg(op, c);
         }
     }
 
-    protected void processArg(PDFOperator op, COSBase c) throws IOException {
+    protected void processArg(Operator op, COSBase c) throws IOException {
         if (c instanceof COSInteger) {
             s.append(((COSInteger) c).intValue());
             s.append(" ");

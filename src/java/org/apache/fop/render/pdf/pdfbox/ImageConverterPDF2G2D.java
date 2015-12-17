@@ -134,8 +134,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                         area.getHeight() / pageDimension.height);
                 g2d.transform(at);
 
-                PageDrawer drawer = new PageDrawer(null);
-                drawer.drawPage(g2d, page, mediaBox);
+                PageDrawer drawer = new PageDrawer(null, page);
+                drawer.drawPage(g2d, mediaBox);
             } catch (IOException ioe) {
                 //TODO Better exception handling
                 throw new RuntimeException("I/O error while painting PDF page", ioe);

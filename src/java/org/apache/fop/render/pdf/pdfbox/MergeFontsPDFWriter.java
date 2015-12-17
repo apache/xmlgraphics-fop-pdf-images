@@ -48,7 +48,7 @@ import org.apache.pdfbox.pdmodel.font.PDFontFactory;
 import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.util.operator.PDFOperator;
+import org.apache.pdfbox.util.operator.Operator;
 
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.SingleByteFont;
@@ -85,7 +85,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
         return txt;
     }
 
-    protected void readPDFArguments(PDFOperator op, Collection<COSBase> arguments) throws IOException {
+    protected void readPDFArguments(Operator op, Collection<COSBase> arguments) throws IOException {
         for (COSBase c : arguments) {
             if (c instanceof COSName) {
                 COSName cn = (COSName)c;

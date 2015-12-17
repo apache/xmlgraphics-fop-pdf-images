@@ -38,7 +38,6 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
 import org.apache.pdfbox.encoding.Encoding;
-import org.apache.pdfbox.encoding.EncodingManager;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDFontDescriptorDictionary;
@@ -117,7 +116,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         addEncoding(font);
     }
 
-    private Map<Integer, String> getCodeToName(Encoding encoding) {
+    private Map<Integer, String> getCodeToName(Encoding encoding) throws IOException {
         Map<Integer, String> codeToName = new HashMap<Integer, String>();
         if (encoding != null) {
             COSBase cos = encoding.getCOSObject();
@@ -125,12 +124,8 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 COSDictionary enc = (COSDictionary) cos;
                 COSName baseEncodingName = (COSName) enc.getDictionaryObject(COSName.BASE_ENCODING);
                 if (baseEncodingName != null) {
-                    try {
-                        Encoding baseEncoding = EncodingManager.INSTANCE.getEncoding(baseEncodingName);
-                        codeToName.putAll(baseEncoding.getCodeToNameMap());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    Encoding baseEncoding = Encoding.getInstance(baseEncodingName);
+                    codeToName.putAll(baseEncoding.getCodeToNameMap());
                 }
                 COSArray differences = (COSArray)enc.getDictionaryObject(COSName.DIFFERENCES);
                 int currentIndex = -1;
@@ -359,7 +354,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return null;
     }
 
-    private void addEncoding(PDFont fontForEnc) {
+    private void addEncoding(PDFont fontForEnc) throws IOException {
         List<String> added = new ArrayList<String>(encodingMap.values());
         Map<Integer, String> codeToName = getCodeToName(fontForEnc.getFontEncoding());
         for (int i = fontForEnc.getFirstChar(); i <= fontForEnc.getLastChar(); i++) {

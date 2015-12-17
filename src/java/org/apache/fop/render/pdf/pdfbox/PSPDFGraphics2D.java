@@ -24,7 +24,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Paint;
+import java.awt.PaintContext;
 import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.awt.image.ImageObserver;
@@ -33,7 +36,28 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.pdfbox.cos.COSArray;
+import org.apache.pdfbox.cos.COSBase;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSInteger;
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.pdmodel.common.function.PDFunction;
+import org.apache.pdfbox.pdmodel.common.function.PDFunctionType0;
+import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2;
+import org.apache.pdfbox.pdmodel.common.function.PDFunctionType3;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
+import org.apache.pdfbox.pdmodel.graphics.pattern.TilingPaint;
+import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingContext;
+import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingPaint;
+import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingContext;
+import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingPaint;
+
 
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSize;
@@ -42,6 +66,13 @@ import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
 import org.apache.xmlgraphics.ps.PSGenerator;
 import org.apache.xmlgraphics.ps.PSResource;
 
+import org.apache.fop.pdf.PDFDeviceColorSpace;
+import org.apache.fop.render.gradient.Function;
+import org.apache.fop.render.gradient.GradientMaker;
+import org.apache.fop.render.gradient.GradientMaker.DoubleFormatter;
+import org.apache.fop.render.gradient.Pattern;
+import org.apache.fop.render.gradient.Shading;
+import org.apache.fop.render.ps.Gradient;
 import org.apache.fop.render.ps.PSDocumentHandler;
 import org.apache.fop.render.ps.PSImageUtils;
 
@@ -57,6 +88,127 @@ public class PSPDFGraphics2D extends PSGraphics2D {
 
     public PSPDFGraphics2D(boolean textAsShapes, PSGenerator gen) {
         super(textAsShapes, gen);
+    }
+
+    private final GradientMaker.DoubleFormatter doubleFormatter = new DoubleFormatter() {
+
+        public String formatDouble(double d) {
+            return getPSGenerator().formatDouble(d);
+        }
+    };
+
+    protected void applyPaint(Paint paint, boolean fill) {
+        preparePainting();
+        if (paint instanceof AxialShadingPaint || paint instanceof RadialShadingPaint) {
+            PaintContext paintContext = paint.createContext(null, null, null, new AffineTransform(),
+                    getRenderingHints());
+            PDColorSpace pdcs;
+            int deviceColorSpace = PDFDeviceColorSpace.DEVICE_RGB;
+            if (paint instanceof AxialShadingPaint) {
+                try {
+                    AxialShadingContext asc = (AxialShadingContext) paintContext;
+                    float[] fCoords = asc.getCoords();
+                    PDFunction function = asc.getFunction();
+                    Function targetFT = getFunction(function);
+                    if (targetFT != null) {
+                        if (targetFT.getFunctions().size() == 5
+                                && targetFT.getFunctions().get(0).getFunctionType() == 0) {
+                            return;
+                        }
+                        List<Double> dCoords = floatArrayToDoubleList(fCoords);
+                        PDFDeviceColorSpace colSpace = new PDFDeviceColorSpace(deviceColorSpace);
+                        Shading shading = new Shading(2, colSpace, dCoords, targetFT);
+                        Pattern pattern = new Pattern(2, shading, null);
+                        gen.write(Gradient.outputPattern(pattern, doubleFormatter));
+                    }
+                } catch (IOException ioe) {
+                    handleIOException(ioe);
+                }
+            } else if (paint instanceof RadialShadingPaint) {
+                try {
+                    RadialShadingContext rsc = (RadialShadingContext) paintContext;
+                    float[] fCoords = rsc.getCoords();
+                    PDFunction function = rsc.getFunction();
+                    Function targetFT3 = getFunction(function);
+                    List<Double> dCoords = floatArrayToDoubleList(fCoords);
+                    PDFDeviceColorSpace colSpace = new PDFDeviceColorSpace(deviceColorSpace);
+                    Shading shading = new Shading(3, colSpace, dCoords, targetFT3);
+                    Pattern pattern = new Pattern(2, shading, null);
+                    gen.write(Gradient.outputPattern(pattern, doubleFormatter));
+                } catch (IOException ioe) {
+                    handleIOException(ioe);
+                }
+            }
+        }
+        if (paint instanceof TilingPaint) {
+            super.applyPaint(paint, fill);
+        }
+    }
+
+    private static Function getFunction(PDFunction f) throws IOException {
+        if (f instanceof PDFunctionType3) {
+            PDFunctionType3 sourceFT3 = (PDFunctionType3) f;
+            float[] bounds = sourceFT3.getBounds().toFloatArray();
+            COSArray sourceFunctions = sourceFT3.getFunctions();
+            List<Function> targetFunctions = new ArrayList<Function>();
+            for (int j = 0; j < sourceFunctions.size(); j++) {
+                targetFunctions.add(getFunction(PDFunction.create(sourceFunctions.get(j))));
+            }
+            return new Function(null, null, targetFunctions, toList(bounds), null);
+        } else if (f instanceof PDFunctionType2) {
+            PDFunctionType2 sourceFT2 = (PDFunctionType2) f;
+            double interpolation = (double)sourceFT2.getN();
+            float[] c0 = sourceFT2.getC0().toFloatArray();
+            float[] c1 = sourceFT2.getC1().toFloatArray();
+            return new Function(null, null, c0, c1, interpolation);
+        } else if (f instanceof PDFunctionType0) {
+            COSDictionary s = f.getDictionary();
+            assert s instanceof COSStream;
+            COSStream stream = (COSStream) s;
+            COSArray encode = (COSArray) s.getDictionaryObject(COSName.ENCODE);
+            COSArray domain = (COSArray) s.getDictionaryObject(COSName.DOMAIN);
+            COSArray range = (COSArray) s.getDictionaryObject(COSName.RANGE);
+            int bits = ((COSInteger)s.getDictionaryObject(COSName.BITS_PER_SAMPLE)).intValue();
+            COSArray size = (COSArray) s.getDictionaryObject(COSName.SIZE);
+            byte[] x = IOUtils.toByteArray(stream.getUnfilteredStream());
+            for (byte y : x) {
+                if (y != 0) {
+                    return new Function(floatArrayToDoubleList(domain.toFloatArray()),
+                            floatArrayToDoubleList(range.toFloatArray()),
+                            floatArrayToDoubleList(encode.toFloatArray()),
+                            x,
+                            bits,
+                            toList(size)
+                    );
+                }
+            }
+            return null;
+        }
+        throw new IOException("Unsupported " + f.toString());
+    }
+
+    private static List<Float> toList(float[] array) {
+        List<Float> list = new ArrayList<Float>(array.length);
+        for (float f : array) {
+            list.add(f);
+        }
+        return list;
+    }
+
+    private static List<Integer> toList(COSArray array) {
+        List<Integer> list = new ArrayList<Integer>();
+        for (COSBase i : array) {
+            list.add(((COSInteger)i).intValue());
+        }
+        return list;
+    }
+
+    private static List<Double> floatArrayToDoubleList(float[] floatArray) {
+        List<Double> doubleList = new ArrayList<Double>();
+        for (float f : floatArray) {
+            doubleList.add((double) f);
+        }
+        return doubleList;
     }
 
     @Override
