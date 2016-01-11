@@ -339,6 +339,8 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(stream, stream.contains("/P <</MCID 5 >>BDC"));
         doc.close();
     }
+
+    @Test
     public void testLink() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
