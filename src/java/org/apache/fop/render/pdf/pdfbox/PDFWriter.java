@@ -21,11 +21,11 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSBoolean;
@@ -36,7 +36,7 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.common.PDStream;
-import org.apache.pdfbox.util.operator.Operator;
+
 
 public class PDFWriter {
     protected StringBuilder s = new StringBuilder();
@@ -51,14 +51,15 @@ public class PDFWriter {
     }
 
     public String writeText(PDStream pdStream) throws IOException {
-        Iterator<Object> it = new PDFStreamParser(pdStream).getTokenIterator();
+        PDFStreamParser pdfStreamParser = new PDFStreamParser(pdStream);
+        pdfStreamParser.parse();
+        List<Object> it = pdfStreamParser.getTokens();
         List<COSBase> arguments = new ArrayList<COSBase>();
-        while (it.hasNext()) {
-            Object o = it.next();
+        for (Object o : it) {
             if (o instanceof Operator) {
                 Operator op = (Operator)o;
                 readPDFArguments(op, arguments);
-                s.append(op.getOperation() + "\n");
+                s.append(op.getName() + "\n");
                 arguments.clear();
                 if (op.getImageParameters() != null) {
                     for (Map.Entry<COSName, COSBase> cn : op.getImageParameters().entrySet()) {
@@ -97,14 +98,14 @@ public class PDFWriter {
             addKey(cn);
             s.append(" ");
         } else if (c instanceof COSString) {
-            s.append("<" + ((COSString) c).getHexString() + ">");
+            s.append("<" + ((COSString) c).toHexString() + ">");
         } else if (c instanceof COSArray) {
             s.append("[");
             readPDFArguments(op, (Collection<COSBase>) ((COSArray) c).toList());
             s.append("] ");
         } else if (c instanceof COSDictionary) {
             Collection<COSBase> dictArgs = new ArrayList<COSBase>();
-            if (currentMCID != 0 && op.getOperation().equals("BDC")) {
+            if (currentMCID != 0 && op.getName().equals("BDC")) {
                 for (Map.Entry<COSName, COSBase> cn : ((COSDictionary)c).entrySet()) {
                     if (cn.getKey().getName().equals("MCID")) {
                         updateMCID(cn, dictArgs);

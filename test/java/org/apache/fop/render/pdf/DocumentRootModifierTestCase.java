@@ -17,6 +17,7 @@
 package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -81,7 +82,7 @@ public class DocumentRootModifierTestCase {
         Assert.assertEquals(test, expected);
 
 
-        PDDocument doc = PDDocument.load(CLASSMAP);
+        PDDocument doc = PDDocument.load(new File(CLASSMAP));
         COSDictionary temp = (COSDictionary)doc.getDocumentCatalog().getStructureTreeRoot().getCOSObject();
         PDFDictionary classMap = new PDFDictionary();
         PDFDictionary inner = new PDFDictionary();

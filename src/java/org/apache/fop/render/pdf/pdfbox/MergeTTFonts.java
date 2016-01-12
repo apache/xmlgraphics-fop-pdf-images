@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.fontbox.ttf.MaximumProfileTable;
-
 import org.apache.fop.fonts.truetype.FontFileReader;
 import org.apache.fop.fonts.truetype.GlyfTable;
 import org.apache.fop.fonts.truetype.OFDirTabEntry;

@@ -52,7 +52,6 @@ import org.apache.pdfbox.pdmodel.common.function.PDFunctionType0;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType3;
 import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
-import org.apache.pdfbox.pdmodel.graphics.pattern.TilingPaint;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingPaint;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingContext;
@@ -77,6 +76,7 @@ import org.apache.fop.render.ps.PSDocumentHandler;
 import org.apache.fop.render.ps.PSImageUtils;
 
 public class PSPDFGraphics2D extends PSGraphics2D {
+    private boolean clearRect;
 
     public PSPDFGraphics2D(boolean textAsShapes) {
         super(textAsShapes);
@@ -88,6 +88,13 @@ public class PSPDFGraphics2D extends PSGraphics2D {
 
     public PSPDFGraphics2D(boolean textAsShapes, PSGenerator gen) {
         super(textAsShapes, gen);
+    }
+
+    public void clearRect(int x, int y, int width, int height) {
+        if (clearRect) {
+            super.clearRect(x, y, width, height);
+        }
+        clearRect = true;
     }
 
     private final GradientMaker.DoubleFormatter doubleFormatter = new DoubleFormatter() {
@@ -140,9 +147,6 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                 }
             }
         }
-        if (paint instanceof TilingPaint) {
-            super.applyPaint(paint, fill);
-        }
     }
 
     private static Function getFunction(PDFunction f) throws IOException {
@@ -162,7 +166,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             float[] c1 = sourceFT2.getC1().toFloatArray();
             return new Function(null, null, c0, c1, interpolation);
         } else if (f instanceof PDFunctionType0) {
-            COSDictionary s = f.getDictionary();
+            COSDictionary s = f.getCOSObject();
             assert s instanceof COSStream;
             COSStream stream = (COSStream) s;
             COSArray encode = (COSArray) s.getDictionaryObject(COSName.ENCODE);

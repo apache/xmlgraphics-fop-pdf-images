@@ -17,6 +17,7 @@
 
 package org.apache.fop.render.pdf;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -42,7 +43,7 @@ public class PageParentTreeFinderTestCase {
 
     @Test
     public void testGetPageParentTreeArray() throws IOException {
-        PDDocument doc = PDDocument.load(LINK);
+        PDDocument doc = PDDocument.load(new File(LINK));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -66,11 +67,10 @@ public class PageParentTreeFinderTestCase {
     }
 
     @Test
-    public void testNoparentTreePresent() {
+    public void testNoparentTreePresent() throws IOException {
         PDPage srcPage = new PDPage();
-        srcPage.getCOSDictionary().setItem(COSName.STRUCT_PARENTS, COSInteger.get(-1));
+        srcPage.getCOSObject().setItem(COSName.STRUCT_PARENTS, COSInteger.get(-1));
         PDResources res = new PDResources();
-        res.setXObjects(new HashMap<String, PDXObject>());
         srcPage.setResources(res);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray parentTree = finder.getPageParentTreeArray(null);

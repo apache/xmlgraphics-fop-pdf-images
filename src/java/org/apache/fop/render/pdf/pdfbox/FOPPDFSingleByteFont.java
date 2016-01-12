@@ -28,8 +28,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.fontbox.cff.CFFType1Font;
 import org.apache.fontbox.cmap.CMap;
-import org.apache.fontbox.ttf.CMAPEncodingEntry;
+
+import org.apache.fontbox.ttf.CmapSubtable;
 import org.apache.fontbox.ttf.TrueTypeFont;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -37,13 +39,15 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
-import org.apache.pdfbox.encoding.Encoding;
+
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDFontDescriptorDictionary;
-import org.apache.pdfbox.pdmodel.font.PDFontFactory;
+import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
+import org.apache.pdfbox.pdmodel.font.PDType1CFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.encoding.BuiltInEncoding;
+import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
 
 import org.apache.fop.fonts.EmbeddingMode;
 import org.apache.fop.fonts.FontType;
@@ -54,7 +58,7 @@ import org.apache.fop.pdf.PDFDictionary;
 
 public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private int fontCount;
-    private PDFont font;
+    private FontContainer font;
     protected PDFDictionary ref;
     protected Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
     private Map<Integer, Integer> newWidth = new HashMap<Integer, Integer>();
@@ -66,7 +70,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private MergeCFFFonts mergeCFFFonts = new MergeCFFFonts();
     private MergeType1Fonts mergeType1Fonts = new MergeType1Fonts();
     private String shortFontName;
-    private final Map<COSDictionary, PDFont> fontMap = new HashMap<COSDictionary, PDFont>();
+    private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
 
     public FOPPDFSingleByteFont(COSDictionary fontData, String name) throws IOException {
         super(null, EmbeddingMode.FULL);
@@ -77,9 +81,9 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         font = getFont(fontData);
         setFirstChar(font.getFirstChar());
         setLastChar(font.getLastChar());
-        shortFontName = MergeFontsPDFWriter.getName(font.getBaseFont());
+        shortFontName = MergeFontsPDFWriter.getName(font.font.getName());
         loadFontFile(font);
-        float[] bBoxF = font.getFontBoundingBox().getCOSArray().toFloatArray();
+        float[] bBoxF = font.getBoundingBox();
         int[] bBox = new int[bBoxF.length];
         for (int i = 0; i < bBox.length; i++) {
             bBox[i] = (int)bBoxF[i];
@@ -96,11 +100,11 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         }
         //mark font as used
         notifyMapOperation();
-        FOPPDFMultiByteFont.setProperties(this, font);
+        FOPPDFMultiByteFont.setProperties(this, font.font);
         if (font.getWidths() != null) {
             //if width contains 0 we cant rely on codeToNameMap
             boolean usesZero = font.getWidths().contains(0);
-            Set<Integer> codeToName = getCodeToName(font.getFontEncoding()).keySet();
+            Set<Integer> codeToName = getCodeToName(font.getEncoding()).keySet();
             for (int i = getFirstChar();
                  i <= Math.min(getLastChar(), getFirstChar() + font.getWidths().size()); i++) {
                 if (usesZero || codeToName.contains(i)) {
@@ -116,10 +120,13 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         addEncoding(font);
     }
 
-    private Map<Integer, String> getCodeToName(Encoding encoding) throws IOException {
+    private Map<Integer, String> getCodeToName(Encoding encoding) {
         Map<Integer, String> codeToName = new HashMap<Integer, String>();
         if (encoding != null) {
-            COSBase cos = encoding.getCOSObject();
+            COSBase cos = null;
+            if (!(encoding instanceof BuiltInEncoding)) {
+                cos = encoding.getCOSObject();
+            }
             if (cos instanceof COSDictionary) {
                 COSDictionary enc = (COSDictionary) cos;
                 COSName baseEncodingName = (COSName) enc.getDictionaryObject(COSName.BASE_ENCODING);
@@ -145,15 +152,18 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return codeToName;
     }
 
-    private Object getCmap(PDFont font) throws IOException {
-        if (font.getFontEncoding() != null) {
-            return font.getFontEncoding();
+    private Object getCmap(FontContainer font) throws IOException {
+        if (font.getEncoding() != null) {
+            return font.getEncoding();
+        }
+        if (font.getToUnicodeCMap() == null) {
+            throw new IOException("No cmap found in " + font.font.getName());
         }
         return font.getToUnicodeCMap();
     }
 
     private PDStream readFontFile(PDFont font) throws IOException {
-        PDFontDescriptorDictionary fd = (PDFontDescriptorDictionary) font.getFontDescriptor();
+        PDFontDescriptor fd = font.getFontDescriptor();
         setFlags(fd.getFlags());
         PDStream ff = fd.getFontFile3();
         if (ff == null) {
@@ -165,18 +175,18 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             setFontType(FontType.TYPE1C);
         }
         if (ff == null) {
-            throw new IOException(font.getBaseFont() + " no font file");
+            throw new IOException(font.getName() + " no font file");
         }
         return ff;
     }
 
-    private void loadFontFile(PDFont font) throws IOException {
-        PDStream ff = readFontFile(font);
+    private void loadFontFile(FontContainer font) throws IOException {
+        PDStream ff = readFontFile(font.font);
         mergeFontFile(ff.createInputStream(), font);
-        if (font instanceof PDTrueTypeFont) {
-            TrueTypeFont ttfont = ((PDTrueTypeFont) font).getTTFFont();
-            CMAPEncodingEntry[] cmapList = ttfont.getCMAP().getCmaps();
-            for (CMAPEncodingEntry c : cmapList) {
+        if (font.font instanceof PDTrueTypeFont) {
+            TrueTypeFont ttfont = ((PDTrueTypeFont) font.font).getTrueTypeFont();
+            CmapSubtable[] cmapList = ttfont.getCmap().getCmaps();
+            for (CmapSubtable c : cmapList) {
                 MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
                 for (int i = 0; i < 256 * 256; i++) {
                     if (c.getGlyphId(i) != 0) {
@@ -225,8 +235,8 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     }
 
     public String addFont(COSDictionary fontData) throws IOException {
-        PDFont font = getFont(fontData);
-        if (font instanceof PDType1Font && differentGlyphData((PDType1Font) font)) {
+        FontContainer font = getFont(fontData);
+        if ((font.font instanceof PDType1Font || font.font instanceof PDType1CFont) && differentGlyphData(font.font)) {
             return null;
         }
         mergeWidths(font);
@@ -247,18 +257,25 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return fontCount;
     }
 
-    private Map<String, byte[]> getCharStringsDict(PDType1Font font) throws IOException {
-        if (getFontType() == FontType.TYPE1) {
-            return font.getType1Font().getCharStringsDict();
+    private Map<String, byte[]> getCharStringsDict(PDFont font) throws IOException {
+        if (font instanceof PDType1Font) {
+            return ((PDType1Font)font).getType1Font().getCharStringsDict();
         }
-        return font.getType1CFont().getCFFFont().getCharStringsDict();
+        CFFType1Font cffFont = ((PDType1CFont) font).getCFFType1Font();
+        List<byte[]> bytes = cffFont.getCharStringBytes();
+        Map<String, byte[]> map = new HashMap<String, byte[]>();
+        for (int i = 0; i < bytes.size(); i++) {
+            map.put(cffFont.getCharset().getNameForGID(i), bytes.get(i));
+        }
+        return map;
     }
 
-    private boolean differentGlyphData(PDType1Font otherFont) throws IOException {
+    private boolean differentGlyphData(PDFont otherFont) throws IOException {
         if (charStringsDict == null) {
-            charStringsDict = getCharStringsDict((PDType1Font) font);
+            charStringsDict = getCharStringsDict(font.font);
         }
-        for (Map.Entry<String, byte[]> s : getCharStringsDict(otherFont).entrySet()) {
+        Map<String, byte[]> otherFontMap = getCharStringsDict(otherFont);
+        for (Map.Entry<String, byte[]> s : otherFontMap.entrySet()) {
             if (charStringsDict.containsKey(s.getKey())) {
                 int numberDiff = 0;
                 byte[] b1 = charStringsDict.get(s.getKey());
@@ -284,15 +301,15 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return false;
     }
 
-    private void mergeWidths(PDFont font) throws IOException {
+    private void mergeWidths(FontContainer font) throws IOException {
         int w = 0;
         int skipGlyphIndex = getLastChar() + 1;
         Object cmap = getCmap(font);
-        Set<Integer> codeToName = getCodeToName(font.getFontEncoding()).keySet();
+        Set<Integer> codeToName = getCodeToName(font.getEncoding()).keySet();
         for (int i = font.getFirstChar(); i <= font.getLastChar(); i++) {
             boolean addedWidth = false;
             int glyphIndexPos = skipGlyphIndex;
-            if (font instanceof PDTrueTypeFont) {
+            if (font.font instanceof PDTrueTypeFont) {
                 glyphIndexPos = i;
             }
             int neww = 0;
@@ -300,7 +317,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 neww = font.getWidths().get(i - font.getFirstChar());
                 if (!newWidth.containsKey(i) || newWidth.get(i) == 0) {
                     if (getFontType() == FontType.TYPE1
-                            || font instanceof PDTrueTypeFont
+                            || font.font instanceof PDTrueTypeFont
                             || codeToName.contains(i)) {
                         newWidth.put(i, neww);
                         glyphIndexPos = i;
@@ -325,19 +342,19 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private String getChar(Object cmap, int i) throws IOException {
         if (cmap instanceof CMap) {
             CMap c = (CMap)cmap;
-            int size = 1;
-            if (c.hasTwoByteMappings()) {
-                size = 2;
-            }
-            return c.lookup(i, size);
+            return c.toUnicode(i);
         }
         Encoding enc = (Encoding)cmap;
         return enc.getName(i);
     }
 
     public String getEncodingName() {
-        if (font.getFontEncoding() != null) {
-            COSBase cosObject = font.getFontEncoding().getCOSObject();
+        Encoding encoding = font.getEncoding();
+        if (encoding != null) {
+            COSBase cosObject = null;
+            if (!(encoding instanceof BuiltInEncoding)) {
+                cosObject = encoding.getCOSObject();
+            }
             if (cosObject != null) {
                 if (cosObject instanceof COSDictionary) {
                     COSBase item = ((COSDictionary) cosObject).getItem(COSName.BASE_ENCODING);
@@ -354,9 +371,9 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return null;
     }
 
-    private void addEncoding(PDFont fontForEnc) throws IOException {
+    private void addEncoding(FontContainer fontForEnc) {
         List<String> added = new ArrayList<String>(encodingMap.values());
-        Map<Integer, String> codeToName = getCodeToName(fontForEnc.getFontEncoding());
+        Map<Integer, String> codeToName = getCodeToName(fontForEnc.getEncoding());
         for (int i = fontForEnc.getFirstChar(); i <= fontForEnc.getLastChar(); i++) {
             if (codeToName.keySet().contains(i)) {
                 String s = codeToName.get(i);
@@ -393,7 +410,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
 
         public char[] getUnicodeCharMap() {
             if (cmap) {
-                if (MergeFontsPDFWriter.getToUnicode(font) == null) {
+                if (font.getToUnicode() == null) {
                     return new char[0];
                 }
                 List<String> cmapStrings = new ArrayList<String>();
@@ -451,13 +468,13 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return false;
     }
 
-    private void mergeFontFile(InputStream ff, PDFont pdFont) throws IOException {
+    private void mergeFontFile(InputStream ff, FontContainer pdFont) throws IOException {
         if (getFontType() == FontType.TRUETYPE) {
             Map<Integer, Integer> chars = new HashMap<Integer, Integer>();
             chars.put(0, 0);
             mergeTTFonts.readFont(new FontFileReader(ff), chars, false);
         } else if (getFontType() == FontType.TYPE1) {
-            mergeType1Fonts.readFont(ff, (PDType1Font) pdFont);
+            mergeType1Fonts.readFont(ff, pdFont);
         } else {
             mergeCFFFonts.readType1CFont(ff, shortFontName);
         }
@@ -479,12 +496,12 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         return null;
     }
 
-    protected PDFont getFont(COSDictionary fontData) throws IOException {
+    protected FontContainer getFont(COSDictionary fontData) throws IOException {
         if (!fontMap.containsKey(fontData)) {
             if (fontMap.size() > 10) {
                 fontMap.clear();
             }
-            fontMap.put(fontData, PDFontFactory.createFont(fontData));
+            fontMap.put(fontData, new FontContainer(fontData));
         }
         return fontMap.get(fontData);
     }

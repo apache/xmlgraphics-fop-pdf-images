@@ -34,8 +34,6 @@ import javax.xml.transform.Source;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.encryption.DecryptionMaterial;
-import org.apache.pdfbox.pdmodel.encryption.StandardDecryptionMaterial;
 
 import org.apache.xmlgraphics.image.loader.ImageContext;
 import org.apache.xmlgraphics.image.loader.ImageException;
@@ -116,27 +114,15 @@ public class PreloaderPDF extends AbstractImagePreloader {
         //the cached PDF shall be disposed off.
         pddoc.getDocument().setWarnMissingClose(false);
 
-        if (pddoc.isEncrypted()) {
-            //Try decrypting with an empty password
-            DecryptionMaterial dec = new StandardDecryptionMaterial("");
-//            try {
-                pddoc.openProtection(dec);
-//            } catch (org.apache.pdfbox.exceptions.CryptographyException e) {
-//                notifyCouldNotDecrypt(e);
-//            } catch (BadSecurityHandlerException e) {
-//                notifyCouldNotDecrypt(e);
-//            }
-        }
-
         int pageCount = pddoc.getNumberOfPages();
         if (selectedPage < 0 || selectedPage >= pageCount) {
             throw new ImageException("Selected page (index: " + selectedPage
                     + ") does not exist in the PDF file. The document has "
                     + pddoc.getNumberOfPages() + " pages.");
         }
-        PDPage page = (PDPage)pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
-        PDRectangle mediaBox = page.findMediaBox();
-        PDRectangle cropBox = page.findCropBox();
+        PDPage page = (PDPage)pddoc.getDocumentCatalog().getPages().get(selectedPage);
+        PDRectangle mediaBox = page.getMediaBox();
+        PDRectangle cropBox = page.getCropBox();
         PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
         int w = Math.round(viewBox.getWidth() * 1000);
         int h = Math.round(viewBox.getHeight() * 1000);

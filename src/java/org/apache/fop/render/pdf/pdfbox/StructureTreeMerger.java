@@ -110,7 +110,7 @@ public class StructureTreeMerger {
             assert base instanceof COSObject;
             COSObject obj = (COSObject)base;
             createAndRegisterStructElem(obj);
-            PDFStructElem elem = structElemCache.get(obj.getObjectNumber().intValue());
+            PDFStructElem elem = structElemCache.get((int)obj.getObjectNumber());
             copyElemEntries(obj, elem);
             parent.addKid(elem);
             elem.setParent(parent);
@@ -132,7 +132,7 @@ public class StructureTreeMerger {
         for (COSBase entry : markedContentParents) {
             COSObject elemCos = (COSObject)entry;
             COSObject elemParent = (COSObject)elemCos.getItem(COSName.P);
-            PDFStructElem elem = structElemCache.get(elemCos.getObjectNumber().intValue());
+            PDFStructElem elem = structElemCache.get((int)elemCos.getObjectNumber());
             createParents(elemCos, elemParent, elem);
         }
     }
@@ -140,7 +140,7 @@ public class StructureTreeMerger {
     private PDFStructElem createAndRegisterStructElem(COSObject entry) {
         PDFStructElem elem = new PDFStructElem();
         pdfDoc.registerStructureElement(elem);
-        structElemCache.put(entry.getObjectNumber().intValue(), elem);
+        structElemCache.put((int)entry.getObjectNumber(), elem);
         return elem;
     }
 
@@ -163,7 +163,7 @@ public class StructureTreeMerger {
     }
 
     private PDFStructElem createPageStructElements(COSObject entry) throws IOException {
-        int objID = entry.getObjectNumber().intValue();
+        int objID = (int)entry.getObjectNumber();
         if (structElemCache.containsKey(objID)) {
             return null;
         }
@@ -176,7 +176,7 @@ public class StructureTreeMerger {
     }
 
     private void createParents(COSObject cosElem, COSObject cosParentElem, PDFStructElem elem) throws IOException {
-        int elemObjectID = cosParentElem.getObjectNumber().intValue();
+        int elemObjectID = (int)cosParentElem.getObjectNumber();
         COSDictionary parentElemDictionary = (COSDictionary)cosParentElem.getObject();
         PDFStructElem elemParent = structElemCache.get(elemObjectID);
         if (isStructureTreeRoot(parentElemDictionary)) {
@@ -245,7 +245,7 @@ public class StructureTreeMerger {
                 COSDictionary mcrDict = (COSDictionary)baseKid;
                 createKidFromCOSDictionary(mcrDict, parent, parentDict);
             } else if (originatedFromTableRow) {
-                int objID = baseObj.getObjectNumber().intValue();
+                int objID = (int)baseObj.getObjectNumber();
                 if (structElemCache.get(objID) != null) {
                     PDFStructElem kidElem = structElemCache.get(objID);
                     parent.addKid(kidElem);
@@ -260,7 +260,7 @@ public class StructureTreeMerger {
     }
 
     private void createkidEntryFromCosObjectForRow(COSObject entree, PDFStructElem parent) throws IOException {
-        int entreeObjID = entree.getObjectNumber().intValue();
+        int entreeObjID = (int)entree.getObjectNumber();
         PDFStructElem elemRef = structElemCache.get(entreeObjID);
         if (elemRef == null) {
             elemRef = createAndRegisterStructElem(entree);
@@ -428,7 +428,7 @@ public class StructureTreeMerger {
             COSDictionary kidDictionary = (COSDictionary)kid;
             COSDictionary parentDict = (COSDictionary)parent.getObject();
             if (isElementFromSourcePage(kidDictionary, parentDict)) {
-                PDFStructElem elem = structElemCache.get(parent.getObjectNumber().intValue());
+                PDFStructElem elem = structElemCache.get((int)parent.getObjectNumber());
                 if (elem == null) {
                     elem = createAndRegisterStructElem(parent);
                     copyElemEntries(parent, elem);
@@ -440,7 +440,7 @@ public class StructureTreeMerger {
             assert kid instanceof COSInteger;
             COSDictionary parentDict = (COSDictionary)parent.getObject();
             if (checkPageEntryInAncestorsRecursively(parentDict)) {
-                PDFStructElem elem = structElemCache.get(parent.getObjectNumber().intValue());
+                PDFStructElem elem = structElemCache.get((int)parent.getObjectNumber());
                 if (elem == null) {
                     elem = createAndRegisterStructElem(parent);
                     copyElemEntries(parent, elem);
