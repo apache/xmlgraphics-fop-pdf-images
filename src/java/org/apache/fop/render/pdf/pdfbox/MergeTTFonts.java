@@ -322,6 +322,8 @@ public class MergeTTFonts extends TTFSubSetFile {
     }
 
     private void writeCMAP(List<Cmap> cmaps) {
+        mergeUniCmap(cmaps);
+
         int checksum = currentPos;
         pad4();
         int cmapPos = currentPos;
@@ -386,6 +388,20 @@ public class MergeTTFonts extends TTFSubSetFile {
 
         updateCheckSum(checksum, currentPos - cmapPos, OFTableName.CMAP);
         realSize += currentPos - cmapPos;
+    }
+
+    private void mergeUniCmap(List<Cmap> cmaps) {
+        Cmap uniCmap = null;
+        for (Cmap cmap : cmaps) {
+            if (cmap.platformId == 3 && cmap.platformEncodingId == 1) {
+                uniCmap = cmap;
+            }
+        }
+        if (uniCmap != null) {
+            for (Cmap cmap : cmaps) {
+                uniCmap.glyphIdToCharacterCode.putAll(cmap.glyphIdToCharacterCode);
+            }
+        }
     }
 
     private int getCmapOffset(List<Cmap> cmaps, int index) {

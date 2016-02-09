@@ -211,6 +211,12 @@ public class MergeFontsPDFWriter extends PDFWriter {
         if (cs.getClass().getName().equals("org.apache.fontbox.cff.CFFParser$Format1Charset")) {
             extra += "f1cs";
         }
+        if (font.getFontEncoding() != null) {
+            String enc = font.getFontEncoding().getClass().getSimpleName();
+            if (!"DictionaryEncoding".equals(enc)) {
+                extra += enc;
+            }
+        }
         return name + extra;
     }
 
