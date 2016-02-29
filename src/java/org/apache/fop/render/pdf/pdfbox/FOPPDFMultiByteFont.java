@@ -54,7 +54,6 @@ import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.EmbeddingMode;
 import org.apache.fop.fonts.FontType;
 import org.apache.fop.fonts.MultiByteFont;
-import org.apache.fop.fonts.truetype.FontFileReader;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.util.CharUtilities;
 
@@ -62,8 +61,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
     protected PDFDictionary ref;
     private Map<Integer, Integer> newWidth = new TreeMap<Integer, Integer>();
     private Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
-    private MergeTTFonts mergeTTFonts = new MergeTTFonts();
-    private MergeCFFFonts mergeCFFFonts = new MergeCFFFonts();
+    private MergeFonts mergeFonts;
     //private Map<String, GlyphData> glyphs = new HashMap<String, GlyphData>();
     private final Map<COSDictionary, PDFont> fontMap = new HashMap<COSDictionary, PDFont>();
 
@@ -122,16 +120,23 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             }
         }
         readCharMap(font, gidToGlyph, glyphData, mainFont, oldToNewGIMap);
-        FontFileReader ffr = readFontFile(mainFont);
-        if (ttf != null) {
-            mergeMaxp(ttf, mergeTTFonts.maxp);
+        InputStream ffr = readFontFile(mainFont);
+        if (mergeFonts == null) {
+            if (ttf != null) {
+                mergeFonts = new MergeTTFonts(null);
+            } else {
+                mergeFonts = new MergeCFFFonts();
+            }
+        }
+        if (mergeFonts instanceof MergeTTFonts) {
+            mergeMaxp(ttf, ((MergeTTFonts)mergeFonts).maxp);
             int sizeNoCompGlyphs = oldToNewGIMap.size();
-            mergeTTFonts.readFont(ffr, oldToNewGIMap, true);
+            mergeFonts.readFont(ffr, null, null, oldToNewGIMap, true);
             if (oldToNewGIMap.size() > sizeNoCompGlyphs) {
                 cidSet.mapChar(256 * 256, (char) 0);
             }
         } else {
-            mergeCFFFonts.readType1CFont(new ByteArrayInputStream(ffr.getAllBytes()), getEmbedFontName());
+            mergeFonts.readFont(ffr, getEmbedFontName(), null, null, true);
         }
         return getFontName();
     }
@@ -239,7 +244,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
 //            return false;
 //        }
 
-    private FontFileReader readFontFile(PDFont font) throws IOException {
+    private InputStream readFontFile(PDFont font) throws IOException {
         PDFontDescriptorDictionary fd = (PDFontDescriptorDictionary) font.getFontDescriptor();
         PDStream ff = fd.getFontFile3();
         if (ff == null) {
@@ -248,8 +253,11 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
                 ff = fd.getFontFile();
             }
         }
+        if (ff == null) {
+            throw new IOException(font.getBaseFont() + " no fontfile");
+        }
         InputStream is = ff.createInputStream();
-        return new FontFileReader(new ByteArrayInputStream(IOUtils.toByteArray(is)));
+        return new ByteArrayInputStream(IOUtils.toByteArray(is));
     }
 
     public Map<Integer, Integer> getWidthsMap() {
@@ -302,12 +310,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
     }
 
     public InputStream getInputStream() throws IOException {
-        if (getFontType() == FontType.CIDTYPE0) {
-            mergeCFFFonts.writeFont();
-            return new ByteArrayInputStream(mergeCFFFonts.getFontSubset());
-        }
-        mergeTTFonts.writeFont(null);
-        return new ByteArrayInputStream(mergeTTFonts.getFontSubset());
+        return new ByteArrayInputStream(mergeFonts.getMergedFontSubset());
     }
 
     protected PDFont getFont(COSDictionary fontData) throws IOException {
