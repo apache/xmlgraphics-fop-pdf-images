@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,6 +77,7 @@ import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFAnnotList;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
@@ -116,6 +118,7 @@ public class PDFBoxAdapterTestCase {
     private static final String LINK = "test/resources/link.pdf";
     private static final String IMAGE = "test/resources/image.pdf";
     private static final String HELLOTagged = "test/resources/taggedWorld.pdf";
+    private static final String XFORM = "test/resources/xform.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
@@ -358,6 +361,27 @@ public class PDFBoxAdapterTestCase {
         PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
         Assert.assertEquals(annots.toPDFString(), "[\n1 0 R\n2 0 R\n]");
         doc.close();
+    }
+
+    @Test
+    public void testXform() throws Exception {
+        PDFDocument pdfdoc = new PDFDocument("");
+        pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Arrays.asList("null"));
+        pdfdoc.setMergeFontsEnabled(true);
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        pdfpage.setDocument(pdfdoc);
+        pdfpage.setObjectNumber(1);
+        Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
+        PDDocument doc = PDDocument.load(XFORM);
+        PDPage page = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", at, new FontInfo(), r);
+        doc.close();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        Assert.assertFalse(bos.toString("UTF-8").contains("/W 5 /H 5 /BPC 8 /CS /RGB ID ÿÿÿ"));
     }
 
     @Test

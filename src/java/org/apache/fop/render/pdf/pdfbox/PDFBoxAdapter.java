@@ -99,6 +99,7 @@ public class PDFBoxAdapter {
     private final Map clonedVersion;
     private Map<COSName, String> newXObj = new HashMap<COSName, String>();
     private Map<Integer, PDFArray> pageNumbers;
+    private Collection<String> parentFonts = new ArrayList<String>();
 
     private int currentMCID;
 
@@ -350,12 +351,11 @@ public class PDFBoxAdapter {
         }
         COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSDictionary().getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
-        String uniqueName = Integer.toString(key.hashCode());
+        UniqueName uniqueName = new UniqueName(key, sourceDoc, sourcePageResources);
         String newStream = null;
         if (fonts != null && pdfDoc.isMergeFontsEnabled()) {
             fontsBackup = new COSDictionary(fonts);
-            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName,
-                    getResourceNames(sourcePageResources.getCOSDictionary()));
+            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID);
             newStream = m.writeText(pdStream);
 //            if (newStream != null) {
 //                for (Object f : fonts.keySet().toArray()) {
@@ -367,8 +367,7 @@ public class PDFBoxAdapter {
 //            }
         }
         if (newStream == null) {
-            PDFWriter writer = new PDFWriter(uniqueName, getResourceNames(sourcePageResources.getCOSDictionary()),
-                    currentMCID);
+            PDFWriter writer = new PDFWriter(uniqueName, currentMCID);
             newStream = writer.writeText(pdStream);
             currentMCID = writer.getCurrentMCID();
 
@@ -470,7 +469,8 @@ public class PDFBoxAdapter {
         return boxStr.toString() + pdStream.getInputStreamAsString();
     }
 
-    private void mergeXObj(COSDictionary sourcePageResources, FontInfo fontinfo, String uniqueName) throws IOException {
+    private void mergeXObj(COSDictionary sourcePageResources, FontInfo fontinfo, UniqueName uniqueName)
+        throws IOException {
         COSDictionary xobj = (COSDictionary) sourcePageResources.getDictionaryObject(COSName.XOBJECT);
         if (xobj != null && pdfDoc.isMergeFontsEnabled()) {
             for (Map.Entry<COSName, COSBase> i : xobj.entrySet()) {
@@ -486,19 +486,18 @@ public class PDFBoxAdapter {
                         } else {
                             for (Map.Entry<COSName, COSBase> entry : src.entrySet()) {
                                 if (!target.keySet().contains(entry.getKey())) {
-                                    target.setItem(entry.getKey(), entry.getValue());
+                                    target.setItem(uniqueName.getName(entry.getKey()), entry.getValue());
                                 }
                             }
                         }
-                        PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName,
-                                getResourceNames(sourcePageResources));
+                        PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName, parentFonts, 0);
                         String c = writer.writeText(PDStream.createFromCOS(stream));
                         if (c != null) {
                             stream.removeItem(COSName.FILTER);
                             newXObj.put(i.getKey(), c);
                             for (Object e : src.keySet().toArray()) {
                                 COSName name = (COSName) e;
-                                src.setItem(name.getName() + uniqueName, src.getItem(name));
+                                src.setItem(uniqueName.getName(name), src.getItem(name));
                                 src.removeItem(name);
                             }
                         }
@@ -515,7 +514,7 @@ public class PDFBoxAdapter {
             for (COSName entry : xobj.keySet()) {
                 if (newXObj.containsKey(entry)) {
                     PDFStream s = (PDFStream) target.get(entry.getName());
-                    s.setData(newXObj.get(entry).getBytes("UTF-8"));
+                    s.setData(newXObj.get(entry).getBytes("ISO-8859-1"));
                     PDFDictionary xobjr = (PDFDictionary) s.get("Resources");
                     xobjr.put("Font", pageResources.get("Font"));
                 }
@@ -523,25 +522,11 @@ public class PDFBoxAdapter {
         }
     }
 
-    private List<COSName> getResourceNames(COSDictionary sourcePageResources) {
-        List<COSName> resourceNames = new ArrayList<COSName>();
-        for (COSBase e : sourcePageResources.getValues()) {
-            if (e instanceof COSObject) {
-                e = ((COSObject) e).getObject();
-            }
-            if (e instanceof COSDictionary) {
-                COSDictionary d = (COSDictionary) e;
-                resourceNames.addAll(d.keySet());
-            }
-        }
-        return resourceNames;
-    }
-
-    private void transferPageDict(COSDictionary fonts, String uniqueName, PDResources sourcePageResources)
+    private void transferPageDict(COSDictionary fonts, UniqueName uniqueName, PDResources sourcePageResources)
         throws IOException {
         if (fonts != null) {
             for (Map.Entry<COSName, COSBase> f : fonts.entrySet()) {
-                String name = f.getKey().getName() + uniqueName;
+                String name = uniqueName.getName(f.getKey());
                 targetPage.getPDFResources().addFont(name, (PDFDictionary)cloneForNewDocument(f.getValue()));
             }
         }
@@ -550,7 +535,7 @@ public class PDFBoxAdapter {
         }
     }
 
-    private void transferDict(Map.Entry<COSName, COSBase> dict, String uniqueName) throws IOException {
+    private void transferDict(Map.Entry<COSName, COSBase> dict, UniqueName uniqueName) throws IOException {
         COSBase src;
         if (dict.getValue() instanceof COSObject) {
             src = ((COSObject) dict.getValue()).getObject();
@@ -565,7 +550,7 @@ public class PDFBoxAdapter {
             }
             COSDictionary srcDict = (COSDictionary) src;
             for (Map.Entry<COSName, COSBase> v : srcDict.entrySet()) {
-                newDict.put(v.getKey().getName() + uniqueName, cloneForNewDocument(v.getValue()));
+                newDict.put(uniqueName.getName(v.getKey()), cloneForNewDocument(v.getValue()));
             }
             targetPage.getPDFResources().put(name, newDict);
         }

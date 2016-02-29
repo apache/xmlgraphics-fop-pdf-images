@@ -67,10 +67,12 @@ public class MergeFontsPDFWriter extends PDFWriter {
     private static final Pattern SUBSET_PATTERN = Pattern.compile("[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]\\+.+");
     private Collection<String> parentFonts;
 
-    public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, String key, List<COSName> resourceNames) {
-        super(key, resourceNames, 0);
+    public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, UniqueName key,
+                               Collection<String> parentFonts, int mcid) {
+        super(key, mcid);
         this.fonts = fonts;
         this.fontInfo = fontInfo;
+        this.parentFonts = parentFonts;
     }
 
     public String writeText(PDStream pdStream) throws IOException {
@@ -95,8 +97,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
                     internalName = getNewFont(fontData, fontInfo, fontsToRemove.values());
                 }
                 if (fontData == null || internalName == null) {
-                    s.append("/" + cn.getName());
-                    addKey(cn);
+                    s.append("/" + key.getName(cn));
                     if (op.getOperation().equals("Tf")) {
                         font = null;
                         oldFont = null;
