@@ -287,7 +287,7 @@ public class PDFBoxAdapter {
             return cloned;
         }
         PDFObject pdfobj = (PDFObject) cloned;
-        if (!pdfobj.hasObjectNumber()) {
+        if (pdfobj != null && !pdfobj.hasObjectNumber() && !(base instanceof COSDictionary)) {
             pdfDoc.registerObject(pdfobj);
             if (log.isTraceEnabled()) {
                 log.trace(key + ": " + pdfobj.getClass().getName() + " registered as "
@@ -302,6 +302,8 @@ public class PDFBoxAdapter {
         if (base instanceof COSObject) {
             COSObject obj = (COSObject)base;
             return obj.getObjectNumber().intValue() + " " + obj.getGenerationNumber().intValue();
+        } else if (base instanceof COSDictionary) {
+            return base;
         } else {
             return null;
         }

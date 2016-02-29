@@ -119,6 +119,7 @@ public class PDFBoxAdapterTestCase {
     private static final String IMAGE = "test/resources/image.pdf";
     private static final String HELLOTagged = "test/resources/taggedWorld.pdf";
     private static final String XFORM = "test/resources/xform.pdf";
+    private static final String LOOP = "test/resources/loop.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
@@ -396,6 +397,50 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream stream = pdfToPS(IMAGE);
         Assert.assertTrue(stream.toString("UTF-8"),
                 stream.toString("UTF-8").contains("%%IncludeResource: form FOPForm:0\nFOPForm:0 execform"));
+
+        pdfToPS(CFF1);
+        pdfToPS(CFF2);
+        pdfToPS(CFF3);
+        pdfToPS(TTCID1);
+        pdfToPS(TTCID2);
+        pdfToPS(TTSubset1);
+        pdfToPS(TTSubset2);
+        pdfToPS(TTSubset3);
+        pdfToPS(TTSubset5);
+        pdfToPS(CFFCID1);
+        pdfToPS(CFFCID2);
+        pdfToPS(Type1Subset1);
+        pdfToPS(Type1Subset2);
+        pdfToPS(Type1Subset3);
+        pdfToPS(Type1Subset4);
+        pdfToPS(ROTATE);
+        pdfToPS(LINK);
+        pdfToPS(LOOP);
+    }
+
+    @Test
+    public void testPDFToPDF() throws IOException {
+        FontInfo fi = new FontInfo();
+        writeText(fi, CFF1);
+        writeText(fi, CFF2);
+        writeText(fi, CFF3);
+        writeText(fi, CFFCID1);
+        writeText(fi, CFFCID2);
+        writeText(fi, IMAGE);
+        writeText(fi, LINK);
+        writeText(fi, ROTATE);
+        writeText(fi, SHADING);
+        writeText(fi, TTCID1);
+        writeText(fi, TTCID2);
+        writeText(fi, TTSubset1);
+        writeText(fi, TTSubset2);
+        writeText(fi, TTSubset3);
+        writeText(fi, TTSubset5);
+        writeText(fi, Type1Subset1);
+        writeText(fi, Type1Subset2);
+        writeText(fi, Type1Subset3);
+        writeText(fi, Type1Subset4);
+        writeText(fi, LOOP);
     }
 
     private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
