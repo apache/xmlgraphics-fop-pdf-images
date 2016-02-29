@@ -62,6 +62,7 @@ public class MergeType1Fonts extends Type1SubsetFile implements MergeFonts {
 
         PostscriptParser psParser = new PostscriptParser();
         List<Integer> glyphs = new ArrayList<Integer>();
+        assert pdFont instanceof PDType1Font;
         PDType1Font font = (PDType1Font) pdFont;
         Encoding enc = font.getType1Font().getEncoding();
         for (int i = font.getFirstChar(); i <= font.getLastChar(); i++) {
