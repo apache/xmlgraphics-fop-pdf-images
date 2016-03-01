@@ -37,6 +37,7 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDFontFactory;
 import org.apache.pdfbox.pdmodel.font.PDSimpleFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.encoding.BuiltInEncoding;
 import org.apache.pdfbox.pdmodel.font.encoding.DictionaryEncoding;
 import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
 
@@ -108,6 +109,26 @@ public class FontContainer {
                         (COSDictionary)((PDSimpleFont)font).getEncoding().getCOSObject(), true, null);
             }
             return ((PDSimpleFont) font).getEncoding();
+        }
+        return null;
+    }
+
+    String getBaseEncodingName() {
+        Encoding encoding = getEncoding();
+        if (encoding != null && !(encoding instanceof BuiltInEncoding)) {
+            COSBase cosObject = encoding.getCOSObject();
+            if (cosObject != null) {
+                if (cosObject instanceof COSDictionary) {
+                    COSBase item = ((COSDictionary) cosObject).getItem(COSName.BASE_ENCODING);
+                    if (item != null) {
+                        return ((COSName)item).getName();
+                    }
+                } else if (cosObject instanceof COSName) {
+                    return ((COSName) cosObject).getName();
+                } else {
+                    throw new RuntimeException(cosObject.toString() + " not supported");
+                }
+            }
         }
         return null;
     }

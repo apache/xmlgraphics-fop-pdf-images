@@ -101,8 +101,6 @@ public class PreloaderPDF extends AbstractImagePreloader {
 
     private ImageInfo loadPDF(String uri, Source src, ImageContext context) throws IOException,
             ImageException {
-//        InputStream in = ImageUtil.needInputStream(src);
-
         int selectedPage = ImageUtil.needPageIndexFromURI(uri);
 
         URI docURI = deriveDocumentURI(src.getSystemId());

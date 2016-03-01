@@ -36,7 +36,7 @@ import org.apache.fop.fonts.type1.PFBParser;
 import org.apache.fop.fonts.type1.PostscriptParser;
 import org.apache.fop.fonts.type1.Type1SubsetFile;
 
-public class MergeType1Fonts extends Type1SubsetFile {
+public class MergeType1Fonts extends Type1SubsetFile implements MergeFonts {
     private Map<Integer, String> nameMap = new HashMap<Integer, String>();
     private PostscriptParser.PSElement encoding;
     private List<String> subsetEncodingEntries = new ArrayList<String>();
@@ -55,7 +55,8 @@ public class MergeType1Fonts extends Type1SubsetFile {
         subsetEncodingEntries.add("dup 0 /.notdef put");
     }
 
-    public void readFont(InputStream fontFile, FontContainer font) throws IOException {
+    public void readFont(InputStream fontFile, String name, FontContainer font,
+                         Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
         PFBParser pfbParser = new PFBParser();
         pfbData = pfbParser.parsePFB(fontFile);
 
@@ -122,7 +123,7 @@ public class MergeType1Fonts extends Type1SubsetFile {
         }
     }
 
-    public byte[] writeFont() throws IOException {
+    public byte[] getMergedFontSubset() throws IOException {
         ByteArrayOutputStream boasHeader = writeHeader(pfbData, encoding);
 
         ByteArrayOutputStream boasMain = writeMainSection(decoded, mainSection, charStrings);
@@ -226,10 +227,12 @@ public class MergeType1Fonts extends Type1SubsetFile {
         writeString("/lenIV 4 def", main);
         writeString("/Subrs " + subByteMap.size() + " array" + eol, main);
         for (Map.Entry<Integer, byte[]> e : subByteMap.entrySet()) {
-            byte[] encoded = BinaryCoder.encodeBytes(e.getValue(), 4330, 4);
-            writeString("dup " + e.getKey() + " " + encoded.length + " " + rd + " ", main);
-            main.write(encoded);
-            writeString(" " + np + eol, main);
+            if (e.getValue() != null) {
+                byte[] encoded = BinaryCoder.encodeBytes(e.getValue(), 4330, 4);
+                writeString("dup " + e.getKey() + " " + encoded.length + " " + rd + " ", main);
+                main.write(encoded);
+                writeString(" " + np + eol, main);
+            }
         }
         writeString(nd + eol, main);
         main.write(subrsEndStream.toByteArray());

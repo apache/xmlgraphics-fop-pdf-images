@@ -53,7 +53,6 @@ import org.apache.fop.fonts.EmbeddingMode;
 import org.apache.fop.fonts.FontType;
 import org.apache.fop.fonts.SingleByteEncoding;
 import org.apache.fop.fonts.SingleByteFont;
-import org.apache.fop.fonts.truetype.FontFileReader;
 import org.apache.fop.pdf.PDFDictionary;
 
 public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
@@ -66,9 +65,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private List<MergeTTFonts.Cmap> newCmap = new ArrayList<MergeTTFonts.Cmap>();
     private Map<Integer, String> encodingMap = new TreeMap<Integer, String>();
     private int encodingSkip;
-    private MergeTTFonts mergeTTFonts = new MergeTTFonts();
-    private MergeCFFFonts mergeCFFFonts = new MergeCFFFonts();
-    private MergeType1Fonts mergeType1Fonts = new MergeType1Fonts();
+    private MergeFonts mergeFonts;
     private String shortFontName;
     private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
 
@@ -189,13 +186,13 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             for (CmapSubtable c : cmapList) {
                 MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
                 for (int i = 0; i < 256 * 256; i++) {
-                    if (c.getGlyphId(i) != 0) {
-                        tempCmap.glyphIdToCharacterCode.put(i, c.getGlyphId(i));
+                    int gid = c.getGlyphId(i);
+                    if (gid != 0) {
+                        tempCmap.glyphIdToCharacterCode.put(i, gid);
                     }
                 }
-                newCmap.add(tempCmap);
             }
-            FOPPDFMultiByteFont.mergeMaxp(ttfont, mergeTTFonts.maxp);
+            FOPPDFMultiByteFont.mergeMaxp(ttfont, ((MergeTTFonts)mergeFonts).maxp);
         }
     }
 
@@ -205,7 +202,9 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 return cmap;
             }
         }
-        return new MergeTTFonts.Cmap(platformID, platformEncodingID);
+        MergeTTFonts.Cmap cmap = new MergeTTFonts.Cmap(platformID, platformEncodingID);
+        newCmap.add(cmap);
+        return cmap;
     }
 
     @Override
@@ -349,26 +348,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     }
 
     public String getEncodingName() {
-        Encoding encoding = font.getEncoding();
-        if (encoding != null) {
-            COSBase cosObject = null;
-            if (!(encoding instanceof BuiltInEncoding)) {
-                cosObject = encoding.getCOSObject();
-            }
-            if (cosObject != null) {
-                if (cosObject instanceof COSDictionary) {
-                    COSBase item = ((COSDictionary) cosObject).getItem(COSName.BASE_ENCODING);
-                    if (item != null) {
-                        return ((COSName)item).getName();
-                    }
-                } else if (cosObject instanceof COSName) {
-                    return ((COSName) cosObject).getName();
-                } else {
-                    throw new RuntimeException(cosObject.toString() + " not supported");
-                }
-            }
-        }
-        return null;
+        return font.getBaseEncodingName();
     }
 
     private void addEncoding(FontContainer fontForEnc) {
@@ -469,31 +449,23 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     }
 
     private void mergeFontFile(InputStream ff, FontContainer pdFont) throws IOException {
-        if (getFontType() == FontType.TRUETYPE) {
-            Map<Integer, Integer> chars = new HashMap<Integer, Integer>();
-            chars.put(0, 0);
-            mergeTTFonts.readFont(new FontFileReader(ff), chars, false);
-        } else if (getFontType() == FontType.TYPE1) {
-            mergeType1Fonts.readFont(ff, pdFont);
-        } else {
-            mergeCFFFonts.readType1CFont(ff, shortFontName);
+        if (mergeFonts == null) {
+            if (getFontType() == FontType.TRUETYPE) {
+                mergeFonts = new MergeTTFonts(newCmap);
+            } else if (getFontType() == FontType.TYPE1) {
+                mergeFonts = new MergeType1Fonts();
+            } else {
+                mergeFonts = new MergeCFFFonts();
+            }
         }
+        Map<Integer, Integer> chars = new HashMap<Integer, Integer>();
+        chars.put(0, 0);
+        mergeFonts.readFont(ff, shortFontName, pdFont, chars, false);
         fontCount++;
     }
 
     public InputStream getInputStream() throws IOException {
-        if (getFontType() == FontType.TYPE1C) {
-            mergeCFFFonts.writeFont();
-            return new ByteArrayInputStream(mergeCFFFonts.getFontSubset());
-        }
-        if (getFontType() == FontType.TRUETYPE) {
-            mergeTTFonts.writeFont(newCmap);
-            return new ByteArrayInputStream(mergeTTFonts.getFontSubset());
-        }
-        if (getFontType() == FontType.TYPE1) {
-            return new ByteArrayInputStream(mergeType1Fonts.writeFont());
-        }
-        return null;
+        return new ByteArrayInputStream(mergeFonts.getMergedFontSubset());
     }
 
     protected FontContainer getFont(COSDictionary fontData) throws IOException {

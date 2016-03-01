@@ -76,6 +76,7 @@ import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFAnnotList;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
@@ -116,6 +117,8 @@ public class PDFBoxAdapterTestCase {
     private static final String LINK = "test/resources/link.pdf";
     private static final String IMAGE = "test/resources/image.pdf";
     private static final String HELLOTagged = "test/resources/taggedWorld.pdf";
+    private static final String XFORM = "test/resources/xform.pdf";
+    private static final String LOOP = "test/resources/loop.pdf";
 
     private PDFBoxAdapter getPDFBoxAdapter() {
         PDFDocument doc = new PDFDocument("");
@@ -285,7 +288,7 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(name, "TimesNewRomanPSMT_TrueType");
         Assert.assertEquals(mbfont.getFontName(), "TimesNewRomanPSMT_TrueType");
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
-        Assert.assertEquals(is.length, 41352);
+        Assert.assertEquals(is.length, 41112);
         doc.close();
         doc2.close();
     }
@@ -361,6 +364,27 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
+    public void testXform() throws Exception {
+        PDFDocument pdfdoc = new PDFDocument("");
+        pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Arrays.asList("null"));
+        pdfdoc.setMergeFontsEnabled(true);
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        pdfpage.setDocument(pdfdoc);
+        pdfpage.setObjectNumber(1);
+        Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
+        PDDocument doc = PDDocument.load(new File(XFORM));
+        PDPage page = (PDPage) doc.getDocumentCatalog().getPages().get(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", at, new FontInfo(), r);
+        doc.close();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        Assert.assertFalse(bos.toString("UTF-8").contains("/W 5 /H 5 /BPC 8 /CS /RGB ID ÿÿÿ"));
+    }
+
+    @Test
     public void testPreloaderPDF() throws Exception {
         ImageSource imageSource = new ImageSource(ImageIO.createImageInputStream(new File(ROTATE)), "", true);
         ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, new DefaultImageContext());
@@ -372,6 +396,50 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream stream = pdfToPS(IMAGE);
         Assert.assertTrue(stream.toString("UTF-8"),
                 stream.toString("UTF-8").contains("%%IncludeResource: form FOPForm:0\nFOPForm:0 execform"));
+
+        pdfToPS(CFF1);
+        pdfToPS(CFF2);
+        pdfToPS(CFF3);
+        pdfToPS(TTCID1);
+        pdfToPS(TTCID2);
+        pdfToPS(TTSubset1);
+        pdfToPS(TTSubset2);
+        pdfToPS(TTSubset3);
+        pdfToPS(TTSubset5);
+        pdfToPS(CFFCID1);
+        pdfToPS(CFFCID2);
+        pdfToPS(Type1Subset1);
+        pdfToPS(Type1Subset2);
+        pdfToPS(Type1Subset3);
+        pdfToPS(Type1Subset4);
+        pdfToPS(ROTATE);
+        pdfToPS(LINK);
+        pdfToPS(LOOP);
+    }
+
+    @Test
+    public void testPDFToPDF() throws IOException {
+        FontInfo fi = new FontInfo();
+        writeText(fi, CFF1);
+        writeText(fi, CFF2);
+        writeText(fi, CFF3);
+        writeText(fi, CFFCID1);
+        writeText(fi, CFFCID2);
+        writeText(fi, IMAGE);
+        writeText(fi, LINK);
+        writeText(fi, ROTATE);
+        writeText(fi, SHADING);
+        writeText(fi, TTCID1);
+        writeText(fi, TTCID2);
+        writeText(fi, TTSubset1);
+        writeText(fi, TTSubset2);
+        writeText(fi, TTSubset3);
+        writeText(fi, TTSubset5);
+        writeText(fi, Type1Subset1);
+        writeText(fi, Type1Subset2);
+        writeText(fi, Type1Subset3);
+        writeText(fi, Type1Subset4);
+        writeText(fi, LOOP);
     }
 
     private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {

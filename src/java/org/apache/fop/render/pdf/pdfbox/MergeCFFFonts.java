@@ -44,7 +44,7 @@ import org.apache.fop.fonts.cff.CFFDataReader;
 import org.apache.fop.fonts.truetype.FontFileReader;
 import org.apache.fop.fonts.truetype.OTFSubSetFile;
 
-public class MergeCFFFonts extends OTFSubSetFile {
+public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
     protected List<LinkedHashMap<Integer, Integer>> subsetGlyphsList = new ArrayList<LinkedHashMap<Integer, Integer>>();
     private boolean fallbackIndex;
     private int charsetOffset;
@@ -62,9 +62,10 @@ public class MergeCFFFonts extends OTFSubSetFile {
         subsetCharStringsIndex = new ArrayList<byte[]>();
     }
 
-    public void readType1CFont(InputStream stream, String embeddedName) throws IOException {
-        this.embeddedName = embeddedName;
-        FontFileReader fontFile = new FontFileReader(stream);
+    public void readFont(InputStream is, String name, FontContainer fontContainer,
+                         Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
+        this.embeddedName = name;
+        FontFileReader fontFile = new FontFileReader(is);
         CFFParser p = new CFFParser();
         CFFFont ff = p.parse(fontFile.getAllBytes()).get(0);
 
@@ -212,14 +213,15 @@ public class MergeCFFFonts extends OTFSubSetFile {
         return "SID" + index;
     }
 
-    public void writeFont() throws IOException {
+    public byte[] getMergedFontSubset() throws IOException {
         output = new byte[fontFileSize * 2];
         if (noOfFonts == 1) {
             writeBytes(fontFile.getAllBytes());
-            return;
+            return super.getFontSubset();
         }
         subsetGlyphs = subsetGlyphsList.get(0);
         createCFF();
+        return super.getFontSubset();
     }
 
     @Override

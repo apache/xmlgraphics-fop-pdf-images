@@ -71,9 +71,9 @@ public class MergeFontsPDFWriter extends PDFWriter {
     private static final Pattern SUBSET_PATTERN = Pattern.compile("[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]\\+.+");
     private Collection<String> parentFonts;
 
-    public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, String key, List<COSName> resourceNames,
+    public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, UniqueName key,
                                Collection<String> parentFonts, int mcid) {
-        super(key, resourceNames, mcid);
+        super(key, mcid);
         this.fonts = fonts;
         this.fontInfo = fontInfo;
         this.parentFonts = parentFonts;
@@ -102,8 +102,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
                     internalName = getNewFont(fontData, fontInfo, fontsToRemove.values());
                 }
                 if (fontData == null || internalName == null) {
-                    s.append("/" + cn.getName());
-                    addKey(cn);
+                    s.append("/" + key.getName(cn));
                     if (op.getName().equals("Tf")) {
                         font = null;
                         oldFont = null;
@@ -214,6 +213,12 @@ public class MergeFontsPDFWriter extends PDFWriter {
         }
         if (cs.getClass().getName().equals("org.apache.fontbox.cff.CFFParser$Format1Charset")) {
             extra += "f1cs";
+        }
+        if (font.getEncoding() != null) {
+            String enc = font.getEncoding().getClass().getSimpleName();
+            if (!"DictionaryEncoding".equals(enc)) {
+                extra += enc;
+            }
         }
         return name + extra;
     }

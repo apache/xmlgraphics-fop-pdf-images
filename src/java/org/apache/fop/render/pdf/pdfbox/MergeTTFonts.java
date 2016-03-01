@@ -17,6 +17,7 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -28,12 +29,13 @@ import org.apache.fop.fonts.truetype.OFMtxEntry;
 import org.apache.fop.fonts.truetype.OFTableName;
 import org.apache.fop.fonts.truetype.TTFSubSetFile;
 
-public class MergeTTFonts extends TTFSubSetFile {
+public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
     private Map<Integer, Glyph> added = new TreeMap<Integer, Glyph>();
     private int origIndexesLen;
     private int size;
     protected MaximumProfileTable maxp = new MaximumProfileTable();
     private Integer nhmtxDiff = null;
+    private List<Cmap> cmap;
 
     static class Glyph {
         final byte[] data;
@@ -42,6 +44,10 @@ public class MergeTTFonts extends TTFSubSetFile {
             data = d;
             mtx = m;
         }
+    }
+
+    public MergeTTFonts(List<Cmap> cmap) {
+        this.cmap = cmap;
     }
 
     /**
@@ -198,18 +204,21 @@ public class MergeTTFonts extends TTFSubSetFile {
     /**
      * Returns a subset of the original font.
      *
-     * @param fontFile font file
+     * @param is font file
+     * @param name name
+     * @param fontContainer fontContainer
      * @param subsetGlyphs Map of glyphs (glyphs has old index as (Integer) key and
      * new index as (Integer) value)
      * @param cid is cid
      * @throws IOException in case of an I/O problem
      */
-    public void readFont(FontFileReader fontFile, Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
+    public void readFont(InputStream is, String name, FontContainer fontContainer,
+                         Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
         this.cid = cid;
         if (subsetGlyphs.isEmpty()) {
             return;
         }
-        this.fontFile = fontFile;
+        this.fontFile = new FontFileReader(is);
         size += fontFile.getAllBytes().length;
 
         readDirTabs();
@@ -263,7 +272,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         }
     }
 
-    public void writeFont(List<Cmap> cmap) throws IOException {
+    public byte[] getMergedFontSubset() throws IOException {
         output = new byte[size * 2];
         createDirectory();     // Create the TrueType header and directory
         int sgsize = added.size();
@@ -293,6 +302,7 @@ public class MergeTTFonts extends TTFSubSetFile {
         createGlyf(); //create glyf table and update loca table
         pad4();
         createCheckSumAdjustment();
+        return getFontSubset();
     }
 
     private void writeMaxp() {
@@ -320,6 +330,8 @@ public class MergeTTFonts extends TTFSubSetFile {
     }
 
     private void writeCMAP(List<Cmap> cmaps) {
+        mergeUniCmap(cmaps);
+
         int checksum = currentPos;
         pad4();
         int cmapPos = currentPos;
@@ -384,6 +396,20 @@ public class MergeTTFonts extends TTFSubSetFile {
 
         updateCheckSum(checksum, currentPos - cmapPos, OFTableName.CMAP);
         realSize += currentPos - cmapPos;
+    }
+
+    private void mergeUniCmap(List<Cmap> cmaps) {
+        Cmap uniCmap = null;
+        for (Cmap cmap : cmaps) {
+            if (cmap.platformId == 3 && cmap.platformEncodingId == 1) {
+                uniCmap = cmap;
+            }
+        }
+        if (uniCmap != null) {
+            for (Cmap cmap : cmaps) {
+                uniCmap.glyphIdToCharacterCode.putAll(cmap.glyphIdToCharacterCode);
+            }
+        }
     }
 
     private int getCmapOffset(List<Cmap> cmaps, int index) {

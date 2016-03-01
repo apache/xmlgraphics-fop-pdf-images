@@ -40,13 +40,11 @@ import org.apache.pdfbox.pdmodel.common.PDStream;
 
 public class PDFWriter {
     protected StringBuilder s = new StringBuilder();
-    private String key;
-    private List<COSName> resourceNames;
+    protected UniqueName key;
     private int currentMCID;
 
-    public PDFWriter(String key, List<COSName> resourceNames, int currentMCID) {
+    public PDFWriter(UniqueName key, int currentMCID) {
         this.key = key;
-        this.resourceNames = resourceNames;
         this.currentMCID = currentMCID;
     }
 
@@ -94,8 +92,7 @@ public class PDFWriter {
             s.append(" ");
         } else if (c instanceof COSName) {
             COSName cn = (COSName)c;
-            s.append("/" + cn.getName());
-            addKey(cn);
+            s.append("/" + key.getName(cn));
             s.append(" ");
         } else if (c instanceof COSString) {
             s.append("<" + ((COSString) c).toHexString() + ">");
@@ -139,11 +136,6 @@ public class PDFWriter {
         dictArgs.add(updatedID);
     }
 
-    protected void addKey(COSName cn) {
-        if (resourceNames.contains(cn)) {
-            s.append(key);
-        }
-    }
     protected int getCurrentMCID() {
         return currentMCID;
     }
