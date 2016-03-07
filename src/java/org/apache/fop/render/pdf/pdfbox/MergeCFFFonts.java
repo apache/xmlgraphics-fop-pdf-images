@@ -38,7 +38,6 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 
 import org.apache.fop.fonts.cff.CFFDataReader;
 import org.apache.fop.fonts.truetype.FontFileReader;
-import org.apache.fop.fonts.truetype.OTFSubSetFile;
 
 public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
     protected List<LinkedHashMap<Integer, Integer>> subsetGlyphsList = new ArrayList<LinkedHashMap<Integer, Integer>>();
@@ -163,12 +162,10 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
             writeBytes(fontFile.getAllBytes());
             return super.getFontSubset();
         }
-        subsetGlyphs = subsetGlyphsList.get(0);
         createCFF();
         return super.getFontSubset();
     }
 
-    @Override
     protected void createCFF() throws IOException {
         //Header
         writeBytes(cffReader.getHeader());
@@ -326,32 +323,13 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
     }
 
     protected void createCharStringData() throws IOException {
-        //Create the new char string index
-        for (int i = 0; i < subsetGlyphsList.size(); i++) {
-            Map<String, CFFDataReader.DICTEntry> topDICT = cffReader.getTopDictEntries();
-            final CFFDataReader.DICTEntry privateEntry = topDICT.get("Private");
-            if (privateEntry != null) {
-                int privateOffset = privateEntry.getOperands().get(1).intValue();
-                Map<String, CFFDataReader.DICTEntry> privateDICT = cffReader.getPrivateDict(privateEntry);
-
-                if (privateDICT.containsKey("Subrs")) {
-                    int localSubrOffset = privateOffset + privateDICT.get("Subrs").getOperands().get(0).intValue();
-                    localIndexSubr = cffReader.readIndex(localSubrOffset);
-                }
-            }
-
-            globalIndexSubr = cffReader.getGlobalIndexSubr();
-        }
         //Create the two lists which are to store the local and global subroutines
         subsetLocalIndexSubr = new ArrayList<byte[]>();
-        subsetGlobalIndexSubr = new ArrayList<byte[]>();
 
         localUniques = new ArrayList<Integer>();
         globalUniques = new ArrayList<Integer>();
 
         //Store the size of each subset index and clear the unique arrays
-        subsetLocalSubrCount = localUniques.size();
-        subsetGlobalSubrCount = globalUniques.size();
         localUniques.clear();
         globalUniques.clear();
     }
