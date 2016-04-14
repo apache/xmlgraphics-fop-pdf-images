@@ -35,6 +35,7 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,12 +52,11 @@ import org.apache.pdfbox.pdmodel.common.function.PDFunction;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType0;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType3;
-import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingPaint;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingPaint;
-
+import org.apache.pdfbox.util.Matrix;
 
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSize;
@@ -109,12 +109,12 @@ public class PSPDFGraphics2D extends PSGraphics2D {
         if (paint instanceof AxialShadingPaint || paint instanceof RadialShadingPaint) {
             PaintContext paintContext = paint.createContext(null, new Rectangle(), null, new AffineTransform(),
                     getRenderingHints());
-            PDColorSpace pdcs;
             int deviceColorSpace = PDFDeviceColorSpace.DEVICE_RGB;
             if (paint instanceof AxialShadingPaint) {
                 try {
                     AxialShadingContext asc = (AxialShadingContext) paintContext;
                     float[] fCoords = asc.getCoords();
+                    transformCoords(fCoords, paint, true);
                     PDFunction function = asc.getFunction();
                     Function targetFT = getFunction(function);
                     if (targetFT != null) {
@@ -135,6 +135,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                 try {
                     RadialShadingContext rsc = (RadialShadingContext) paintContext;
                     float[] fCoords = rsc.getCoords();
+                    transformCoords(fCoords, paint, false);
                     PDFunction function = rsc.getFunction();
                     Function targetFT3 = getFunction(function);
                     List<Double> dCoords = floatArrayToDoubleList(fCoords);
@@ -146,6 +147,28 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                     handleIOException(ioe);
                 }
             }
+        }
+    }
+
+    private void transformCoords(float[] coords, Paint paint, boolean axialShading) {
+        try {
+            Field f = paint.getClass().getDeclaredField("matrix");
+            f.setAccessible(true);
+            Matrix ctm = (Matrix) f.get(paint);
+            AffineTransform at = ctm.createAffineTransform();
+            if (axialShading) {
+                at.transform(coords, 0, coords, 0, 2);
+            } else {
+                at.transform(coords, 0, coords, 0, 1);
+                at.transform(coords, 3, coords, 3, 1);
+                coords[2] *= ctm.getScalingFactorX();
+                coords[5] *= ctm.getScalingFactorX();
+            }
+
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
     }
 
