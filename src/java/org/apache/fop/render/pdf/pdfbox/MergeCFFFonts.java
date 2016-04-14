@@ -18,6 +18,7 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -172,7 +173,11 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                         sids.add(sid);
                     }
                 }
-            } catch (ReflectiveOperationException e1) {
+            } catch (NoSuchMethodException e1) {
+                throw new RuntimeException(e1);
+            } catch (InvocationTargetException e1) {
+                throw new RuntimeException(e1);
+            } catch (IllegalAccessException e1) {
                 throw new RuntimeException(e1);
             }
         }
