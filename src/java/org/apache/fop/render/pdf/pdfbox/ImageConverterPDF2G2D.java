@@ -104,37 +104,15 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         public void paint(Graphics2D g2d, Rectangle2D area) {
             try {
                 PDRectangle mediaBox = page.getCropBox();
-
                 AffineTransform at = new AffineTransform();
-
-                Integer rotation = page.getRotation();
-                if (rotation != null) {
-                    switch (rotation) {
-                    case 270:
-                        at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
-                        at.translate(0, area.getWidth());
-                        at.rotate(-Math.PI / 2.0);
-                        break;
-                    case 180:
-                        at.translate(area.getWidth(), area.getHeight());
-                        at.rotate(-Math.PI);
-                        break;
-                    case 90:
-                        at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
-                        at.translate(area.getHeight(), 0);
-                        at.rotate(-Math.PI * 1.5);
-                            break;
-                    default:
-                        //no additional transformations necessary
-                            break;
-                    }
+                int rotation = page.getRotation();
+                if (rotation == 90 || rotation == 270) {
+                    at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
                 }
-
                 at.translate(area.getX(), area.getY());
                 at.scale(area.getWidth() / mediaBox.getWidth(),
                         area.getHeight() / mediaBox.getHeight());
                 g2d.transform(at);
-
                 new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
             } catch (IOException ioe) {
                 //TODO Better exception handling

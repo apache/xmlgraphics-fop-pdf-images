@@ -107,7 +107,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
     protected void applyPaint(Paint paint, boolean fill) {
         preparePainting();
         if (paint instanceof AxialShadingPaint || paint instanceof RadialShadingPaint) {
-            PaintContext paintContext = paint.createContext(null, null, null, new AffineTransform(),
+            PaintContext paintContext = paint.createContext(null, new Rectangle(), null, new AffineTransform(),
                     getRenderingHints());
             PDColorSpace pdcs;
             int deviceColorSpace = PDFDeviceColorSpace.DEVICE_RGB;

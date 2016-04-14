@@ -53,6 +53,6 @@ public class PDFRotateTestCase {
         GraphicContext gc = new GraphicContext();
         g2d.setGraphicContext(gc);
         ig.getGraphics2DImagePainter().paint(g2d, rect);
-        Assert.assertEquals(g2d.getTransform().getShearX(), -5.5191148992250524E-9);
+        Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045735);
     }
 }
