@@ -20,10 +20,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
-import org.apache.pdfbox.pdmodel.font.PDFont;
-
 public interface MergeFonts {
-    void readFont(InputStream is, String name, PDFont pdFont, Map<Integer, Integer> subsetGlyphs, boolean cid)
-            throws IOException;
+    void readFont(InputStream is, String name, FontContainer fontContainer,
+                         Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException;
     byte[] getMergedFontSubset() throws IOException;
 }

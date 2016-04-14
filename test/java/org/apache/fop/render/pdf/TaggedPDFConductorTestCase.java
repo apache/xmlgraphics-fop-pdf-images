@@ -18,6 +18,7 @@
 package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -89,7 +90,7 @@ public class TaggedPDFConductorTestCase {
 
     private void runConductor(String pdf, PDFStructElem elem) throws IOException {
         setUp();
-        PDDocument doc = PDDocument.load(pdf);
+        PDDocument doc = PDDocument.load(new File(pdf));
         PDPage srcPage = doc.getPage(0);
         elem.setObjectNumber(2);
         PDFBoxAdapter adapter = new PDFBoxAdapter(

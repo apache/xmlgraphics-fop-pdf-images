@@ -16,7 +16,9 @@
  */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,42 +30,44 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.fontbox.cff.CFFFont;
-import org.apache.fontbox.cff.CFFFontROS;
-import org.apache.fontbox.cff.charset.CFFCharset;
-import org.apache.fontbox.cff.encoding.CFFEncoding;
-import org.apache.fontbox.ttf.CMAPEncodingEntry;
-import org.apache.fontbox.ttf.TrueTypeFont;
 
+import org.apache.fontbox.cff.CFFCIDFont;
+import org.apache.fontbox.cff.CFFCharset;
+import org.apache.fontbox.cff.CFFEncoding;
+import org.apache.fontbox.cff.CFFFont;
+import org.apache.fontbox.ttf.CmapSubtable;
+import org.apache.fontbox.ttf.TrueTypeFont;
+import org.apache.pdfbox.contentstream.operator.Operator;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
+
 import org.apache.pdfbox.pdmodel.common.PDStream;
-import org.apache.pdfbox.pdmodel.font.PDCIDFontType0Font;
-import org.apache.pdfbox.pdmodel.font.PDCIDFontType2Font;
+import org.apache.pdfbox.pdmodel.font.PDCIDFontType0;
+import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDFontDescriptorDictionary;
-import org.apache.pdfbox.pdmodel.font.PDFontFactory;
 import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDType1CFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.util.operator.Operator;
 
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.SingleByteFont;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.fonts.truetype.OTFSubSetFile;
+
 import org.apache.fop.pdf.PDFText;
+
 
 public class MergeFontsPDFWriter extends PDFWriter {
     protected static final Log log = LogFactory.getLog(MergeFontsPDFWriter.class);
     private COSDictionary fonts;
     private FontInfo fontInfo;
     private Typeface font;
-    private PDFont oldFont = null;
+    private FontContainer oldFont = null;
     protected Map<COSName, String> fontsToRemove = new HashMap<COSName, String>();
-    private final Map<COSDictionary, PDFont> fontMap = new HashMap<COSDictionary, PDFont>();
+    private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
     private static final Pattern SUBSET_PATTERN = Pattern.compile("[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]\\+.+");
     private Collection<String> parentFonts;
 
@@ -83,7 +87,8 @@ public class MergeFontsPDFWriter extends PDFWriter {
         for (COSName cn : fontsToRemove.keySet()) {
             fonts.removeItem(cn);
         }
-        parentFonts = fontsToRemove.values();
+        parentFonts.clear();
+        parentFonts.addAll(fontsToRemove.values());
         return txt;
     }
 
@@ -98,7 +103,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
                 }
                 if (fontData == null || internalName == null) {
                     s.append("/" + key.getName(cn));
-                    if (op.getOperation().equals("Tf")) {
+                    if (op.getName().equals("Tf")) {
                         font = null;
                         oldFont = null;
                     }
@@ -154,66 +159,63 @@ public class MergeFontsPDFWriter extends PDFWriter {
     }
 
     private String getUniqueFontName(COSDictionary fontData) throws IOException {
-        PDFont font = getFont(fontData);
-        String extra = "";
-        String name = getName(font.getBaseFont()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
-        if (font instanceof PDType0Font
-                && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType0Font
-                && ((PDCIDFontType0Font) ((PDType0Font) font).getDescendantFont()).getType1CFont() != null) {
-            CFFFont cffFont =
-                    ((PDCIDFontType0Font) ((PDType0Font) font).getDescendantFont()).getType1CFont().getCFFFont();
-            if (cffFont instanceof CFFFontROS
-                    && ((CFFFontROS)cffFont).getFdSelect().getClass().getName()
-                    .equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
-                extra += "format0";
-            }
-            return name + extra;
-        } else if (font instanceof PDType0Font
-                && getToUnicode(font) != null
-                && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType2Font) {
-            if (!isSubsetFont(font.getBaseFont())) {
-                extra = "f3";
-            }
-            return name + extra;
-        } else if (font instanceof PDTrueTypeFont && isSubsetFont(font.getBaseFont())) {
-            TrueTypeFont tt = ((PDTrueTypeFont) font).getTTFFont();
-            for (CMAPEncodingEntry c : tt.getCMAP().getCmaps()) {
-                if (c.getGlyphId(1) > 0) {
-                    extra = "cid";
+        FontContainer fontContainer = getFont(fontData);
+        PDFont font = fontContainer.font;
+        if (font.getName() != null) {
+            String extra = "";
+            String name = getName(font.getName()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
+            if (font instanceof PDType0Font
+                    && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType0) {
+                CFFFont cffFont = ((PDCIDFontType0) ((PDType0Font) font).getDescendantFont()).getCFFFont();
+                if (cffFont instanceof CFFCIDFont
+                        && ((CFFCIDFont)cffFont).getFdSelect().getClass().getName()
+                        .equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
+                    extra += "format0";
                 }
+                return name + extra;
+            } else if (font instanceof PDType0Font
+                    && fontContainer.getToUnicode() != null
+                    && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType2) {
+                if (!isSubsetFont(font.getName())) {
+                    extra = "f3";
+                }
+                return name + extra;
+            } else if (font instanceof PDTrueTypeFont && isSubsetFont(font.getName())) {
+                TrueTypeFont tt = ((PDTrueTypeFont) font).getTrueTypeFont();
+                for (CmapSubtable c : tt.getCmap().getCmaps()) {
+                    if (c.getGlyphId(1) > 0) {
+                        extra = "cid";
+                    }
+                }
+                return name + extra;
+            } else if (font instanceof PDType1CFont) {
+                return getNamePDType1Font(name, (PDType1CFont) font);
+            } else if (font instanceof PDType1Font) {
+                return name;
             }
-            return name + extra;
-        } else if (font instanceof PDType1Font) {
-            return getNamePDType1Font(name, (PDType1Font) font);
         }
         return null;
     }
 
-    private String getNamePDType1Font(String name, PDType1Font font) throws IOException {
+    private String getNamePDType1Font(String name, PDType1CFont font) throws IOException {
         String extra = "";
-        if (font.getType1CFont() == null
-                || font.getType1CFont().getCFFFont() == null) {
-            if (font.getFontDescriptor() instanceof PDFontDescriptorDictionary) {
-                return name;
-            }
-            return null;
-        }
-        CFFEncoding encoding = font.getType1CFont().getCFFFont().getEncoding();
+        CFFEncoding encoding = font.getCFFType1Font().getEncoding();
         String eClass = encoding.getClass().getName();
         if (eClass.equals("org.apache.fontbox.cff.CFFParser$Format1Encoding")) {
             extra = "f1enc";
         } else if (eClass.equals("org.apache.fontbox.cff.CFFParser$Format0Encoding")) {
             extra = "f0enc";
         }
-        CFFCharset cs = font.getType1CFont().getCFFFont().getCharset();
-        if (cs.getEntries().get(0).getSID() < OTFSubSetFile.NUM_STANDARD_STRINGS) {
+        CFFCharset cs = font.getCFFType1Font().getCharset();
+        List<Integer> sids = MergeCFFFonts.getSids(cs);
+        if (!sids.isEmpty() && sids.get(0) < OTFSubSetFile.NUM_STANDARD_STRINGS) {
             extra += "stdcs";
         }
         if (cs.getClass().getName().equals("org.apache.fontbox.cff.CFFParser$Format1Charset")) {
             extra += "f1cs";
         }
-        if (font.getFontEncoding() != null) {
-            String enc = font.getFontEncoding().getClass().getSimpleName();
+        if (font.getEncoding() != null) {
+            String enc = font.getEncoding().getClass().getSimpleName();
             if (!"DictionaryEncoding".equals(enc)) {
                 extra += enc;
             }
@@ -265,44 +267,36 @@ public class MergeFontsPDFWriter extends PDFWriter {
     }
 
     private Integer getMapping(byte i) throws IOException {
-        if (oldFont.getFontEncoding() != null && font instanceof FOPPDFSingleByteFont) {
-            String name = oldFont.getFontEncoding().getName(i);
-            if (name != null && ((FOPPDFSingleByteFont)font).charMapGlobal.containsKey(name)) {
+        if (oldFont.getEncoding() != null && font instanceof FOPPDFSingleByteFont) {
+            String name = oldFont.getEncoding().getName(i);
+            if (!name.equals(".notdef") && ((FOPPDFSingleByteFont)font).charMapGlobal.containsKey(name)) {
                 return ((FOPPDFSingleByteFont)font).charMapGlobal.get(name);
             }
         }
         return null;
     }
 
-    private List<String> readCOSString(COSString s, PDFont oldFont) throws IOException {
+    private List<String> readCOSString(COSString s, FontContainer oldFont) throws IOException {
         List<String> word = new ArrayList<String>();
         byte[] string = s.getBytes();
-        int codeLength;
-//            String t1Str = new String(string, "UTF-8");
-        for (int i = 0; i < string.length; i += codeLength) {
-            codeLength = 1;
-            String c = oldFont.encode(string, i, codeLength);
-//                if (oldFont instanceof PDType1Font && i < t1Str.length()) {
-//                    c = ((PDType1Font)oldFont).encodetype1(string, i, codeLength);
-//                }
-            if (c == null && i + 1 < string.length) {
-                codeLength++;
-                c = oldFont.encode(string, i, codeLength);
-            }
-            if (c == null) {
+        InputStream in = new ByteArrayInputStream(string);
+        while (in.available() > 0) {
+            int code = oldFont.font.readCode(in);
+            String unicode = oldFont.font.toUnicode(code);
+            if (unicode == null) {
                 return null;
             }
-            word.add(c);
+            word.add(unicode);
         }
         return word;
     }
 
-    protected PDFont getFont(COSDictionary fontData) throws IOException {
+    protected FontContainer getFont(COSDictionary fontData) throws IOException {
         if (!fontMap.containsKey(fontData)) {
             if (fontMap.size() > 10) {
                 fontMap.clear();
             }
-            fontMap.put(fontData, PDFontFactory.createFont(fontData));
+            fontMap.put(fontData, new FontContainer(fontData));
         }
         return fontMap.get(fontData);
     }
@@ -316,10 +310,5 @@ public class MergeFontsPDFWriter extends PDFWriter {
             return name.split("\\+")[1].replace(" ", "");
         }
         return name.replace(" ", "");
-    }
-
-    protected static COSBase getToUnicode(PDFont font) {
-        COSDictionary dict = (COSDictionary) font.getCOSObject();
-        return dict.getDictionaryObject(COSName.TO_UNICODE);
     }
 }

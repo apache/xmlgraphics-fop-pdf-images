@@ -25,29 +25,15 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
-import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDResources;
 
 public class UniqueName {
     private String key;
     private List<COSName> resourceNames;
 
-    public UniqueName(String key, PDDocument sourceDoc, PDResources sourcePageResources) {
-        if (checkIfDocResourcesEqualPage(sourceDoc, sourcePageResources)) {
-            this.key = "";
-        } else {
-            this.key = Integer.toString(key.hashCode());
-        }
-        resourceNames = getResourceNames(sourcePageResources.getCOSDictionary());
-    }
-
-    private boolean checkIfDocResourcesEqualPage(PDDocument sourceDoc, PDResources sourcePageResources) {
-        PDResources srcDocResources = sourceDoc.getDocumentCatalog().getPages().getResources();
-        if (srcDocResources != null) {
-            COSDictionary srcDocResourcesDict = srcDocResources.getCOSDictionary();
-            return srcDocResourcesDict.equals(sourcePageResources.getCOSObject());
-        }
-        return false;
+    public UniqueName(String key, PDResources sourcePageResources) {
+        this.key = Integer.toString(key.hashCode());
+        resourceNames = getResourceNames(sourcePageResources.getCOSObject());
     }
 
     protected String getName(COSName cn) {

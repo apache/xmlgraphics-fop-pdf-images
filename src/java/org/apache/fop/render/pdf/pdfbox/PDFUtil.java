@@ -36,7 +36,7 @@ public final class PDFUtil {
      */
     public static int getNormalizedRotation(PDPage page) {
         //Handle the /Rotation entry on the page dict
-        int rotation = page.findRotation();
+        int rotation = page.getRotation();
         rotation %= 360;
         if (rotation < 0) {
             rotation += 360;

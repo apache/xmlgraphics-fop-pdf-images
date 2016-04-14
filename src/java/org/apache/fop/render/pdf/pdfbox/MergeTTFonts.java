@@ -22,9 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.fontbox.ttf.MaximumProfileTable;
-import org.apache.pdfbox.pdmodel.font.PDFont;
-
 import org.apache.fop.fonts.truetype.FontFileReader;
 import org.apache.fop.fonts.truetype.GlyfTable;
 import org.apache.fop.fonts.truetype.OFDirTabEntry;
@@ -209,14 +206,14 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
      *
      * @param is font file
      * @param name name
-     * @param pdFont pdFont
+     * @param fontContainer fontContainer
      * @param subsetGlyphs Map of glyphs (glyphs has old index as (Integer) key and
      * new index as (Integer) value)
      * @param cid is cid
      * @throws IOException in case of an I/O problem
      */
-    public void readFont(InputStream is, String name, PDFont pdFont, Map<Integer, Integer> subsetGlyphs, boolean cid)
-        throws IOException {
+    public void readFont(InputStream is, String name, FontContainer fontContainer,
+                         Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
         this.cid = cid;
         if (subsetGlyphs.isEmpty()) {
             return;

@@ -29,7 +29,7 @@ import java.util.Map;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.rendering.PageDrawer;
+import org.apache.pdfbox.rendering.PDFRenderer;
 
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageException;
@@ -57,10 +57,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 src.getInfo().getOriginalURI());
 
         PDDocument pddoc = imgPDF.getPDDocument();
-        PDPage page = (PDPage)pddoc.getDocumentCatalog().getAllPages().get(selectedPage);
 
-        Graphics2DImagePainter painter = new Graphics2DImagePainterPDF(
-                page);
+        Graphics2DImagePainter painter = new Graphics2DImagePainterPDF(pddoc, selectedPage);
 
         ImageGraphics2D g2dImage = new ImageGraphics2D(src.getInfo(), painter);
         return g2dImage;
@@ -85,14 +83,18 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
     private static class Graphics2DImagePainterPDF implements GeneralGraphics2DImagePainter {
 
         private final PDPage page;
+        private final PDDocument pdDocument;
+        private int selectedPage;
 
-        public Graphics2DImagePainterPDF(PDPage page) {
-            this.page = page;
+        public Graphics2DImagePainterPDF(PDDocument pddoc, int selectedPage) {
+            pdDocument = pddoc;
+            this.selectedPage = selectedPage;
+            page = pdDocument.getPage(selectedPage);
         }
 
         /** {@inheritDoc} */
         public Dimension getImageSize() {
-            PDRectangle mediaBox = page.findMediaBox();
+            PDRectangle mediaBox = page.getMediaBox();
             int wmpt = (int)Math.ceil(mediaBox.getWidth() * 1000);
             int hmpt = (int)Math.ceil(mediaBox.getHeight() * 1000);
             return new Dimension(wmpt, hmpt);
@@ -101,41 +103,17 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         /** {@inheritDoc} */
         public void paint(Graphics2D g2d, Rectangle2D area) {
             try {
-                PDRectangle mediaBox = page.findCropBox();
-                Dimension pageDimension = mediaBox.createDimension();
-
+                PDRectangle mediaBox = page.getCropBox();
                 AffineTransform at = new AffineTransform();
-
-                Integer rotation = page.getRotation();
-                if (rotation != null) {
-                    switch (rotation) {
-                    case 270:
-                        at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
-                        at.translate(0, area.getWidth());
-                        at.rotate(-Math.PI / 2.0);
-                        break;
-                    case 180:
-                        at.translate(area.getWidth(), area.getHeight());
-                        at.rotate(-Math.PI);
-                        break;
-                    case 90:
-                        at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
-                        at.translate(area.getHeight(), 0);
-                        at.rotate(-Math.PI * 1.5);
-                            break;
-                    default:
-                        //no additional transformations necessary
-                            break;
-                    }
+                int rotation = page.getRotation();
+                if (rotation == 90 || rotation == 270) {
+                    at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
                 }
-
                 at.translate(area.getX(), area.getY());
-                at.scale(area.getWidth() / pageDimension.width,
-                        area.getHeight() / pageDimension.height);
+                at.scale(area.getWidth() / mediaBox.getWidth(),
+                        area.getHeight() / mediaBox.getHeight());
                 g2d.transform(at);
-
-                PageDrawer drawer = new PageDrawer(null, page);
-                drawer.drawPage(g2d, mediaBox);
+                new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
             } catch (IOException ioe) {
                 //TODO Better exception handling
                 throw new RuntimeException("I/O error while painting PDF page", ioe);

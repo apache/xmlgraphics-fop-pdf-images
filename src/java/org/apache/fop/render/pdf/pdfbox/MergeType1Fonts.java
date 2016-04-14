@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.fontbox.encoding.Encoding;
-import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.fontbox.type1.Type1Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import org.apache.fop.fonts.type1.PFBData;
@@ -55,16 +55,15 @@ public class MergeType1Fonts extends Type1SubsetFile implements MergeFonts {
         subsetEncodingEntries.add("dup 0 /.notdef put");
     }
 
-    public void readFont(InputStream fontFile, String name, PDFont pdFont,
+    public void readFont(InputStream fontFile, String name, FontContainer font,
                          Map<Integer, Integer> subsetGlyphs, boolean cid) throws IOException {
         PFBParser pfbParser = new PFBParser();
         pfbData = pfbParser.parsePFB(fontFile);
 
         PostscriptParser psParser = new PostscriptParser();
         List<Integer> glyphs = new ArrayList<Integer>();
-        assert pdFont instanceof PDType1Font;
-        PDType1Font font = (PDType1Font) pdFont;
-        Encoding enc = font.getType1Font().getEncoding();
+        Type1Font t1f = ((PDType1Font)font.font).getType1Font();
+        Encoding enc = t1f.getEncoding();
         for (int i = font.getFirstChar(); i <= font.getLastChar(); i++) {
             if (!enc.getName(i).equals(".notdef")) {
                 nameMap.put(i, enc.getName(i));
@@ -97,14 +96,14 @@ public class MergeType1Fonts extends Type1SubsetFile implements MergeFonts {
             subrsEndStream.write(decoded, subroutines.getEndPoint(),
                     charStrings.getStartPoint() - subroutines.getEndPoint());
         }
-        List<byte[]> subArray = font.getType1Font().getSubrsArray();
+        List<byte[]> subArray = t1f.getSubrsArray();
         for (int i = 0; i < subArray.size(); i++) {
             if (subByteMap.containsKey(i) && !Arrays.equals(subByteMap.get(i), subArray.get(i))) {
-                throw new IOException("Can't merge font subroutines " + font.getBaseFont());
+                throw new IOException("Can't merge font subroutines " + font.font.getName());
             }
             subByteMap.put(i, subArray.get(i));
         }
-        Map<String, byte[]> cs = font.getType1Font().getCharStringsDict();
+        Map<String, byte[]> cs = t1f.getCharStringsDict();
         int lenIV = 4;
         PostscriptParser.PSElement element = getElement("/lenIV", mainSection);
         if (element != null && element instanceof PostscriptParser.PSVariable) {

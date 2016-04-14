@@ -18,6 +18,7 @@
 package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -62,7 +63,7 @@ public class StructureTreeMergerTestCase {
     @Test
     public void testCopyStructure() throws IOException {
         setUp();
-        PDDocument doc = PDDocument.load(LINK);
+        PDDocument doc = PDDocument.load(new File(LINK));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -82,7 +83,7 @@ public class StructureTreeMergerTestCase {
     @Test
     public void testNullEntriesInParentTree() throws IOException {
         setUp();
-        PDDocument doc = PDDocument.load(LINK);
+        PDDocument doc = PDDocument.load(new File(LINK));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -100,7 +101,7 @@ public class StructureTreeMergerTestCase {
     @Test
     public void testOBJRCorrectPosition() throws IOException {
         setUp();
-        PDDocument doc = PDDocument.load(MissingOBJR);
+        PDDocument doc = PDDocument.load(new File(MissingOBJR));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -176,13 +177,13 @@ public class StructureTreeMergerTestCase {
     @Test
     public void testCheckNullCOSObject() throws IOException {
         setUp();
-        PDDocument doc = PDDocument.load(BrokenLink);
+        PDDocument doc = PDDocument.load(new File(BrokenLink));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
         COSObject nullObj = new COSObject(null);
-        nullObj.setObjectNumber(COSInteger.get(100));
-        nullObj.setGenerationNumber(COSInteger.ZERO);
+        nullObj.setObjectNumber(100);
+        nullObj.setGenerationNumber(0);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
         COSObject parent = (COSObject)markedContentParents.get(1);
@@ -212,8 +213,8 @@ public class StructureTreeMergerTestCase {
         COSDictionary dict = new COSDictionary();
         dict.setItem(COSName.S, COSName.P);
         COSObject obj = new COSObject(dict);
-        obj.setObjectNumber(COSInteger.get(200));
-        obj.setGenerationNumber(COSInteger.ZERO);
+        obj.setObjectNumber(200);
+        obj.setGenerationNumber(0);
         array.add(0, obj);
         merger.createDirectDescendants(array, elem);
         List<PDFObject> list = elem.getKids();

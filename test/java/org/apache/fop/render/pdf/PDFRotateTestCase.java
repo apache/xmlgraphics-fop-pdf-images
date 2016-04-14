@@ -25,6 +25,7 @@ import junit.framework.Assert;
 
 import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
+import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.xmlgraphics.image.loader.Image;
@@ -48,10 +49,10 @@ public class PDFRotateTestCase {
         ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
         Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
         
-        PSGraphics2D g2d = new PSGraphics2D(true);
+        PSGraphics2D g2d = new PSPDFGraphics2D(true);
         GraphicContext gc = new GraphicContext();
         g2d.setGraphicContext(gc);
         ig.getGraphics2DImagePainter().paint(g2d, rect);
-        Assert.assertEquals(g2d.getTransform().getShearX(), 0.12626262626262627);
+        Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045735);
     }
 }

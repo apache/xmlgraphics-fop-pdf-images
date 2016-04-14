@@ -17,9 +17,9 @@
 
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
@@ -40,22 +40,23 @@ public class PageParentTreeFinder {
         this.srcPage = srcPage;
     }
 
-    public COSArray getPageParentTreeArray(PDDocument srcDoc) {
-        int position = srcPage.getCOSDictionary().getInt(COSName.STRUCT_PARENTS);
+    public COSArray getPageParentTreeArray(PDDocument srcDoc) throws IOException {
+        int position = srcPage.getCOSObject().getInt(COSName.STRUCT_PARENTS);
         if (position == -1) {
             position = findXObjectStructParent();
         }
         if (position != -1) {
             PDNumberTreeNode srcNumberTreeNode = srcDoc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
-            return traverseParentTree(srcNumberTreeNode.getCOSDictionary(), position);
+            return traverseParentTree(srcNumberTreeNode.getCOSObject(), position);
         }
         return new COSArray();
     }
     //TODO handle structural hierarchy in xboject stream
-    private int findXObjectStructParent() {
+    private int findXObjectStructParent() throws IOException {
         int position = -1;
-        Map<String, PDXObject> mapXObject = srcPage.findResources().getXObjects();
-        for (PDXObject t : mapXObject.values()) {
+        Iterable<COSName> mapXObject = srcPage.getResources().getXObjectNames();
+        for (COSName n : mapXObject) {
+            PDXObject t = srcPage.getResources().getXObject(n);
             COSDictionary xObjectDict = (COSDictionary)t.getCOSObject();
             position = xObjectDict.getInt(COSName.STRUCT_PARENTS);
             if (position != -1) {
