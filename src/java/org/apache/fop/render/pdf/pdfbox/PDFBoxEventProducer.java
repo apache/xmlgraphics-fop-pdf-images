@@ -33,8 +33,7 @@ interface PDFBoxEventProducer extends EventProducer {
          * @return the event producer
          */
         public static PDFBoxEventProducer get(EventBroadcaster broadcaster) {
-            return (PDFBoxEventProducer) broadcaster.getEventProducerFor(
-                    PDFBoxEventProducer.class);
+            return broadcaster.getEventProducerFor(PDFBoxEventProducer.class);
         }
     }
 

@@ -187,6 +187,7 @@
            source="${javac.source}" target="${javac.target}">
       <src path="${src.java.dir}"/>
       <classpath refid="libs-build-classpath"/>
+      <compilerarg value="-Xlint:cast"/> 
     </javac>
     <copy todir="${build.classes.dir}">
       <fileset dir="${src.java.dir}">

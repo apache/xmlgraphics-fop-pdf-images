@@ -392,7 +392,7 @@ public class PDFBoxAdapter {
             sourcePageResources.getCOSObject().setItem(COSName.FONT, fontsBackup);
         }
 
-        COSStream originalPageContents = (COSStream)pdStream.getCOSObject();
+        COSStream originalPageContents = pdStream.getCOSObject();
 
         bindOptionalContent(sourceDoc);
 

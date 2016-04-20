@@ -53,7 +53,7 @@ public class TaggedPDFConductor {
     public void handleLogicalStructure(PDDocument srcDoc) throws IOException {
         if (isInputPDFTagged(srcDoc) && isStructureTreeRootNull(srcDoc)) {
             merger.setCurrentSessionElem();
-            COSDictionary strucRootDict = (COSDictionary)srcDoc.getDocumentCatalog().getStructureTreeRoot()
+            COSDictionary strucRootDict = srcDoc.getDocumentCatalog().getStructureTreeRoot()
                 .getCOSObject();
             rootMod.structTreeRootEntriesToCopy(strucRootDict);
             if (!isParentTreeIsPresent(strucRootDict)) {
