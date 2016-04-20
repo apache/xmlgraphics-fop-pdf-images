@@ -19,7 +19,6 @@ package org.apache.fop.render.pdf;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 
 import org.junit.Test;
 
@@ -32,7 +31,6 @@ import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 

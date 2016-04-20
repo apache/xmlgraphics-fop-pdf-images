@@ -423,6 +423,7 @@
     <taskdef name="checkstyle" classname="com.puppycrawl.tools.checkstyle.CheckStyleTask" classpathref="libs-build-tools-classpath"/>
     <checkstyle config="checkstyle-5.5.xml" failonviolation="true" maxWarnings="0">
       <fileset dir="${src.java.dir}" includes="**/*.java"/>
+      <fileset dir="test/java" includes="**/*.java"/>
       <formatter type="plain"/>
     </checkstyle>
   </target>
@@ -437,7 +438,9 @@
     <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" classpathref="libs-findbugs"/>
     <findbugs home="${findbugs.home.dir}" output="text" reportLevel="low" effort="max" jvmargs="-Xmx1024m" warningsProperty="findbugs.warnings">
       <sourcePath path="${src.java.dir}"/>
+      <sourcePath path="test/java"/>
       <class location="${build.classes.dir}"/>
+      <class location="${build.unit.tests.dir}"/>
       <auxClasspath>
         <path refid="libs-build-classpath"/>
         <path>

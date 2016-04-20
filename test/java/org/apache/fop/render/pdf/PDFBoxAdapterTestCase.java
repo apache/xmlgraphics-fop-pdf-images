@@ -20,11 +20,8 @@ package org.apache.fop.render.pdf;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
-import java.awt.image.DataBufferInt;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,9 +32,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import javax.imageio.ImageIO;
-import javax.imageio.stream.MemoryCacheImageInputStream;
 
 import org.junit.Test;
 
@@ -58,10 +52,7 @@ import org.apache.pdfbox.pdmodel.PDResources;
 
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
-import org.apache.xmlgraphics.image.loader.ImageSource;
-import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
-import org.apache.xmlgraphics.image.loader.impl.ImageRendered;
 import org.apache.xmlgraphics.image.loader.util.SoftMapCache;
 import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.GraphicContext;
@@ -87,8 +78,6 @@ import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
 import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
-import org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData;
-import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
 import org.apache.fop.render.ps.PSDocumentHandler;
 import org.apache.fop.render.ps.PSImageFormResource;
 import org.apache.fop.render.ps.PSRenderingUtil;
@@ -112,7 +101,7 @@ public class PDFBoxAdapterTestCase {
     private static final String Type1Subset2 = "test/resources/t1subset2.pdf";
     private static final String Type1Subset3 = "test/resources/t1subset3.pdf";
     private static final String Type1Subset4 = "test/resources/t1subset4.pdf";
-    private static final String ROTATE = "test/resources/rotate.pdf";
+    protected static final String ROTATE = "test/resources/rotate.pdf";
     private static final String SHADING = "test/resources/shading.pdf";
     private static final String LINK = "test/resources/link.pdf";
     private static final String IMAGE = "test/resources/image.pdf";
@@ -385,13 +374,6 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testPreloaderPDF() throws Exception {
-        ImageSource imageSource = new ImageSource(ImageIO.createImageInputStream(new File(ROTATE)), "", true);
-        ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, new DefaultImageContext());
-        Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
-    }
-
-    @Test
     public void testPSPDFGraphics2D() throws Exception {
         ByteArrayOutputStream stream = pdfToPS(IMAGE);
         Assert.assertTrue(stream.toString("UTF-8"),
@@ -459,20 +441,6 @@ public class PDFBoxAdapterTestCase {
         return stream;
     }
 
-    @Test
-    public void testPreloaderImageRawData() throws IOException, ImageException {
-        PreloaderImageRawData p = new PreloaderImageRawData();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        DataOutputStream dos = new DataOutputStream(bos);
-        dos.writeInt(1);
-        dos.writeInt(1);
-        dos.writeInt(1);
-        InputStream is = new ByteArrayInputStream(bos.toByteArray());
-        ImageSource src = new ImageSource(new MemoryCacheImageInputStream(is), "", true);
-        ImageInfo img = p.preloadImage(DataBufferInt.class.getName(), src, new DefaultImageContext());
-        Assert.assertTrue(img.getOriginalImage() instanceof ImageRendered);
-    }
-
     static class FOPPSGeneratorImpl extends PSGenerator implements PSDocumentHandler.FOPPSGenerator {
         public FOPPSGeneratorImpl(OutputStream out) {
             super(out);
@@ -518,8 +486,8 @@ public class PDFBoxAdapterTestCase {
         c.setPageNumbers(new HashMap<Integer, PDFArray>());
         new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
         PDFResources res = c.getPage().getPDFResources();
-        OutputStream bos = new ByteArrayOutputStream();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         res.output(bos);
-        Assert.assertTrue(bos.toString().contains("/ExtGState << /GS1"));
+        Assert.assertTrue(bos.toString("UTF-8").contains("/ExtGState << /GS1"));
     }
 }

@@ -21,24 +21,27 @@ package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
 
-import junit.framework.Assert;
+import org.junit.Test;
 
-import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
-import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 import org.apache.xmlgraphics.java2d.GraphicContext;
 import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
-import org.junit.Test;
+
+import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
+import org.apache.fop.render.pdf.pdfbox.ImagePDF;
+import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
+
+import junit.framework.Assert;
 
 public class PDFRotateTestCase {
-    
+
     @Test
-    public void test() throws Exception {    	
+    public void test() throws Exception {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo("a", "b");
         PDDocument doc = new PDDocument();
@@ -48,7 +51,7 @@ public class PDFRotateTestCase {
         Image img = new ImagePDF(imgi, doc);
         ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
         Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-        
+
         PSGraphics2D g2d = new PSPDFGraphics2D(true);
         GraphicContext gc = new GraphicContext();
         g2d.setGraphicContext(gc);
