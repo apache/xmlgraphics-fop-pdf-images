@@ -634,7 +634,8 @@ public class PDFBoxAdapter {
                 //to guess the calculation order.
                 destAcroForm = new PDFDictionary(pdfDoc.getRoot());
             }
-            pdfDoc.registerObject(destAcroForm);
+            pdfDoc.assignObjectNumber(destAcroForm);
+            pdfDoc.addTrailerObject(destAcroForm);
             catalog.put(COSName.ACRO_FORM.getName(), destAcroForm);
         }
         PDFArray clonedFields = (PDFArray) destAcroForm.get(COSName.FIELDS.getName());
