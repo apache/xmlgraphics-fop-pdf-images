@@ -91,7 +91,7 @@ public abstract class AbstractPDFBoxHandler {
             getEventProducer(eventBroadcaster).pdfXActive(this);
         }
 
-        Map<Object, Object> objectCache = getObjectCache(originalImageUri, userAgent);
+        Map<Object, Object> objectCachePerFile = getObjectCache(getImagePath(originalImageUri), userAgent);
 
         PDPage page = pddoc.getDocumentCatalog().getPages().get(selectedPage);
 
@@ -102,7 +102,9 @@ public abstract class AbstractPDFBoxHandler {
             targetPage.put("Resources", res);
         }
 
-        PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCache, pageNumbers);
+        Map<Object, Object> objectCache = getObjectCache(getClass().getName(), userAgent);
+        PDFBoxAdapter adapter =
+                new PDFBoxAdapter(targetPage, objectCachePerFile, pageNumbers, objectCache);
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }
@@ -115,9 +117,8 @@ public abstract class AbstractPDFBoxHandler {
         return stream;
     }
 
-    private Map<Object, Object> getObjectCache(String originalImageUri, FOUserAgent userAgent) {
+    private Map<Object, Object> getObjectCache(String path, FOUserAgent userAgent) {
         SoftMapCache objectCache = userAgent.getPDFObjectCache();
-        String path = getImagePath(originalImageUri);
         if (objectCache.get(path) == null) {
             objectCache.put(path, new HashMap<Object, Object>());
         }

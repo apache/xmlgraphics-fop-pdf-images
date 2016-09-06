@@ -71,6 +71,7 @@ import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
+import org.apache.fop.pdf.PDFStream;
 import org.apache.fop.render.pdf.pdfbox.FOPPDFMultiByteFont;
 import org.apache.fop.render.pdf.pdfbox.FOPPDFSingleByteFont;
 import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
@@ -510,5 +511,24 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         res.output(bos);
         Assert.assertTrue(bos.toString("UTF-8").contains("/ExtGState << /GS1"));
+    }
+
+    @Test
+    public void testPDFCache() throws IOException {
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        pdfdoc.assignObjectNumber(pdfpage);
+        pdfpage.setDocument(pdfdoc);
+        Map<Object, Object> pdfCache = new HashMap<Object, Object>();
+        PDFBoxAdapter adapter = new PDFBoxAdapter(
+                pdfpage, new HashMap<Object, Object>(), new HashMap<Integer, PDFArray>(), pdfCache);
+        PDDocument doc = PDDocument.load(new File(LOOP));
+        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
+        doc.close();
+
+        Object item = pdfCache.values().iterator().next();
+        Assert.assertEquals(item.getClass(), PDFStream.class);
+        Assert.assertEquals(pdfCache.size(), 11);
     }
 }

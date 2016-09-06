@@ -93,7 +93,8 @@ public class PDFBoxAdapter {
     private final PDFPage targetPage;
     private final PDFDocument pdfDoc;
 
-    private final Map clonedVersion;
+    private final Map<Object, Object> clonedVersion;
+    private final Map<Object, Object> objectCache;
     private Map<COSName, String> newXObj = new HashMap<COSName, String>();
     private Map<Integer, PDFArray> pageNumbers;
     private Collection<String> parentFonts = new ArrayList<String>();
@@ -103,14 +104,21 @@ public class PDFBoxAdapter {
     /**
      * Creates a new PDFBoxAdapter.
      * @param targetPage The target FOP PDF page object
-     * @param objectCache the object cache for reusing objects shared by multiple pages.
+     * @param objectCachePerFile the object cache for reusing objects shared by multiple pages.
      * @param pageNumbers references to page object numbers
      */
-    public PDFBoxAdapter(PDFPage targetPage, Map objectCache, Map<Integer, PDFArray> pageNumbers) {
+    public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile,
+                         Map<Integer, PDFArray> pageNumbers) {
+        this(targetPage, objectCachePerFile, pageNumbers, new HashMap<Object, Object>());
+    }
+
+    public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile,
+                         Map<Integer, PDFArray> pageNumbers, Map<Object, Object> objectCache) {
         this.targetPage = targetPage;
         this.pdfDoc = this.targetPage.getDocument();
-        this.clonedVersion = objectCache;
+        this.clonedVersion = objectCachePerFile;
         this.pageNumbers = pageNumbers;
+        this.objectCache = objectCache;
     }
 
     public PDFPage getTargetPage() {
@@ -239,7 +247,7 @@ public class PDFBoxAdapter {
         return obj;
     }
 
-    private Object readCOSString(COSString string, Object keyBase) {
+    private Object readCOSString(COSString string, Object keyBase) throws IOException {
         //retval = ((COSString)base).getString(); //this is unsafe for binary content
         byte[] bytes = string.getBytes();
         //Be on the safe side and use the byte array to avoid encoding problems
@@ -275,11 +283,16 @@ public class PDFBoxAdapter {
         return cacheClonedObject(keyBase, stream);
     }
 
-    protected Object getCachedClone(Object base) {
-        return clonedVersion.get(getBaseKey(base));
+    protected Object getCachedClone(Object base) throws IOException {
+        Object key = getBaseKey(base);
+        Object o = clonedVersion.get(key);
+        if (o == null) {
+            return objectCache.get(key);
+        }
+        return o;
     }
 
-    protected Object cacheClonedObject(Object base, Object cloned) {
+    protected Object cacheClonedObject(Object base, Object cloned) throws IOException {
         Object key = getBaseKey(base);
         if (key == null) {
             return cloned;
@@ -293,18 +306,39 @@ public class PDFBoxAdapter {
             }
         }
         clonedVersion.put(key, cloned);
+        if (key instanceof Integer) {
+            objectCache.put(key, cloned);
+        }
         return cloned;
     }
 
-    private Object getBaseKey(Object base) {
+    private Object getBaseKey(Object base) throws IOException {
         if (base instanceof COSObject) {
             COSObject obj = (COSObject)base;
+            COSBase o = obj.getObject();
+            if (o instanceof COSStream) {
+                Integer hash = getStreamHash((COSStream) o);
+                if (hash != null) {
+                    return hash;
+                }
+            }
             return obj.getObjectNumber() + " " + obj.getGenerationNumber();
         } else if (base instanceof COSDictionary) {
             return base;
         } else {
             return null;
         }
+    }
+
+    private Integer getStreamHash(COSStream o) throws IOException {
+        for (COSBase x : o.getValues()) {
+            if (x instanceof COSObject || x instanceof COSDictionary) {
+                return null;
+            }
+        }
+        InputStream stream = o.getFilteredStream();
+        byte[] b = IOUtils.toByteArray(stream);
+        return Arrays.deepHashCode(new Object[]{b, o.toString()});
     }
 
     private void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter) throws IOException {
