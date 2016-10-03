@@ -62,7 +62,6 @@ import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 
-import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 
 import org.apache.fop.fonts.FontInfo;
@@ -184,7 +183,8 @@ public class PDFBoxAdapter {
         } else if (base instanceof COSDictionary) {
             return readCOSDictionary((COSDictionary) base, keyBase, exclude);
         } else if (base instanceof COSName) {
-            PDFName newName = new PDFName(((COSName)base).getName());
+            byte[] name = ((COSName)base).getName().getBytes("ISO-8859-1");
+            PDFName newName = new PDFName(new String(name, "ISO-8859-1"));
             return cacheClonedObject(keyBase, newName);
         } else if (base instanceof COSInteger) {
             PDFNumber number = new PDFNumber();
@@ -284,7 +284,7 @@ public class PDFBoxAdapter {
     }
 
     protected Object getCachedClone(Object base) throws IOException {
-        Object key = getBaseKey(base);
+        Object key = PDFBoxAdapterUtil.getBaseKey(base);
         Object o = clonedVersion.get(key);
         if (o == null) {
             return objectCache.get(key);
@@ -293,7 +293,7 @@ public class PDFBoxAdapter {
     }
 
     protected Object cacheClonedObject(Object base, Object cloned) throws IOException {
-        Object key = getBaseKey(base);
+        Object key = PDFBoxAdapterUtil.getBaseKey(base);
         if (key == null) {
             return cloned;
         }
@@ -310,35 +310,6 @@ public class PDFBoxAdapter {
             objectCache.put(key, cloned);
         }
         return cloned;
-    }
-
-    private Object getBaseKey(Object base) throws IOException {
-        if (base instanceof COSObject) {
-            COSObject obj = (COSObject)base;
-            COSBase o = obj.getObject();
-            if (o instanceof COSStream) {
-                Integer hash = getStreamHash((COSStream) o);
-                if (hash != null) {
-                    return hash;
-                }
-            }
-            return obj.getObjectNumber() + " " + obj.getGenerationNumber();
-        } else if (base instanceof COSDictionary) {
-            return base;
-        } else {
-            return null;
-        }
-    }
-
-    private Integer getStreamHash(COSStream o) throws IOException {
-        for (COSBase x : o.getValues()) {
-            if (x instanceof COSObject || x instanceof COSDictionary) {
-                return null;
-            }
-        }
-        InputStream stream = o.getFilteredStream();
-        byte[] b = IOUtils.toByteArray(stream);
-        return Arrays.deepHashCode(new Object[]{b, o.toString()});
     }
 
     private void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter) throws IOException {
@@ -473,7 +444,7 @@ public class PDFBoxAdapter {
         atdoc.scale(-1, 1);
         atdoc.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
 
-        rotate(rotation, viewBox, atdoc);
+        PDFBoxAdapterUtil.rotate(rotation, viewBox, atdoc);
 
         StringBuilder boxStr = new StringBuilder();
         boxStr.append(PDFNumber.doubleOut(mediaBox.getLowerLeftX())).append(' ')
@@ -481,32 +452,6 @@ public class PDFBoxAdapter {
                 .append(PDFNumber.doubleOut(mediaBox.getWidth())).append(' ')
                 .append(PDFNumber.doubleOut(mediaBox.getHeight())).append(" re W n\n");
         return boxStr.toString() + IOUtils.toString(pdStream.createInputStream(null), "ISO-8859-1");
-    }
-
-    private void rotate(int rotation, PDRectangle viewBox, AffineTransform atdoc) {
-        float x = viewBox.getWidth() + viewBox.getLowerLeftX();
-        float y = viewBox.getHeight() + viewBox.getLowerLeftY();
-        switch (rotation) {
-            case 90:
-                atdoc.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
-                atdoc.translate(0, viewBox.getWidth());
-                atdoc.rotate(-Math.PI / 2.0);
-                atdoc.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
-                break;
-            case 180:
-                atdoc.translate(x, y);
-                atdoc.rotate(-Math.PI);
-                atdoc.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
-                break;
-            case 270:
-                atdoc.translate(viewBox.getLowerLeftX(), y);
-                atdoc.rotate(Math.toRadians(270 + 180));
-                atdoc.translate(-x, -y);
-                break;
-            default:
-                //no additional transformations necessary
-                break;
-        }
     }
 
     private PDStream getContents(PDPage page) throws IOException {
@@ -621,7 +566,7 @@ public class PDFBoxAdapter {
             return;
         }
 
-        moveAnnotations(page, pageAnnotations, at);
+        PDFBoxAdapterUtil.moveAnnotations(page, pageAnnotations, at);
 
         //Pseudo-cache the target page in place of the original source page.
         //This essentially replaces the original page reference with the target page.
@@ -683,25 +628,6 @@ public class PDFBoxAdapter {
         }
     }
 
-    private void updateAnnotationLink(PDFDictionary clonedAnnot) {
-        Object a = clonedAnnot.get("A");
-        if (a instanceof PDFDictionary) {
-            PDFDictionary annot = (PDFDictionary) a;
-            Object oldarrayObj = annot.get("D");
-            if (oldarrayObj instanceof PDFArray) {
-                PDFArray oldarray = (PDFArray) oldarrayObj;
-                Object newarrayObj = oldarray.get(0);
-                if (newarrayObj instanceof PDFArray) {
-                    PDFArray newarray = (PDFArray) newarrayObj;
-                    for (int i = 1; i < oldarray.length(); i++) {
-                        newarray.add(oldarray.get(i));
-                    }
-                    annot.put("D", oldarray.get(0));
-                }
-            }
-        }
-    }
-
     private Set<COSObject> copyAnnotations(PDPage page) throws IOException {
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
         Set<COSObject> fields = Collections.emptySet();
@@ -729,41 +655,12 @@ public class PDFBoxAdapter {
                 PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot1, annot1, exclude);
                 if (clonedAnnot instanceof PDFDictionary) {
                     clonedAnnot.setParent(targetPage);
-                    updateAnnotationLink((PDFDictionary) clonedAnnot);
+                    PDFBoxAdapterUtil.updateAnnotationLink((PDFDictionary) clonedAnnot);
                 }
                 targetPage.addAnnotation(clonedAnnot);
             }
         }
         return fields;
-    }
-
-    private void moveAnnotations(PDPage page, List pageAnnotations, AffineTransform at) {
-        PDRectangle mediaBox = page.getMediaBox();
-        PDRectangle cropBox = page.getCropBox();
-        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
-        for (Object obj : pageAnnotations) {
-            PDAnnotation annot = (PDAnnotation)obj;
-            PDRectangle rect = annot.getRectangle();
-            float translateX = (float) (at.getTranslateX() - viewBox.getLowerLeftX());
-            float translateY = (float) (at.getTranslateY() - viewBox.getLowerLeftY());
-            if (rect != null) {
-                rect.setUpperRightX(rect.getUpperRightX() + translateX);
-                rect.setLowerLeftX(rect.getLowerLeftX() + translateX);
-                rect.setUpperRightY(rect.getUpperRightY() + translateY);
-                rect.setLowerLeftY(rect.getLowerLeftY() + translateY);
-                annot.setRectangle(rect);
-            }
-//            COSArray vertices = (COSArray) annot.getCOSObject().getDictionaryObject("Vertices");
-//            if (vertices != null) {
-//                Iterator iter = vertices.iterator();
-//                while (iter.hasNext()) {
-//                    COSFloat x = (COSFloat) iter.next();
-//                    COSFloat y = (COSFloat) iter.next();
-//                    x.setValue(x.floatValue() + translateX);
-//                    y.setValue(y.floatValue() + translateY);
-//                }
-//            }
-        }
     }
 
     static class CompareFields implements Comparator<COSObject>, Serializable {

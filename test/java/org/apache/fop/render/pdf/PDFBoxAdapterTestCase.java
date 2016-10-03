@@ -66,6 +66,7 @@ import org.apache.fop.fonts.MultiByteFont;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFAnnotList;
 import org.apache.fop.pdf.PDFArray;
+import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFGState;
@@ -520,8 +521,9 @@ public class PDFBoxAdapterTestCase {
         pdfdoc.assignObjectNumber(pdfpage);
         pdfpage.setDocument(pdfdoc);
         Map<Object, Object> pdfCache = new HashMap<Object, Object>();
+        Map<Object, Object> objectCachePerFile = new HashMap<Object, Object>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(
-                pdfpage, new HashMap<Object, Object>(), new HashMap<Integer, PDFArray>(), pdfCache);
+                pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
         PDDocument doc = PDDocument.load(new File(LOOP));
         PDPage page = doc.getDocumentCatalog().getPages().get(0);
         adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
@@ -529,6 +531,14 @@ public class PDFBoxAdapterTestCase {
 
         Object item = pdfCache.values().iterator().next();
         Assert.assertEquals(item.getClass(), PDFStream.class);
+        item = pdfCache.keySet().iterator().next();
+        Assert.assertEquals(item.getClass(), Integer.class);
         Assert.assertEquals(pdfCache.size(), 11);
+
+        item = objectCachePerFile.values().iterator().next();
+        Assert.assertEquals(item.getClass(), PDFDictionary.class);
+        item = objectCachePerFile.keySet().iterator().next();
+        Assert.assertEquals(item.getClass(), String.class);
+        Assert.assertEquals(objectCachePerFile.size(), 45);
     }
 }
