@@ -79,6 +79,7 @@
 
   <fileset dir="${basedir}" id="dist.src">
     <include name="src/**"/>
+    <include name="test/**"/>
     <patternset>
       <include name="lib/*"/>
     </patternset>
@@ -87,6 +88,7 @@
     <include name="README"/>
     <include name="KEYS"/>
     <include name="build.*"/>
+    <include name="*.xml"/>
   </fileset>
   
   <property name="build.unit.tests.dir" value="${build.dir}/test-classes"/>
@@ -350,7 +352,9 @@
 
   <target name="release-dist" depends="dist" description="Generates the distribution package and signs the release">
     <property name="bin.suffix" value="bin-jdk${java.specification.version}"/>
-    <input message="Passphrase for your default private key (attention: passphrase will be echoed in clear text on the display!)" addproperty="pwd"/>
+    <input message="Passphrase for your default private key" addproperty="pwd">
+      <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+    </input>
     <antcall target="md5">
       <param name="sign.archive" value="${name}-${version}-src.zip"/>
     </antcall>
