@@ -535,10 +535,18 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(item.getClass(), Integer.class);
         Assert.assertEquals(pdfCache.size(), 11);
 
-        item = objectCachePerFile.values().iterator().next();
-        Assert.assertEquals(item.getClass(), PDFDictionary.class);
-        item = objectCachePerFile.keySet().iterator().next();
-        Assert.assertEquals(item.getClass(), String.class);
+        int pdfDictionary = 0;
+        int strings = 0;
+        for (Map.Entry<Object, Object> o : objectCachePerFile.entrySet()) {
+            if (o.getValue().getClass().equals(PDFDictionary.class)) {
+                pdfDictionary++;
+            }
+            if (o.getKey() instanceof String) {
+                strings++;
+            }
+        }
+        Assert.assertEquals(pdfDictionary, 26);
+        Assert.assertEquals(strings, 34);
         Assert.assertEquals(objectCachePerFile.size(), 45);
     }
 }
