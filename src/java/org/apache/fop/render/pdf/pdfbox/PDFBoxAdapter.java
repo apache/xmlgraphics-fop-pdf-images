@@ -638,16 +638,10 @@ public class PDFBoxAdapter {
                 exclude.add(COSName.P);
                 if (annot1 instanceof COSObject) {
                     COSObject annot = (COSObject) annot1;
-                    COSObject fieldObject = annot;
-                    COSDictionary field = (COSDictionary) fieldObject.getObject();
-                    COSObject parent;
-                    while ((parent = (COSObject) field.getItem(COSName.PARENT)) != null) {
-                        fieldObject = parent;
-                        field = (COSDictionary) fieldObject.getObject();
-                    }
-                    fields.add(fieldObject);
+                    getField(annot, fields);
 
-                    if (((COSDictionary) annot.getObject()).getItem(COSName.getPDFName("StructParent")) != null) {
+
+                    if (((COSDictionary) annot.getObject()).getItem(COSName.STRUCT_PARENT) != null) {
                         exclude.add(COSName.PARENT);
                     }
                 }
@@ -661,6 +655,25 @@ public class PDFBoxAdapter {
             }
         }
         return fields;
+    }
+
+    private COSDictionary getField(COSObject fieldObject, Set<COSObject> fields) {
+        COSDictionary field = (COSDictionary) fieldObject.getObject();
+        COSObject parent;
+        while ((parent = getParent(field)) != null) {
+            fieldObject = parent;
+            field = (COSDictionary) fieldObject.getObject();
+        }
+        fields.add(fieldObject);
+        return field;
+    }
+
+    private COSObject getParent(COSDictionary field) {
+        COSBase parent = field.getItem(COSName.PARENT);
+        if (parent instanceof COSObject) {
+            return (COSObject) parent;
+        }
+        return null;
     }
 
     static class CompareFields implements Comparator<COSObject>, Serializable {

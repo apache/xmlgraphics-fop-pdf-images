@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -44,8 +45,11 @@ import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.type1.Type1Font;
+import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
@@ -112,10 +116,10 @@ public class PDFBoxAdapterTestCase {
     private static final String XFORM = "test/resources/xform.pdf";
     private static final String LOOP = "test/resources/loop.pdf";
 
-    private PDFBoxAdapter getPDFBoxAdapter() {
+    private PDFBoxAdapter getPDFBoxAdapter(boolean mergeFonts) {
         PDFDocument doc = new PDFDocument("");
         PDFPage pdfpage = new PDFPage(new PDFResources(doc), 0, r, r, r, r);
-        doc.setMergeFontsEnabled(true);
+        doc.setMergeFontsEnabled(mergeFonts);
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
         return new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
@@ -180,7 +184,7 @@ public class PDFBoxAdapterTestCase {
         PDDocument doc = PDDocument.load(new File(pdf));
         PDPage page = doc.getDocumentCatalog().getPages().get(0);
         AffineTransform at = new AffineTransform();
-        String c = getPDFBoxAdapter().createStreamFromPDFBoxPage(doc, page, pdf, at, fi, new Rectangle());
+        String c = getPDFBoxAdapter(true).createStreamFromPDFBoxPage(doc, page, pdf, at, fi, new Rectangle());
 //        PDResources sourcePageResources = page.findResources();
 //        COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSDictionary().getDictionaryObject(COSName.FONT);
 //        PDFBoxAdapter.PDFWriter w = adapter. new MergeFontsPDFWriter(fonts, fi, "", new ArrayList<COSName>());
@@ -356,6 +360,21 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
+    public void testAnnot2() throws Exception {
+        PDFBoxAdapter adapter = getPDFBoxAdapter(false);
+        PDDocument doc = PDDocument.load(new File(ANNOT));
+        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
+        COSDictionary dict = (COSDictionary) ((COSObject)annots.get(0)).getObject();
+        dict.setItem(COSName.PARENT, COSInteger.ONE);
+
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        doc.close();
+    }
+
+    @Test
     public void testLink() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
@@ -378,7 +397,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testXform() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
-        pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Arrays.asList("null"));
+        pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Collections.singletonList("null"));
         pdfdoc.setMergeFontsEnabled(true);
         PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
         pdfpage.setDocument(pdfdoc);

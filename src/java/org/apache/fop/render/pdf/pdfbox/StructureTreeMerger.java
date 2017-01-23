@@ -194,8 +194,7 @@ public class StructureTreeMerger {
             copyElemEntries(cosParentElem, elemParent);
             elem.setParent(elemParent);
             fillKidsWithNull(elemParent, (COSDictionary)cosParentElem.getObject());
-            if (((COSName)parentElemDictionary.getDictionaryObject(COSName.S)).getName()
-                .equals(StandardStructureTypes.TR)) {
+            if (parentElemDictionary.getDictionaryObject(COSName.S) == COSName.TR) {
                 COSBase rowKids = parentElemDictionary.getItem(COSName.K);
                 createKids(rowKids, parentElemDictionary, elemParent, true);
             } else {
@@ -378,7 +377,7 @@ public class StructureTreeMerger {
         for (COSBase base : originalParentTree) {
             if (base instanceof COSNull || base == null) {
                 complete.add(null);
-            } else {
+            } else if (!list.isEmpty()) {
                 complete.add(list.get(0));
                 list.remove(0);
             }

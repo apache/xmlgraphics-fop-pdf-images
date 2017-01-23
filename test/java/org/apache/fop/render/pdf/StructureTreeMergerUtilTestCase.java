@@ -35,9 +35,9 @@ public class StructureTreeMergerUtilTestCase {
 
         COSDictionary rolemap = new COSDictionary();
         COSName key1 = COSName.getPDFName("Para");
-        COSName value1 = COSName.getPDFName("P");
+        COSName value1 = COSName.P;
         COSName key2 = COSName.getPDFName("Icon");
-        COSName value2 = COSName.getPDFName("Image");
+        COSName value2 = COSName.IMAGE;
         rolemap.setItem(key1, value1);
         rolemap.setItem(key2, value2);
         String type = "Image";
