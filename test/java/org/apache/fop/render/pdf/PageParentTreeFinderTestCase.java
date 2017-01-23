@@ -31,6 +31,7 @@ import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.common.PDNumberTreeNode;
 
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 
@@ -62,6 +63,7 @@ public class PageParentTreeFinderTestCase {
         test = secondKid.getInt("MCID");
         expected = 1;
         Assert.assertEquals(test, expected);
+        doc.close();
     }
 
     @Test
@@ -74,5 +76,19 @@ public class PageParentTreeFinderTestCase {
         COSArray parentTree = finder.getPageParentTreeArray(null);
         int test = parentTree.size();
         Assert.assertEquals(test, 0);
+    }
+
+    @Test
+    public void testTraverseKids() throws IOException {
+        PDDocument doc = PDDocument.load(new File(LINK));
+        PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
+        COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
+        COSObject kidCOSObj = (COSObject) parentTree.get(0);
+        COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
+        nums.add(0, COSInteger.get(9));
+        nums.add(1, new COSDictionary());
+        COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
+        Assert.assertEquals(numList.size(), 3);
+        doc.close();
     }
 }

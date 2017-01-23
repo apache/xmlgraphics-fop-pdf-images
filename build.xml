@@ -448,6 +448,7 @@
       <class location="${build.unit.tests.dir}"/>
       <auxClasspath>
         <path refid="libs-build-classpath"/>
+        <path refid="libs-build-tools-classpath"/>
         <path>
           <fileset dir="${ant.library.dir}">
             <include name="ant.jar"/>
@@ -458,4 +459,22 @@
     </findbugs>
     <fail if="findbugs.warnings"/>
   </target>
+  
+  <target name="jar-sources" description="Generates a jar file with all the sources">
+    <tstamp>
+      <format property="ts" pattern="yyyyMMdd-HHmmss-z"/>
+    </tstamp>
+    <patternset id="java-only">
+      <include name="**/*.java"/>
+    </patternset>
+    <jar jarfile="${build.dir}/${name}-${version}-sources.jar">
+      <fileset dir="${src.java.dir}">
+        <patternset refid="java-only"/>
+      </fileset>
+      <fileset dir="${basedir}">
+        <include name="LICENSE"/>
+        <include name="NOTICE"/>
+      </fileset>
+    </jar>
+  </target>  
 </project>

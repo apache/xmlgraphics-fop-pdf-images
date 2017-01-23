@@ -35,7 +35,7 @@ import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 
 public class PageParentTreeFinder {
 
-    PDPage srcPage;
+    private PDPage srcPage;
     public PageParentTreeFinder(PDPage srcPage) {
         this.srcPage = srcPage;
     }
@@ -57,7 +57,7 @@ public class PageParentTreeFinder {
         Iterable<COSName> mapXObject = srcPage.getResources().getXObjectNames();
         for (COSName n : mapXObject) {
             PDXObject t = srcPage.getResources().getXObject(n);
-            COSDictionary xObjectDict = (COSDictionary)t.getCOSObject();
+            COSDictionary xObjectDict = t.getCOSObject();
             position = xObjectDict.getInt(COSName.STRUCT_PARENTS);
             if (position != -1) {
                 return position;
@@ -77,11 +77,13 @@ public class PageParentTreeFinder {
             parentTree = (COSArray) numberTreeNodeDict.getDictionaryObject(COSName.KIDS);
             traverseKids(parentTree, position, nums);
         }
+        if (nums.isEmpty()) {
+            return new COSArray();
+        }
         return nums.get(0);
     }
 
     private void traverseKids(COSBase kids, int position, List<COSArray> numList) {
-        COSArray pageParentTree;
         if (!numList.isEmpty()) {
             return;
         }
@@ -95,7 +97,6 @@ public class PageParentTreeFinder {
             COSObject kidCOSObj = (COSObject) kids;
             if (kidCOSObj.getDictionaryObject(COSName.NUMS) == null) {
                 traverseKids(kidCOSObj.getDictionaryObject(COSName.KIDS), position, numList);
-
             } else {
                 if (kidCOSObj.getDictionaryObject(COSName.LIMITS) != null) {
                     COSArray kidCOSArray = (COSArray) kidCOSObj.getDictionaryObject(COSName.LIMITS);
@@ -103,8 +104,7 @@ public class PageParentTreeFinder {
                     int upperLimit = ((COSInteger) kidCOSArray.get(1)).intValue();
                     if (lowerLimit <= position && position <= upperLimit) {
                         COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
-                        pageParentTree = (COSArray) nums.getObject(((position - lowerLimit) * 2) + 1);
-                        numList.add(pageParentTree);
+                        numList.add(extractMarkedContentParents(nums, position));
                     }
                 } else {
                     COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
