@@ -137,4 +137,8 @@ public class FontContainer {
         BoundingBox bb = font.getBoundingBox();
         return new float[] {bb.getLowerLeftX(), bb.getLowerLeftY(), bb.getUpperRightX(), bb.getUpperRightY()};
     }
+
+    public PDFont getFont() {
+        return font;
+    }
 }

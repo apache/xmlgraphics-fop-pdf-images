@@ -105,9 +105,9 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         }
         CMap c = font.getToUnicodeCMap();
         Map<Integer, String> mapping = getMapping(font, c, glyphData.length);
-        //if (glyphData.length > 0 && differentGlyphData(glyphData, mapping)) {
-        //    return null;
-        //}
+        if (glyphData.length > 0) {
+            differentGlyphData(glyphData, mapping);
+        }
         Map<Integer, String> gidToGlyph = new TreeMap<Integer, String>(mapping);
         if (font.font instanceof PDTrueTypeFont) {
             CmapSubtable cmap = ttf.getCmap().getCmaps()[0];
@@ -233,28 +233,31 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         return "SID" + index;
     }
 
-//        private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping) throws IOException {
-//            Map<String, Integer> tmpMap = new HashMap<String, Integer>();
-//            for (Map.Entry<Integer, String> entry : mapping.entrySet()) {
-//                if (!tmpMap.containsKey(entry.getValue())) {
-//                    tmpMap.put(entry.getValue(), entry.getKey());
-//                }
-//            }
-//            mapping.clear();
-//            for (Map.Entry<String, Integer> entry : tmpMap.entrySet()) {
-//                mapping.put(entry.getValue(), entry.getKey());
-//            }
-//
-//            for (Map.Entry<Integer, String> n : mapping.entrySet()) {
+        private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping) throws IOException {
+            Map<String, Integer> tmpMap = new HashMap<String, Integer>();
+            for (Map.Entry<Integer, String> entry : mapping.entrySet()) {
+                if (!tmpMap.containsKey(entry.getValue())) {
+                    tmpMap.put(entry.getValue(), entry.getKey());
+                }
+            }
+            mapping.clear();
+            for (Map.Entry<String, Integer> entry : tmpMap.entrySet()) {
+                mapping.put(entry.getValue(), entry.getKey());
+            }
+
+            for (Map.Entry<Integer, String> n : mapping.entrySet()) {
+                if (n.getKey() >= data.length) {
+                    throw new IOException("Mapping not found in glyphData");
+                }
 //                if (data[n.getKey()] != null) {
 //                    if (glyphs.containsKey(n.getValue()) && !glyphs.get(n.getValue()).equals(data[n.getKey()])) {
 //                        return true;
 //                    }
 //                    glyphs.put(n.getValue(), data[n.getKey()]);
 //                }
-//            }
-//            return false;
-//        }
+            }
+            return false;
+        }
 
     private InputStream readFontFile(PDFont font) throws IOException {
         PDFontDescriptor fd = font.getFontDescriptor();

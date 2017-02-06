@@ -28,15 +28,20 @@ import org.junit.Test;
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
+import org.apache.fontbox.ttf.GlyphData;
+import org.apache.fontbox.ttf.GlyphTable;
 import org.apache.fontbox.type1.Type1Font;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import org.apache.fop.render.pdf.pdfbox.FOPPDFMultiByteFont;
 import org.apache.fop.render.pdf.pdfbox.FOPPDFSingleByteFont;
+import org.apache.fop.render.pdf.pdfbox.FontContainer;
 
 public class FOPPDFSingleMultiByteFontTestCase {
     private COSDictionary getFont(PDDocument doc, String internalname) throws IOException {
@@ -159,5 +164,34 @@ public class FOPPDFSingleMultiByteFontTestCase {
         FOPPDFMultiByteFont multiByteFont = new FOPPDFMultiByteFont(font, null);
         Assert.assertTrue(multiByteFont.hadMappingOperations());
         pdf.close();
+    }
+
+    @Test
+    public void testMappingNotFound() throws IOException {
+        PDDocument pdf = PDDocument.load(new File(PDFBoxAdapterTestCase.TTCID1));
+        final COSDictionary fontDict = getFont(pdf, "C2_0");
+        MyFOPPDFMultiByteFont multiByteFont = new MyFOPPDFMultiByteFont(fontDict, null);
+        PDType0Font font = (PDType0Font) multiByteFont.getFontContainer().getFont();
+        GlyphTable glyphTable = ((PDCIDFontType2)font.getDescendantFont()).getTrueTypeFont().getGlyph();
+        glyphTable.setGlyphs(new GlyphData[glyphTable.getGlyphs().length - 1]);
+        String ex = "";
+        try {
+            multiByteFont.addFont(fontDict);
+        } catch (IOException e) {
+            ex = e.getMessage();
+        }
+        Assert.assertEquals(ex, "Mapping not found in glyphData");
+        pdf.close();
+    }
+
+    private static class MyFOPPDFMultiByteFont extends FOPPDFMultiByteFont {
+        COSDictionary fontData;
+        MyFOPPDFMultiByteFont(COSDictionary fontData, String name) throws IOException {
+            super(fontData, name);
+            this.fontData = fontData;
+        }
+        FontContainer getFontContainer() throws IOException {
+            return getFont(fontData);
+        }
     }
 }
