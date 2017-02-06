@@ -72,6 +72,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         readFontBBox(fontData);
         setFontName(name);
         addFont(fontData);
+        notifyMapOperation();
     }
 
     public String addFont(COSDictionary fontData) throws IOException {
