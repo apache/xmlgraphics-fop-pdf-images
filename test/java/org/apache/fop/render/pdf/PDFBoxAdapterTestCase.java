@@ -84,7 +84,6 @@ import org.apache.fop.render.ps.PSRenderingUtil;
 import junit.framework.Assert;
 
 public class PDFBoxAdapterTestCase {
-    private Rectangle2D r = new Rectangle2D.Double();
     protected static final String CFF1 = "test/resources/2fonts.pdf";
     protected static final String CFF2 = "test/resources/2fonts2.pdf";
     protected static final String CFF3 = "test/resources/simpleh.pdf";
@@ -109,9 +108,14 @@ public class PDFBoxAdapterTestCase {
     private static final String XFORM = "test/resources/xform.pdf";
     private static final String LOOP = "test/resources/loop.pdf";
 
-    private PDFBoxAdapter getPDFBoxAdapter(boolean mergeFonts) {
+    private static PDFPage getPDFPage(PDFDocument doc) {
+        final Rectangle2D r = new Rectangle2D.Double();
+        return new PDFPage(new PDFResources(doc), 0, r, r, r, r);
+    }
+
+    protected static PDFBoxAdapter getPDFBoxAdapter(boolean mergeFonts) {
         PDFDocument doc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(doc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(doc);
         doc.setMergeFontsEnabled(mergeFonts);
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
@@ -187,27 +191,9 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testStream() throws Exception {
-        PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
-        pdfpage.setDocument(pdfdoc);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(ROTATE));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
-        AffineTransform at = new AffineTransform();
-        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
-        Assert.assertEquals(at, new AffineTransform(-0.0, 1.0000000554888686, 1.0000000554888686, 0.0, 0.0,
-                -2.0742416381835938E-5));
-        Assert.assertTrue(stream.contains("/GS0106079 gs"));
-        Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
-        doc.close();
-    }
-
-    @Test
     public void testTaggedPDFWriter() throws IOException {
         PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
         adapter.setCurrentMCID(5);
@@ -223,7 +209,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testAnnot() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
@@ -258,7 +244,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testLink() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
@@ -280,7 +266,7 @@ public class PDFBoxAdapterTestCase {
         PDFDocument pdfdoc = new PDFDocument("");
         pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Collections.singletonList("null"));
         pdfdoc.setMergeFontsEnabled(true);
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
@@ -396,7 +382,7 @@ public class PDFBoxAdapterTestCase {
         PDDocument doc = PDDocument.load(new File(SHADING));
         ImagePDF img = new ImagePDF(imgi, doc);
         PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         PDFGState g = new PDFGState();
         pdfdoc.assignObjectNumber(g);
@@ -417,7 +403,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testPDFCache() throws IOException {
         PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = new PDFPage(new PDFResources(pdfdoc), 0, r, r, r, r);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfdoc.assignObjectNumber(pdfpage);
         pdfpage.setDocument(pdfdoc);
         Map<Object, Object> pdfCache = new HashMap<Object, Object>();

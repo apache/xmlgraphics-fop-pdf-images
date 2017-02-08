@@ -110,24 +110,22 @@ public final class PDFBoxAdapterUtil {
     }
 
     protected static void rotate(int rotation, PDRectangle viewBox, AffineTransform atdoc) {
-        float x = viewBox.getWidth() + viewBox.getLowerLeftX();
-        float y = viewBox.getHeight() + viewBox.getLowerLeftY();
+        float w = viewBox.getWidth();
+        float h = viewBox.getHeight();
+        float x = viewBox.getLowerLeftX();
+        float y = viewBox.getLowerLeftY();
         switch (rotation) {
             case 90:
-                atdoc.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
-                atdoc.translate(0, viewBox.getWidth());
-                atdoc.rotate(-Math.PI / 2.0);
-                atdoc.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
+                atdoc.rotate(Math.toRadians(rotation + 180), x, y);
+                atdoc.translate(-h, 0);
                 break;
             case 180:
-                atdoc.translate(x, y);
-                atdoc.rotate(-Math.PI);
-                atdoc.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
+                atdoc.translate(w, h);
+                atdoc.rotate(Math.toRadians(rotation), x, y);
                 break;
             case 270:
-                atdoc.translate(viewBox.getLowerLeftX(), y);
-                atdoc.rotate(Math.toRadians(270 + 180));
-                atdoc.translate(-x, -y);
+                atdoc.rotate(Math.toRadians(rotation + 180), x, h + y);
+                atdoc.translate(-w, 0);
                 break;
             default:
                 //no additional transformations necessary

@@ -19,7 +19,11 @@
 
 package org.apache.fop.render.pdf;
 
+import java.awt.Rectangle;
+import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
+import java.io.File;
+import java.io.IOException;
 
 import org.junit.Test;
 
@@ -34,6 +38,7 @@ import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
 
 import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
+import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 
 import junit.framework.Assert;
@@ -57,5 +62,28 @@ public class PDFRotateTestCase {
         g2d.setGraphicContext(gc);
         ig.getGraphics2DImagePainter().paint(g2d, rect);
         Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045735);
+    }
+
+    @Test
+    public void testAngle() throws IOException {
+        Assert.assertEquals(getTransform(90), new AffineTransform(0, 1, 1, 0, 0, 0));
+        Assert.assertEquals(getTransform(270), new AffineTransform(0, -1, -1, 0, 842, 595));
+        AffineTransform at = getTransform(180);
+        Assert.assertEquals((int)at.getTranslateX(), 842);
+        Assert.assertEquals(at.getTranslateY(), 0.0);
+    }
+
+    private AffineTransform getTransform(int angle) throws IOException {
+        PDFBoxAdapter adapter = PDFBoxAdapterTestCase.getPDFBoxAdapter(false);
+        PDDocument doc = PDDocument.load(new File(PDFBoxAdapterTestCase.ROTATE));
+        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        page.setRotation(angle);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        Assert.assertTrue(stream.contains("/GS0106079 gs"));
+        Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
+        doc.close();
+        return at;
     }
 }
