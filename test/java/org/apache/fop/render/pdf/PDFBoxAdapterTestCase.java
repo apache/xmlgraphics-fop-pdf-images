@@ -107,6 +107,7 @@ public class PDFBoxAdapterTestCase {
     private static final String HELLOTagged = "test/resources/taggedWorld.pdf";
     private static final String XFORM = "test/resources/xform.pdf";
     private static final String LOOP = "test/resources/loop.pdf";
+    private static final String ERROR = "test/resources/error.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -335,7 +336,7 @@ public class PDFBoxAdapterTestCase {
 
     private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
-        ImageInfo imgi = new ImageInfo("a", "b");
+        ImageInfo imgi = new ImageInfo(pdf, "b");
         PDDocument doc = PDDocument.load(new File(pdf));
         org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
         ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
@@ -434,5 +435,29 @@ public class PDFBoxAdapterTestCase {
         Assert.assertEquals(pdfDictionary, 26);
         Assert.assertEquals(strings, 34);
         Assert.assertEquals(objectCachePerFile.size(), 45);
+    }
+
+    @Test
+    public void testErrorMsgToPS() throws IOException, ImageException {
+        String msg = "";
+        try {
+            pdfToPS(ERROR);
+        } catch (RuntimeException e) {
+            msg = e.getMessage();
+        }
+        Assert.assertEquals(msg, "Error while painting PDF page: " + ERROR);
+    }
+
+    @Test
+    public void testErrorMsgToPDF() throws IOException {
+        String msg = "";
+        PDFRenderingContext context = new PDFRenderingContext(null, null, null, null);
+        ImagePDF imagePDF = new ImagePDF(new ImageInfo(ERROR, null), null);
+        try {
+            new PDFBoxImageHandler().handleImage(context, imagePDF, null);
+        } catch (RuntimeException e) {
+            msg = e.getMessage();
+        }
+        Assert.assertEquals(msg, "Error on PDF page: " + ERROR);
     }
 }

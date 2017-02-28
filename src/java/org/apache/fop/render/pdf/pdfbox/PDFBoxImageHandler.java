@@ -55,31 +55,33 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         PDFContentGenerator generator = pdfContext.getGenerator();
         assert image instanceof ImagePDF;
         ImagePDF pdfImage = (ImagePDF)image;
+        try {
+            float x = (float)pos.getX() / 1000f;
+            float y = (float)pos.getY() / 1000f;
+            float h = (float)pos.getHeight() / 1000f;
 
-        float x = (float)pos.getX() / 1000f;
-        float y = (float)pos.getY() / 1000f;
-//        float w = (float)pos.getWidth() / 1000f;
-        float h = (float)pos.getHeight() / 1000f;
+            AffineTransform pageAdjust = new AffineTransform();
+            AffineTransform at = generator.getAffineTransform();
+            if (at != null) {
+                pageAdjust.setToTranslation(
+                    (float)(generator.getState().getTransform().getTranslateX()),
+                    (float)(generator.getState().getTransform().getTranslateY() - h - y));
+            }
+            FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
+            String stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
+                    pageAdjust, fontinfo, pos, pdfContext.getPageNumbers(),
+                    pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem());
 
-        AffineTransform pageAdjust = new AffineTransform();
-        AffineTransform at = generator.getAffineTransform();
-        if (at != null) {
-            pageAdjust.setToTranslation(
-                (float)(generator.getState().getTransform().getTranslateX()),
-                (float)(generator.getState().getTransform().getTranslateY() - h - y));
+            if (stream == null) {
+                return;
+            }
+            if (pageAdjust.getScaleX() != 0) {
+                pageAdjust.translate(x * (1 / pageAdjust.getScaleX()), -y * (1 / -pageAdjust.getScaleY()));
+            }
+            generator.placeImage(pageAdjust, stream);
+        } catch (Throwable t) {
+            throw new RuntimeException("Error on PDF page: " + pdfImage.getInfo().getOriginalURI(), t);
         }
-        FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
-        String stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
-                pageAdjust, fontinfo, pos, pdfContext.getPageNumbers(),
-                pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem());
-
-        if (stream == null) {
-            return;
-        }
-        if (pageAdjust.getScaleX() != 0) {
-            pageAdjust.translate(x * (1 / pageAdjust.getScaleX()), -y * (1 / -pageAdjust.getScaleY()));
-        }
-        generator.placeImage(pageAdjust, stream);
     }
 
     /** {@inheritDoc} */

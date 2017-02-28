@@ -58,7 +58,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
         PDDocument pddoc = imgPDF.getPDDocument();
 
-        Graphics2DImagePainter painter = new Graphics2DImagePainterPDF(pddoc, selectedPage);
+        Graphics2DImagePainter painter =
+                new Graphics2DImagePainterPDF(pddoc, selectedPage, imgPDF.getInfo().getOriginalURI());
 
         ImageGraphics2D g2dImage = new ImageGraphics2D(src.getInfo(), painter);
         return g2dImage;
@@ -85,11 +86,13 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         private final PDPage page;
         private final PDDocument pdDocument;
         private int selectedPage;
+        private String uri;
 
-        public Graphics2DImagePainterPDF(PDDocument pddoc, int selectedPage) {
+        public Graphics2DImagePainterPDF(PDDocument pddoc, int selectedPage, String uri) {
             pdDocument = pddoc;
             this.selectedPage = selectedPage;
             page = pdDocument.getPage(selectedPage);
+            this.uri = uri;
         }
 
         /** {@inheritDoc} */
@@ -114,9 +117,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                         area.getHeight() / mediaBox.getHeight());
                 g2d.transform(at);
                 new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
-            } catch (IOException ioe) {
-                //TODO Better exception handling
-                throw new RuntimeException("I/O error while painting PDF page", ioe);
+            } catch (Throwable t) {
+                throw new RuntimeException("Error while painting PDF page: " + uri, t);
             }
         }
 
