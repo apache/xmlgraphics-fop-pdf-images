@@ -79,6 +79,7 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
                 pageAdjust.translate(x * (1 / pageAdjust.getScaleX()), -y * (1 / -pageAdjust.getScaleY()));
             }
             generator.placeImage(pageAdjust, stream);
+            pdfImage.close();
         } catch (Throwable t) {
             throw new RuntimeException(
                     "Error on PDF page: " + pdfImage.getInfo().getOriginalURI() + " " + t.getMessage(), t);

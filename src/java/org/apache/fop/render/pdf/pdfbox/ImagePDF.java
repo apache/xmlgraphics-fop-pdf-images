@@ -66,18 +66,15 @@ public class ImagePDF extends AbstractImage {
 
     /** {@inheritDoc} */
     public boolean isCacheable() {
-        return true;
+        return false;
     }
 
-    /** {@inheritDoc} */
-    @Override
-    protected void finalize() throws Throwable {
+    public void close() {
         try {
-            this.pddoc.close();
-        } catch (IOException ioe) {
-            //ignore
+            pddoc.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        super.finalize();
     }
 
 }

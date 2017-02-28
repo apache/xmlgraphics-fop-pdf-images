@@ -29,12 +29,15 @@ import javax.imageio.stream.MemoryCacheImageInputStream;
 
 import org.junit.Test;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSource;
 import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 import org.apache.xmlgraphics.image.loader.impl.ImageRendered;
 
+import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData;
 import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
 
@@ -62,5 +65,22 @@ public class PreloaderPDFTestCase {
                 ImageIO.createImageInputStream(new File(PDFBoxAdapterTestCase.ROTATE)), "", true);
         ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, new DefaultImageContext());
         Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
+    }
+
+    @Test
+    public void testPreloaderPDFCache() throws IOException, ImageException {
+        DefaultImageContext context = new DefaultImageContext();
+        readPDF(context);
+        readPDF(context);
+    }
+
+    private void readPDF(DefaultImageContext context) throws IOException, ImageException {
+        ImageSource imageSource = new ImageSource(
+                ImageIO.createImageInputStream(new File(PDFBoxAdapterTestCase.ROTATE)), "", true);
+        ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, context);
+        ImagePDF img = (ImagePDF) imageInfo.getOriginalImage();
+        PDDocument doc = img.getPDDocument();
+        doc.save(new ByteArrayOutputStream());
+        img.close();
     }
 }

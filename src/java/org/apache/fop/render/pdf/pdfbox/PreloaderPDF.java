@@ -23,10 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collections;
-import java.util.Locale;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 import javax.imageio.stream.ImageInputStream;
 import javax.xml.transform.Source;
@@ -53,15 +49,6 @@ public class PreloaderPDF extends AbstractImagePreloader {
 
     /** PDF header text */
     private static final String PDF_HEADER = "%PDF-";
-
-    /** static PDDocument cache for faster multi-page processing */
-    private static final Cache.Type CACHE_TYPE = Cache.Type.valueOf(
-            System.getProperty("fop.pdfbox.preloader-cache", Cache.Type.WEAK.name()).toUpperCase(Locale.ENGLISH));
-
-    private static Map<Object, Cache<URI, PDDocument>> documentCacheMap
-            = Collections.synchronizedMap(new WeakHashMap<Object, Cache<URI, PDDocument>>());
-    //the cache here can cause problems because PDDocument that have been closed might still
-    //be accessed. Example: java.io.IOException: The handle is invalid
 
     /** {@inheritDoc} */
     public ImageInfo preloadImage(String uri, Source src, ImageContext context)
@@ -162,23 +149,13 @@ public class PreloaderPDF extends AbstractImagePreloader {
     private PDDocument getDocument(Object context, URI uri, Source src)
             throws IOException {
         try {
-            return getDocumentCache(context).getValue(uri, createDocumentMaker(src, uri));
+            return createDocumentMaker(src, uri).make();
         } catch (IOException ioe) {
             throw ioe;
         } catch (Exception e) {
             // We cannot recover from this
             throw new RuntimeException(e);
         }
-    }
-
-    private Cache<URI, PDDocument> getDocumentCache(Object context) {
-        Cache<URI, PDDocument> documentCache = documentCacheMap.get(context);
-
-        if (documentCache == null) {
-            documentCache = Cache.createCache(CACHE_TYPE);
-            documentCacheMap.put(context, documentCache);
-        }
-        return documentCache;
     }
 
     private ValueMaker<PDDocument> createDocumentMaker(final Source src, final URI docURI) {
