@@ -445,7 +445,7 @@ public class PDFBoxAdapterTestCase {
         } catch (RuntimeException e) {
             msg = e.getMessage();
         }
-        Assert.assertEquals(msg, "Error while painting PDF page: " + ERROR);
+        Assert.assertTrue(msg.startsWith("Error while painting PDF page: " + ERROR));
     }
 
     @Test
@@ -458,6 +458,6 @@ public class PDFBoxAdapterTestCase {
         } catch (RuntimeException e) {
             msg = e.getMessage();
         }
-        Assert.assertEquals(msg, "Error on PDF page: " + ERROR);
+        Assert.assertTrue(msg.startsWith("Error on PDF page: " + ERROR));
     }
 }

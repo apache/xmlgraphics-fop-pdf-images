@@ -80,7 +80,8 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
             }
             generator.placeImage(pageAdjust, stream);
         } catch (Throwable t) {
-            throw new RuntimeException("Error on PDF page: " + pdfImage.getInfo().getOriginalURI(), t);
+            throw new RuntimeException(
+                    "Error on PDF page: " + pdfImage.getInfo().getOriginalURI() + " " + t.getMessage(), t);
         }
     }
 
