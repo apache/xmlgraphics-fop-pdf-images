@@ -357,7 +357,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         for (int i = fontForEnc.getFirstChar(); i <= fontForEnc.getLastChar(); i++) {
             if (codeToName.keySet().contains(i)) {
                 String s = codeToName.get(i);
-                if (!added.contains(s) || (added.contains(s) && !encodingMap.containsKey(i))) {
+                if (!added.contains(s) || !encodingMap.containsKey(i)) {
                     if (!encodingMap.containsKey(i)) {
                         encodingMap.put(i, s);
                     } else {

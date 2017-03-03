@@ -45,7 +45,7 @@ import org.apache.fop.render.pdf.pdfbox.FontContainer;
 
 public class FOPPDFSingleMultiByteFontTestCase {
     private COSDictionary getFont(PDDocument doc, String internalname) throws IOException {
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         PDResources sourcePageResources = page.getResources();
         COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSObject().getDictionaryObject(COSName.FONT);
         return (COSDictionary) fonts.getDictionaryObject(internalname);

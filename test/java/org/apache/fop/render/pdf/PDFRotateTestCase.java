@@ -76,7 +76,7 @@ public class PDFRotateTestCase {
     private AffineTransform getTransform(int angle) throws IOException {
         PDFBoxAdapter adapter = PDFBoxAdapterTestCase.getPDFBoxAdapter(false);
         PDDocument doc = PDDocument.load(new File(PDFBoxAdapterTestCase.ROTATE));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         page.setRotation(angle);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);

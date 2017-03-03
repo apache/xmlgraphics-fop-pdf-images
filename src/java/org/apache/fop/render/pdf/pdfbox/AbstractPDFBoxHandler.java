@@ -93,7 +93,7 @@ public abstract class AbstractPDFBoxHandler {
 
         Map<Object, Object> objectCachePerFile = getObjectCache(getImagePath(originalImageUri), userAgent);
 
-        PDPage page = pddoc.getDocumentCatalog().getPages().get(selectedPage);
+        PDPage page = pddoc.getPage(selectedPage);
 
         if (targetPage.getPDFResources().getParentResources() == null) {
             PDFResources res = pdfDoc.getFactory().makeResources();

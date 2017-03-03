@@ -105,7 +105,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
                     + ") does not exist in the PDF file. The document has "
                     + pddoc.getNumberOfPages() + " pages.");
         }
-        PDPage page = pddoc.getDocumentCatalog().getPages().get(selectedPage);
+        PDPage page = pddoc.getPage(selectedPage);
         PDRectangle mediaBox = page.getMediaBox();
         PDRectangle cropBox = page.getCropBox();
         PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;

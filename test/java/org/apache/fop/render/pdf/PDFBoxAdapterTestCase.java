@@ -159,7 +159,7 @@ public class PDFBoxAdapterTestCase {
             if (font.getFontType() == FontType.TYPE1C || font.getFontType() == FontType.CIDTYPE0) {
                 byte[] data = IOUtils.toByteArray(is);
                 CFFParser p = new CFFParser();
-                p.parse(data).get(0);
+                p.parse(data);
             } else if (font.getFontType() == FontType.TRUETYPE) {
                 TTFParser parser = new TTFParser();
                 parser.parse(is);
@@ -180,7 +180,7 @@ public class PDFBoxAdapterTestCase {
 
     private String writeText(FontInfo fi, String pdf) throws IOException {
         PDDocument doc = PDDocument.load(new File(pdf));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         String c = getPDFBoxAdapter(true).createStreamFromPDFBoxPage(doc, page, pdf, at, fi, new Rectangle());
 //        PDResources sourcePageResources = page.findResources();
@@ -199,7 +199,7 @@ public class PDFBoxAdapterTestCase {
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
         adapter.setCurrentMCID(5);
         PDDocument doc = PDDocument.load(new File(HELLOTagged));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
@@ -215,7 +215,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
         PDDocument doc = PDDocument.load(new File(ANNOT));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
@@ -231,7 +231,7 @@ public class PDFBoxAdapterTestCase {
     public void testAnnot2() throws Exception {
         PDFBoxAdapter adapter = getPDFBoxAdapter(false);
         PDDocument doc = PDDocument.load(new File(ANNOT));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
         COSDictionary dict = (COSDictionary) ((COSObject)annots.get(0)).getObject();
         dict.setItem(COSName.PARENT, COSInteger.ONE);
@@ -251,7 +251,7 @@ public class PDFBoxAdapterTestCase {
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
         PDDocument doc = PDDocument.load(new File(LINK));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
@@ -273,7 +273,7 @@ public class PDFBoxAdapterTestCase {
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
         PDDocument doc = PDDocument.load(new File(XFORM));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         adapter.createStreamFromPDFBoxPage(doc, page, "key", at, new FontInfo(), r);
@@ -412,7 +412,7 @@ public class PDFBoxAdapterTestCase {
         PDFBoxAdapter adapter = new PDFBoxAdapter(
                 pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
         PDDocument doc = PDDocument.load(new File(LOOP));
-        PDPage page = doc.getDocumentCatalog().getPages().get(0);
+        PDPage page = doc.getPage(0);
         adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
         doc.close();
 
