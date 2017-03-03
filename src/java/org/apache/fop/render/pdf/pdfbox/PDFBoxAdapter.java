@@ -348,10 +348,10 @@ public class PDFBoxAdapter {
         if (pageNumbers.containsKey(targetPage.getPageIndex())) {
             pageNumbers.get(targetPage.getPageIndex()).set(0, targetPage.makeReference());
         }
-        PDResources sourcePageResources = page.getResources();
+        COSDictionary sourcePageResources = getResources(page);
         PDStream pdStream = getContents(page);
 
-        COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSObject().getDictionaryObject(COSName.FONT);
+        COSDictionary fonts = (COSDictionary)sourcePageResources.getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
         UniqueName uniqueName = new UniqueName(key, sourcePageResources);
         String newStream = null;
@@ -375,8 +375,8 @@ public class PDFBoxAdapter {
 
         }
         pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
-        mergeXObj(sourcePageResources.getCOSObject(), fontinfo, uniqueName);
-        PDFDictionary pageResources = (PDFDictionary)cloneForNewDocument(sourcePageResources.getCOSObject());
+        mergeXObj(sourcePageResources, fontinfo, uniqueName);
+        PDFDictionary pageResources = (PDFDictionary)cloneForNewDocument(sourcePageResources);
 
         PDFDictionary fontDict = (PDFDictionary)pageResources.get("Font");
         if (fontDict != null && pdfDoc.isMergeFontsEnabled()) {
@@ -392,9 +392,9 @@ public class PDFBoxAdapter {
                 }
             }
         }
-        updateXObj(sourcePageResources.getCOSObject(), pageResources);
+        updateXObj(sourcePageResources, pageResources);
         if (fontsBackup != null) {
-            sourcePageResources.getCOSObject().setItem(COSName.FONT, fontsBackup);
+            sourcePageResources.setItem(COSName.FONT, fontsBackup);
         }
 
         COSStream originalPageContents = pdStream.getCOSObject();
@@ -462,6 +462,14 @@ public class PDFBoxAdapter {
         return pdStream;
     }
 
+    private COSDictionary getResources(PDPage page) {
+        PDResources res = page.getResources();
+        if (res == null) {
+            return new COSDictionary();
+        }
+        return res.getCOSObject();
+    }
+
     private void mergeXObj(COSDictionary sourcePageResources, FontInfo fontinfo, UniqueName uniqueName)
         throws IOException {
         COSDictionary xobj = (COSDictionary) sourcePageResources.getDictionaryObject(COSName.XOBJECT);
@@ -515,7 +523,7 @@ public class PDFBoxAdapter {
         }
     }
 
-    private void transferPageDict(COSDictionary fonts, UniqueName uniqueName, PDResources sourcePageResources)
+    private void transferPageDict(COSDictionary fonts, UniqueName uniqueName, COSDictionary sourcePageResources)
         throws IOException {
         if (fonts != null) {
             for (Map.Entry<COSName, COSBase> f : fonts.entrySet()) {
@@ -523,7 +531,7 @@ public class PDFBoxAdapter {
                 targetPage.getPDFResources().addFont(name, (PDFDictionary)cloneForNewDocument(f.getValue()));
             }
         }
-        for (Map.Entry<COSName, COSBase> e : sourcePageResources.getCOSObject().entrySet()) {
+        for (Map.Entry<COSName, COSBase> e : sourcePageResources.entrySet()) {
             transferDict(e, uniqueName);
         }
     }

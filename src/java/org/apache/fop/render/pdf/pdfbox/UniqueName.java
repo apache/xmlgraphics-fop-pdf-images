@@ -25,15 +25,14 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
-import org.apache.pdfbox.pdmodel.PDResources;
 
 public class UniqueName {
     private String key;
     private List<COSName> resourceNames;
 
-    public UniqueName(String key, PDResources sourcePageResources) {
+    public UniqueName(String key, COSDictionary sourcePageResources) {
         this.key = Integer.toString(key.hashCode());
-        resourceNames = getResourceNames(sourcePageResources.getCOSObject());
+        resourceNames = getResourceNames(sourcePageResources);
     }
 
     protected String getName(COSName cn) {

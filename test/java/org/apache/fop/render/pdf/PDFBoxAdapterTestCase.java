@@ -460,4 +460,14 @@ public class PDFBoxAdapterTestCase {
         }
         Assert.assertTrue(msg.startsWith("Error on PDF page: " + ERROR));
     }
+
+    @Test
+    public void testNoPageResource() throws IOException {
+        PDDocument doc = PDDocument.load(new File(CFF1));
+        PDPage page = doc.getPage(0);
+        page.setResources(null);
+        AffineTransform at = new AffineTransform();
+        getPDFBoxAdapter(false).createStreamFromPDFBoxPage(doc, page, CFF1, at, new FontInfo(), new Rectangle());
+        doc.close();
+    }
 }
