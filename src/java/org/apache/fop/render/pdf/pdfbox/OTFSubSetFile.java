@@ -19,30 +19,26 @@
 
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.fop.fonts.cff.CFFDataReader;
 import org.apache.fop.fonts.cff.CFFDataReader.DICTEntry;
-import org.apache.fop.fonts.truetype.OTFFile;
+import org.apache.fop.fonts.truetype.OTFSubSetWriter;
 
 /**
  * Reads an OpenType CFF file and generates a subset
  * The OpenType specification can be found at the Microsoft
  * Typography site: http://www.microsoft.com/typography/otspec/
  */
-public abstract class OTFSubSetFile extends OTFFile {
-
-    protected byte[] output;
-    protected int currentPos;
-    private int realSize;
+public abstract class OTFSubSetFile extends OTFSubSetWriter {
 
     /** A map of the new GID to SID used to construct the charset table **/
-    protected LinkedHashMap<Integer, Integer> gidToSID;
+    protected Map<Integer, Integer> gidToSID;
 
     /** List of subroutines to write to the local / global indexes in the subset font **/
     protected List<byte[]> subsetLocalIndexSubr;
@@ -66,30 +62,13 @@ public abstract class OTFSubSetFile extends OTFFile {
 
     /** The number of standard strings in CFF **/
     public static final int NUM_STANDARD_STRINGS = 391;
-    /** The operator used to identify a local subroutine reference */
-    private static final int LOCAL_SUBROUTINE = 10;
-    /** The operator used to identify a global subroutine reference */
-    private static final int GLOBAL_SUBROUTINE = 29;
 
     public OTFSubSetFile() throws IOException {
         super();
     }
 
-    protected void writeBytes(byte[] out) {
-        for (byte anOut : out) {
-            writeByte(anOut);
-        }
-    }
-
-    protected void writeBytes(byte[] out, int offset, int length) {
-        for (int i = offset; i < offset + length; i++) {
-            output[currentPos++] = out[i];
-            realSize++;
-        }
-    }
-
     protected void writeTopDICT() throws IOException {
-        LinkedHashMap<String, DICTEntry> topDICT = cffReader.getTopDictEntries();
+        Map<String, DICTEntry> topDICT = cffReader.getTopDictEntries();
         List<String> topDictStringEntries = Arrays.asList("version", "Notice", "Copyright",
                 "FullName", "FamilyName", "Weight", "PostScript");
         for (Map.Entry<String, DICTEntry> dictEntry : topDICT.entrySet()) {
@@ -120,11 +99,11 @@ public abstract class OTFSubSetFile extends OTFFile {
         }
         int sidBStringIndex = stringIndexData.size() + 390;
         byte[] cidEntryByteData = dictEntry.getByteData();
-        cidEntryByteData = updateOffset(cidEntryByteData, 0, dictEntry.getOperandLengths().get(0),
+        updateOffset(cidEntryByteData, 0, dictEntry.getOperandLengths().get(0),
                 sidAStringIndex);
-        cidEntryByteData = updateOffset(cidEntryByteData, dictEntry.getOperandLengths().get(0),
+        updateOffset(cidEntryByteData, dictEntry.getOperandLengths().get(0),
                 dictEntry.getOperandLengths().get(1), sidBStringIndex);
-        cidEntryByteData = updateOffset(cidEntryByteData, dictEntry.getOperandLengths().get(0)
+        updateOffset(cidEntryByteData, dictEntry.getOperandLengths().get(0)
                 + dictEntry.getOperandLengths().get(1), dictEntry.getOperandLengths().get(2), 139);
         writeBytes(cidEntryByteData);
     }
@@ -143,50 +122,45 @@ public abstract class OTFSubSetFile extends OTFFile {
     }
 
     public static byte[] createNewRef(int newRef, int[] operatorCode, int forceLength) {
-        byte[] newRefBytes;
-        int sizeOfOperator = operatorCode.length;
+        ByteArrayOutputStream newRefBytes = new ByteArrayOutputStream();
         if ((forceLength == -1 && newRef <= 107) || forceLength == 1) {
-            newRefBytes = new byte[1 + sizeOfOperator];
             //The index values are 0 indexed
-            newRefBytes[0] = (byte)(newRef + 139);
-            for (int i = 0; i < operatorCode.length; i++) {
-                newRefBytes[1 + i] = (byte)operatorCode[i];
+            newRefBytes.write(newRef + 139);
+            for (int i : operatorCode) {
+                newRefBytes.write(i);
             }
         } else if ((forceLength == -1 && newRef <= 1131) || forceLength == 2) {
-            newRefBytes = new byte[2 + sizeOfOperator];
             if (newRef <= 363) {
-                newRefBytes[0] = (byte)247;
+                newRefBytes.write(247);
             } else if (newRef <= 619) {
-                newRefBytes[0] = (byte)248;
+                newRefBytes.write(248);
             } else if (newRef <= 875) {
-                newRefBytes[0] = (byte)249;
+                newRefBytes.write(249);
             } else {
-                newRefBytes[0] = (byte)250;
+                newRefBytes.write(250);
             }
-            newRefBytes[1] = (byte)(newRef - 108);
-            for (int i = 0; i < operatorCode.length; i++) {
-                newRefBytes[2 + i] = (byte)operatorCode[i];
+            newRefBytes.write(newRef - 108);
+            for (int i : operatorCode) {
+                newRefBytes.write(i);
             }
         } else if ((forceLength == -1 && newRef <= 32767) || forceLength == 3) {
-            newRefBytes = new byte[3 + sizeOfOperator];
-            newRefBytes[0] = 28;
-            newRefBytes[1] = (byte)(newRef >> 8);
-            newRefBytes[2] = (byte)newRef;
-            for (int i = 0; i < operatorCode.length; i++) {
-                newRefBytes[3 + i] = (byte)operatorCode[i];
+            newRefBytes.write(28);
+            newRefBytes.write(newRef >> 8);
+            newRefBytes.write(newRef);
+            for (int i : operatorCode) {
+                newRefBytes.write(i);
             }
         } else {
-            newRefBytes = new byte[5 + sizeOfOperator];
-            newRefBytes[0] = 29;
-            newRefBytes[1] = (byte)(newRef >> 24);
-            newRefBytes[2] = (byte)(newRef >> 16);
-            newRefBytes[3] = (byte)(newRef >> 8);
-            newRefBytes[4] = (byte)newRef;
-            for (int i = 0; i < operatorCode.length; i++) {
-                newRefBytes[5 + i] = (byte)operatorCode[i];
+            newRefBytes.write(29);
+            newRefBytes.write(newRef >> 24);
+            newRefBytes.write(newRef >> 16);
+            newRefBytes.write(newRef >> 8);
+            newRefBytes.write(newRef);
+            for (int i : operatorCode) {
+                newRefBytes.write(i);
             }
         }
-        return newRefBytes;
+        return newRefBytes.toByteArray();
     }
 
     protected int writeIndex(List<byte[]> dataArray) {
@@ -282,7 +256,7 @@ public abstract class OTFSubSetFile extends OTFFile {
         if (privateDICT != null) {
             //Private index offset in the top dict
             int oldPrivateOffset = dataTopDictOffset + privateEntry.getOffset();
-            output = updateOffset(output, oldPrivateOffset + privateEntry.getOperandLengths().get(0),
+            updateOffset(output, oldPrivateOffset + privateEntry.getOperandLengths().get(0),
                     privateEntry.getOperandLengths().get(1), privateDictOffset);
 
             //Update the local subroutine index offset in the private dict
@@ -294,7 +268,7 @@ public abstract class OTFSubSetFile extends OTFFile {
                 if (subroutines.getOperandLength() == 1) {
                     encodeValue = 139;
                 }
-                output = updateOffset(output, oldLocalSubrOffset, subroutines.getOperandLength(),
+                updateOffset(output, oldLocalSubrOffset, subroutines.getOperandLength(),
                         (localIndexOffset - privateDictOffset) + encodeValue);
             }
         }
@@ -305,24 +279,24 @@ public abstract class OTFSubSetFile extends OTFFile {
 
     protected void updateCIDOffsets(int topDictDataOffset, int fdArrayOffset, int fdSelectOffset,
                                     int charsetOffset, int charStringOffset, int encodingOffset) {
-        LinkedHashMap<String, DICTEntry> topDict = cffReader.getTopDictEntries();
+        Map<String, DICTEntry> topDict = cffReader.getTopDictEntries();
 
         DICTEntry fdArrayEntry = topDict.get("FDArray");
         if (fdArrayEntry != null) {
-            output = updateOffset(output, topDictDataOffset + fdArrayEntry.getOffset() - 1,
+            updateOffset(output, topDictDataOffset + fdArrayEntry.getOffset() - 1,
                     fdArrayEntry.getOperandLength(), fdArrayOffset);
         }
 
         DICTEntry fdSelect = topDict.get("FDSelect");
         if (fdSelect != null) {
-            output = updateOffset(output, topDictDataOffset + fdSelect.getOffset() - 1,
+            updateOffset(output, topDictDataOffset + fdSelect.getOffset() - 1,
                     fdSelect.getOperandLength(), fdSelectOffset);
         }
 
         updateFixedOffsets(topDict, topDictDataOffset, charsetOffset, charStringOffset, encodingOffset);
     }
 
-    protected byte[] updateOffset(byte[] out, int position, int length, int replacement) {
+    protected void updateOffset(byte[] out, int position, int length, int replacement) {
         switch (length) {
             case 1:
                 out[position] = (byte)(replacement & 0xFF);
@@ -353,67 +327,5 @@ public abstract class OTFSubSetFile extends OTFFile {
                 break;
             default:
         }
-        return out;
-    }
-
-    /**
-     * Appends a byte to the output array,
-     * updates currentPost but not realSize
-     *
-     * @param b b
-     */
-    protected void writeByte(int b) {
-        output[currentPos++] = (byte)b;
-        realSize++;
-    }
-
-    /**
-     * Appends a USHORT to the output array,
-     * updates currentPost but not realSize
-     *
-     * @param s s
-     */
-    protected void writeCard16(int s) {
-        byte b1 = (byte)((s >> 8) & 0xff);
-        byte b2 = (byte)(s & 0xff);
-        writeByte(b1);
-        writeByte(b2);
-    }
-
-    private void writeThreeByteNumber(int s) {
-        byte b1 = (byte)((s >> 16) & 0xFF);
-        byte b2 = (byte)((s >> 8) & 0xFF);
-        byte b3 = (byte)(s & 0xFF);
-        writeByte(b1);
-        writeByte(b2);
-        writeByte(b3);
-    }
-
-    /**
-     * Appends a ULONG to the output array,
-     * at the given position
-     *
-     * @param s s
-     */
-    private void writeULong(int s) {
-        byte b1 = (byte)((s >> 24) & 0xff);
-        byte b2 = (byte)((s >> 16) & 0xff);
-        byte b3 = (byte)((s >> 8) & 0xff);
-        byte b4 = (byte)(s & 0xff);
-        writeByte(b1);
-        writeByte(b2);
-        writeByte(b3);
-        writeByte(b4);
-    }
-
-    /**
-     * Returns a subset of the fonts (readFont() MUST be called first in order to create the
-     * subset).
-     * @return byte array
-     */
-    public byte[] getFontSubset() {
-        byte[] ret = new byte[realSize];
-        System.arraycopy(output, 0, ret, 0, realSize);
-        return ret;
     }
 }

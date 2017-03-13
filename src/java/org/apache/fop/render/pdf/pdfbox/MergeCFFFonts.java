@@ -45,7 +45,7 @@ import org.apache.fop.fonts.cff.CFFDataReader;
 import org.apache.fop.fonts.truetype.FontFileReader;
 
 public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
-    protected List<LinkedHashMap<Integer, Integer>> subsetGlyphsList = new ArrayList<LinkedHashMap<Integer, Integer>>();
+    protected List<Map<Integer, Integer>> subsetGlyphsList = new ArrayList<Map<Integer, Integer>>();
     private boolean fallbackIndex;
     private int charsetOffset;
     private int fontFileSize;
@@ -78,7 +78,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         if (fileFont == null) {
             fileFont = ff;
         }
-        LinkedHashMap<Integer, Integer> sg = new LinkedHashMap<Integer, Integer>();
+        Map<Integer, Integer> sg = new LinkedHashMap<Integer, Integer>();
         for (int i = 0; i < ff.getNumCharStrings() + 1; i++) {
             sg.put(i, i);
         }
@@ -127,7 +127,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         noOfFonts++;
     }
 
-    private void setupMapping(CFFCharset charset, LinkedHashMap<Integer, Integer> sg) {
+    private void setupMapping(CFFCharset charset, Map<Integer, Integer> sg) {
         int subsetGlyphIndex = 0;
         for (int sid : getSids(charset)) {
             if (sg.containsKey(subsetGlyphIndex)) {
@@ -317,7 +317,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                 Map<String, CFFDataReader.DICTEntry> fdFontDict = cffReader.parseDictData(fdFontByteData);
                 //Update the Private dict reference
                 CFFDataReader.DICTEntry fdPrivate = fdFontDict.get("Private");
-                fdFontByteData = updateOffset(fdFontByteData,
+                updateOffset(fdFontByteData,
                         fdPrivate.getOffset() + fdPrivate.getOperandLengths().get(0),
                         fdPrivate.getOperandLengths().get(1),
                         privateDictOffsets.get(i));
@@ -479,7 +479,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
             if (oldCharset >= 32 && oldCharset <= 246) {
                 charsetOffset += 139;
             }
-            output = updateOffset(output, oldCharsetOffset, charset.getOperandLength(), charsetOffset);
+            updateOffset(output, oldCharsetOffset, charset.getOperandLength(), charsetOffset);
         }
 
         //Char string index offset in the private dict
@@ -490,7 +490,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
             charStringOffset += 139;
         }
         if (!(fileFont.getCharset() instanceof CFFISOAdobeCharset)) {
-            output = updateOffset(output, oldCharStringOffset, charString.getOperandLength(), charStringOffset);
+            updateOffset(output, oldCharStringOffset, charString.getOperandLength(), charStringOffset);
         }
 
         final CFFDataReader.DICTEntry encodingEntry = topDICT.get("Encoding");
@@ -503,7 +503,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
             } else {
                 encodingOffset--;
             }
-            output = updateOffset(output, oldEncodingOffset, encodingEntry.getOperandLength(), encodingOffset);
+            updateOffset(output, oldEncodingOffset, encodingEntry.getOperandLength(), encodingOffset);
         }
     }
 
