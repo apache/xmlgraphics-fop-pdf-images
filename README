@@ -104,12 +104,12 @@ Requirements
 ----------------
 
 This plug-in has the following requirements:
-- Apache PDFBox 1.0 or later
-- Apache XML Graphics Commons 1.3.1 or later (for the image converter)
-- Apache XML FOP 0.95 or later (for the FOP functionality)
-- Java 1.5 or later
+- Apache PDFBox 2.0 or later
+- Apache XML Graphics Commons 2.2 or later (for the image converter)
+- Apache XML FOP 2.2 or later (for the FOP functionality)
+- Java 1.6 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 1.0 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.2 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -169,10 +169,12 @@ Known Issues
 Contributors
 ---------------
 
-- Jeremias Märki (original author)
+- Jeremias Mï¿½rki (original author)
 - Krister Wicksell
 - Vincent Hennebert
-
+- Simon Steiner
+- Luis Bernardo
+- Athanasios-Dimitrios Giannimaras
 
 Versions prior to 2.1 (i.e. prior to the move to the Apache XML Graphics
 project) can be downloaded from here:
@@ -187,6 +189,13 @@ Version 2.1 (TBD)
 =========================
 
 Changes:
+- Move to PDFBox 2
+- Deduplicate PDF streams
+- PDF to PS deduplication of images
+- Remove xobj type=form
+- Merge fonts (off by default)
+- Support PDF shading to PS
+- Merging of Tagged (Accessible) PDF
 - Bugfix for handling of strings (the check method for US-ASCII had a bug)
 
 Version 2.0 (2010-10-28)
