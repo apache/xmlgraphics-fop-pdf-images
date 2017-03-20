@@ -265,7 +265,7 @@
         version="true"
         windowtitle="${Name} ${version} API"
         doctitle="PDF image support for Apache FOP"
-        bottom="Copyright ${year} Jeremias Maerki. All Rights Reserved."
+        bottom="Copyright ${year} The Apache Software Foundation. All Rights Reserved."
         use="true"
         failonerror="true">
       <header><![CDATA[${name} ${version}]]></header>
