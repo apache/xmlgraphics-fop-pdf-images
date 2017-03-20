@@ -37,7 +37,7 @@ Implementation notes:
   the various PDF objects 1:1 to the target PDF. For the other output 
   formats, Apache PDFBox is used to render the PDF to a Graphics2D 
   object (Java2D). PDFBox still has some problems with rendering certain 
-  PDFs, so if you run into a problem with that, don't come to me. 
+  PDFs. 
   Rather, consider helping out in the PDFBox project to improve the 
   code. This plug-in only plays the adapter between FOP and PDFBox. It 
   is not responsible for correct rendering of the PDF.
@@ -48,33 +48,6 @@ Implementation notes:
   Note: this only works on URIs, not plain file names in which case you'll
   get an error. Plain file names are illegal in XSL-FO anyway, strictly
   speaking.
-
-* The PDF file must not be encrypted. Or else, you'll have to install an
-  OnLoadInterceptor. Example:
-  
-  Interceptors.getInstance().setOnLoad(new Decrypter());
-
-  [..]
-  
-  private static class Decrypter implements OnLoadInterceptor {
-
-      public PDDocument intercept(PDDocument doc, URI uri) throws IOException {
-          if (doc.isEncrypted()) {
-              DecryptionMaterial dec = new StandardDecryptionMaterial("password");
-              try {
-                  doc.openProtection(dec);
-                  System.out.println("Decrypting: " + uri);
-              } catch (Exception e) {
-                  throw new RuntimeException("Error decrypting PDF", e);
-              }
-          }
-          return doc;
-      }
-
-  }
-  
-  For more information on how to set decryption material, please see the PDFBox
-  documentation.
   
 * If you enable PDF/A or PDF/X functionality, the resulting PDF may not be
   a compliant file since the code isn't sophisticated enough to ensure that
@@ -84,8 +57,6 @@ Implementation notes:
 
 * If the PDF you want to embed has annotations, be prepared that they may
   not be transferred correctly.
-
-* Document structure (Tagged PDF/Accessibility) will not be preserved!
 
 * Apache FOP currently generates PDF 1.4. If you include a PDF with a
   higher PDF version, the results may be unpredictable.
@@ -185,7 +156,7 @@ http://www.jeremias-maerki.ch/development/fop/index.html
   RELEASE NOTES
 ==============================================================================
 
-Version 2.2 (TBD)
+Version 2.2
 =========================
 
 Changes:
