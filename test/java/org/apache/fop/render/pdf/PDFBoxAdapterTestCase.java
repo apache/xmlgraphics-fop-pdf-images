@@ -108,6 +108,7 @@ public class PDFBoxAdapterTestCase {
     private static final String XFORM = "test/resources/xform.pdf";
     private static final String LOOP = "test/resources/loop.pdf";
     private static final String ERROR = "test/resources/error.pdf";
+    private static final String LIBREOFFICE = "test/resources/libreoffice.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -286,8 +287,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testPSPDFGraphics2D() throws Exception {
         ByteArrayOutputStream stream = pdfToPS(IMAGE);
-        Assert.assertTrue(stream.toString("UTF-8"),
-                stream.toString("UTF-8").contains("%%IncludeResource: form FOPForm:0\nFOPForm:0 execform"));
+        Assert.assertEquals(countString(stream.toString("UTF-8"), "%AXGBeginBitmap:"), 1);
 
         pdfToPS(CFF1);
         pdfToPS(CFF2);
@@ -298,7 +298,8 @@ public class PDFBoxAdapterTestCase {
         pdfToPS(TTSubset2);
         pdfToPS(TTSubset3);
         pdfToPS(TTSubset5);
-        pdfToPS(CFFCID1);
+        stream = pdfToPS(CFFCID1);
+        Assert.assertEquals(countString(stream.toString("UTF-8"), "%AXGBeginBitmap:"), 1);
         pdfToPS(CFFCID2);
         pdfToPS(Type1Subset1);
         pdfToPS(Type1Subset2);
@@ -307,6 +308,13 @@ public class PDFBoxAdapterTestCase {
         pdfToPS(ROTATE);
         pdfToPS(LINK);
         pdfToPS(LOOP);
+        stream = pdfToPS(LIBREOFFICE);
+        Assert.assertTrue(stream.toString("UTF-8").contains("/MaskColor [ 255 255 255 ]"));
+
+    }
+
+    private int countString(String s, String value) {
+        return s.split(value).length - 1;
     }
 
     @Test
@@ -359,7 +367,7 @@ public class PDFBoxAdapterTestCase {
         public PSDocumentHandler getHandler() {
             PSDocumentHandler handler = mock(PSDocumentHandler.class);
             PSRenderingUtil util = mock(PSRenderingUtil.class);
-            when(util.isOptimizeResources()).thenReturn(true);
+            when(util.isOptimizeResources()).thenReturn(false);
             when(handler.getPSUtil()).thenReturn(util);
             FOUserAgent mockedAgent = mock(FOUserAgent.class);
             when(handler.getUserAgent()).thenReturn(mockedAgent);

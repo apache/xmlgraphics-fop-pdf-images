@@ -29,6 +29,7 @@ import java.awt.PaintContext;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
 import java.awt.image.DataBufferInt;
 import java.awt.image.ImageObserver;
 import java.io.BufferedOutputStream;
@@ -240,9 +241,13 @@ public class PSPDFGraphics2D extends PSGraphics2D {
 
     @Override
     public boolean drawImage(Image img, int x1, int y1, ImageObserver observer) {
-        PSGenerator tmp = gen;
+        Color mask = null;
+        ColorModel cm = ((BufferedImage)img).getColorModel();
+        if (cm.hasAlpha()) {
+            mask = Color.WHITE;
+        }
         if (gen instanceof PSDocumentHandler.FOPPSGenerator) {
-            PSDocumentHandler.FOPPSGenerator fopGen = (PSDocumentHandler.FOPPSGenerator)tmp;
+            PSDocumentHandler.FOPPSGenerator fopGen = (PSDocumentHandler.FOPPSGenerator)gen;
             PSDocumentHandler handler = fopGen.getHandler();
             if (handler.getPSUtil().isOptimizeResources()) {
                 try {
@@ -292,7 +297,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                 return true;
             }
         }
-        return super.drawImage(img, x1, y1, observer);
+        return super.drawImage(img, x1, y1, observer, mask);
     }
 
     private BufferedImage getImage(int width, int height, Image img, ImageObserver observer) {
