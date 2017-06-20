@@ -21,6 +21,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -39,6 +40,8 @@ import org.apache.pdfbox.pdmodel.common.PDStream;
 
 
 public class PDFWriter {
+    private DecimalFormat df = new DecimalFormat("#.####", new DecimalFormatSymbols(Locale.US));
+    private Map<Float, String> floatCache = new HashMap<Float, String>();
     protected StringBuilder s = new StringBuilder();
     protected UniqueName key;
     private int currentMCID;
@@ -88,8 +91,14 @@ public class PDFWriter {
             s.append(" ");
         } else if (c instanceof COSFloat) {
             float f = ((COSFloat) c).floatValue();
-            s.append(new DecimalFormat("#.####", new DecimalFormatSymbols(Locale.US)).format(f));
+            if (!floatCache.containsKey(f)) {
+                addCache(f);
+            }
+            s.append(floatCache.get(f));
             s.append(" ");
+            if (floatCache.size() > 1024) {
+                floatCache.clear();
+            }
         } else if (c instanceof COSName) {
             COSName cn = (COSName)c;
             s.append("/" + key.getName(cn));
@@ -125,6 +134,11 @@ public class PDFWriter {
         } else {
             throw new IOException(c + " not supported");
         }
+    }
+
+    protected void addCache(float f) {
+        String formatted = df.format(f);
+        floatCache.put(f, formatted);
     }
 
     private void updateMCID(Map.Entry<COSName, COSBase> cn, Collection<COSBase> dictArgs) {

@@ -39,4 +39,26 @@ public class PDFWriterTestCase {
         Assert.assertEquals(pdfWriter.writeText(pdStream), text + "\n");
         Locale.setDefault(l);
     }
+
+    @Test
+    public void testFloatCache() throws IOException {
+        String text = "[1.1 1.1] a";
+        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        MyPDFWriter pdfWriter = new MyPDFWriter();
+        pdfWriter.writeText(pdStream);
+        Assert.assertEquals(pdfWriter.i, 1);
+    }
+
+    private static class MyPDFWriter extends PDFWriter {
+        int i;
+
+        public MyPDFWriter() {
+            super(null, 0);
+        }
+
+        protected void addCache(float f) {
+            super.addCache(f);
+            i++;
+        }
+    };
 }
