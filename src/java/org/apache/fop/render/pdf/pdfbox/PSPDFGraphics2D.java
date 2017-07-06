@@ -173,7 +173,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
         }
     }
 
-    private static Function getFunction(PDFunction f) throws IOException {
+    protected static Function getFunction(PDFunction f) throws IOException {
         if (f instanceof PDFunctionType3) {
             PDFunctionType3 sourceFT3 = (PDFunctionType3) f;
             float[] bounds = sourceFT3.getBounds().toFloatArray();
@@ -193,11 +193,11 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             COSDictionary s = f.getCOSObject();
             assert s instanceof COSStream;
             COSStream stream = (COSStream) s;
-            COSArray encode = (COSArray) s.getDictionaryObject(COSName.ENCODE);
             COSArray domain = (COSArray) s.getDictionaryObject(COSName.DOMAIN);
             COSArray range = (COSArray) s.getDictionaryObject(COSName.RANGE);
             int bits = ((COSInteger)s.getDictionaryObject(COSName.BITS_PER_SAMPLE)).intValue();
             COSArray size = (COSArray) s.getDictionaryObject(COSName.SIZE);
+            COSArray encode = getEncode(s);
             byte[] x = IOUtils.toByteArray(stream.getUnfilteredStream());
             for (byte y : x) {
                 if (y != 0) {
@@ -213,6 +213,20 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             return null;
         }
         throw new IOException("Unsupported " + f.toString());
+    }
+
+    private static COSArray getEncode(COSDictionary s) {
+        COSArray encode = (COSArray) s.getDictionaryObject(COSName.ENCODE);
+        if (encode == null) {
+            encode = new COSArray();
+            COSArray size = (COSArray) s.getDictionaryObject(COSName.SIZE);
+            int sizeValuesSize = size.size();
+            for (int i = 0; i < sizeValuesSize; i++) {
+                encode.add(COSInteger.ZERO);
+                encode.add(COSInteger.get(size.getInt(i) - 1));
+            }
+        }
+        return encode;
     }
 
     private static List<Float> toList(float[] array) {
