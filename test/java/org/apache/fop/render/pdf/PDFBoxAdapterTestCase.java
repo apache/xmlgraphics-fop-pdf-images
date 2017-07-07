@@ -72,6 +72,8 @@ import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStream;
+import org.apache.fop.render.pcl.PCLGenerator;
+import org.apache.fop.render.pcl.PCLGraphics2D;
 import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
@@ -357,6 +359,32 @@ public class PDFBoxAdapterTestCase {
         ig.getGraphics2DImagePainter().paint(g2d, rect);
         doc.close();
         return stream;
+    }
+
+    @Test
+    public void testPCL() throws IOException, ImageException {
+        String ex = "";
+        try {
+            pdfToPCL(SHADING);
+        } catch (UnsupportedOperationException e) {
+            ex = e.getMessage();
+        }
+        Assert.assertTrue(ex.contains("Clipping is not supported."));
+    }
+
+    private void pdfToPCL(String pdf) throws IOException, ImageException {
+        ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
+        ImageInfo imgi = new ImageInfo(pdf, "b");
+        PDDocument doc = PDDocument.load(new File(pdf));
+        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        PCLGraphics2D g2d = new PCLGraphics2D(new PCLGenerator(stream));
+        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+        GraphicContext gc = new GraphicContext();
+        g2d.setGraphicContext(gc);
+        ig.getGraphics2DImagePainter().paint(g2d, rect);
+        doc.close();
     }
 
     static class FOPPSGeneratorImpl extends PSGenerator implements PSDocumentHandler.FOPPSGenerator {

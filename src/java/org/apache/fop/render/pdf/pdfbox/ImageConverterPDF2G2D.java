@@ -147,6 +147,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                         area.getHeight() / mediaBox.getHeight());
                 g2d.transform(at);
                 new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
+            } catch (UnsupportedOperationException e) {
+                throw e;
             } catch (Throwable t) {
                 throw new RuntimeException("Error while painting PDF page: " + uri + " " + t.getMessage(), t);
             }
