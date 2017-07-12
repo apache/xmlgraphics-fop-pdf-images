@@ -44,14 +44,7 @@ public final class PDFBoxAdapterUtil {
     }
 
     private static Integer getStreamHash(COSStream o) throws IOException {
-        for (COSBase x : o.getValues()) {
-            if (x instanceof COSObject || x instanceof COSDictionary) {
-                return null;
-            }
-        }
-        InputStream stream = o.getFilteredStream();
-        byte[] b = IOUtils.toByteArray(stream);
-        return Arrays.deepHashCode(new Object[]{b, o.toString()});
+        return getDictionaryHash(o).hashCode();
     }
 
     private static String getDictionaryHash(COSBase base) throws IOException {

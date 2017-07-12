@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.Test;
@@ -196,10 +197,7 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testTaggedPDFWriter() throws IOException {
-        PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = getPDFPage(pdfdoc);
-        pdfpage.setDocument(pdfdoc);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = getPDFBoxAdapter(false);
         adapter.setCurrentMCID(5);
         PDDocument doc = PDDocument.load(new File(HELLOTagged));
         PDPage page = doc.getPage(0);
@@ -440,23 +438,14 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testPDFCache() throws IOException {
         PDFDocument pdfdoc = new PDFDocument("");
-        PDFPage pdfpage = getPDFPage(pdfdoc);
-        pdfdoc.assignObjectNumber(pdfpage);
-        pdfpage.setDocument(pdfdoc);
-        Map<Object, Object> pdfCache = new HashMap<Object, Object>();
-        Map<Object, Object> objectCachePerFile = new HashMap<Object, Object>();
-        PDFBoxAdapter adapter = new PDFBoxAdapter(
-                pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
-        PDDocument doc = PDDocument.load(new File(LOOP));
-        PDPage page = doc.getPage(0);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
-        doc.close();
+        Map<Object, Object> pdfCache = new LinkedHashMap<Object, Object>();
+        Map<Object, Object> objectCachePerFile = loadPDFWithCache(pdfdoc, pdfCache, LOOP);
 
         Object item = pdfCache.values().iterator().next();
         Assert.assertEquals(item.getClass(), PDFStream.class);
         item = pdfCache.keySet().iterator().next();
         Assert.assertEquals(item.getClass(), Integer.class);
-        Assert.assertEquals(pdfCache.size(), 11);
+        Assert.assertEquals(pdfCache.size(), 12);
 
         int pdfDictionary = 0;
         int strings = 0;
@@ -469,8 +458,35 @@ public class PDFBoxAdapterTestCase {
             }
         }
         Assert.assertEquals(pdfDictionary, 26);
-        Assert.assertEquals(strings, 34);
+        Assert.assertEquals(strings, 33);
         Assert.assertEquals(objectCachePerFile.size(), 45);
+    }
+
+    private Map<Object, Object> loadPDFWithCache(PDFDocument pdfdoc, Map<Object, Object> pdfCache, String pdf)
+        throws IOException {
+        Map<Object, Object> objectCachePerFile = new LinkedHashMap<Object, Object>();
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        pdfdoc.assignObjectNumber(pdfpage);
+        pdfpage.setDocument(pdfdoc);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(
+                pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
+        PDDocument doc = PDDocument.load(new File(pdf));
+        PDPage page = doc.getPage(0);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
+        doc.close();
+        return objectCachePerFile;
+    }
+
+    @Test
+    public void testPDFSize() throws IOException {
+        PDFDocument pdfdoc = new PDFDocument("");
+        Map<Object, Object> pdfCache = new HashMap<Object, Object>();
+        loadPDFWithCache(pdfdoc, pdfCache, ANNOT);
+        loadPDFWithCache(pdfdoc, pdfCache, ANNOT);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        Assert.assertEquals(pdfCache.size(), 2);
+        Assert.assertTrue(bos.size() <= 6418);
     }
 
     @Test
