@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
+import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -60,7 +61,6 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testCopyStructure() throws IOException {
-        setUp();
         PDDocument doc = PDDocument.load(new File(LINK));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
@@ -80,7 +80,6 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testNullEntriesInParentTree() throws IOException {
-        setUp();
         PDDocument doc = PDDocument.load(new File(LINK));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
@@ -98,7 +97,6 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testOBJRCorrectPosition() throws IOException {
-        setUp();
         PDDocument doc = PDDocument.load(new File(MissingOBJR));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
@@ -156,7 +154,8 @@ public class StructureTreeMergerTestCase {
         }
     }
 
-    private void setUp() {
+    @Before
+    public void setUp() {
         Rectangle2D r = new Rectangle2D.Double();
         pdfDoc = new PDFDocument(" ");
         pdfPage = new PDFPage(new PDFResources(pdfDoc), 0, r, r, r, r);
@@ -174,7 +173,6 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testCheckNullCOSObject() throws IOException {
-        setUp();
         PDDocument doc = PDDocument.load(new File(BrokenLink));
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
@@ -202,7 +200,6 @@ public class StructureTreeMergerTestCase {
     public void testDirectDescedants() throws IOException {
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(100);
-        setUp();
         adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         PDPage srcPage = new PDPage();
