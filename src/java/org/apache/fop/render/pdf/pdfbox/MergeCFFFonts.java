@@ -234,14 +234,10 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         //Name Index
         writeIndex(Arrays.asList(fileFont.getName().getBytes("UTF-8")));
 
-        //Keep offset of the topDICT so it can be updated once all data has been written
-        int topDictOffset = currentPos;
+        Offsets offsets = new Offsets();
+
         //Top DICT Index and Data
-        byte[] topDictIndex = cffReader.getTopDictIndex().getByteData();
-        int offSize = topDictIndex[2];
-        writeBytes(topDictIndex, 0, 3 + (offSize * 2));
-        int topDictDataOffset = currentPos;
-        writeTopDICT();
+        offsets.topDictData = currentPos + writeTopDICT();
         createCharStringData();
 
         //String index
@@ -250,26 +246,25 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         Map<String, CFFDataReader.DICTEntry> topDICT = cffReader.getTopDictEntries();
         final CFFDataReader.DICTEntry charString = topDICT.get("CharStrings");
         final CFFDataReader.DICTEntry encodingEntry = topDICT.get("Encoding");
-
-        int encodingOffset;
+        boolean hasFDSelect = cffReader.getFDSelect() != null;
         if (encodingEntry != null && charString.getOffset() > encodingEntry.getOffset()) {
             charsetOffset = currentPos;
             if (!fallbackIndex) {
                 charsetOffset += 2;
             }
-            writeCharsetTable(cffReader.getFDSelect() != null, !fallbackIndex);
-            encodingOffset = currentPos;
+            writeCharsetTable(hasFDSelect, !fallbackIndex);
+            offsets.encoding = currentPos;
             writeEncoding();
         } else {
             writeCard16(0);
-            encodingOffset = currentPos;
+            offsets.encoding = currentPos;
             writeEncoding();
             charsetOffset = currentPos;
-            writeCharsetTable(cffReader.getFDSelect() != null, false);
+            writeCharsetTable(hasFDSelect, false);
         }
 
-        int fdSelectOffset = currentPos;
-        if (cffReader.getFDSelect() != null) {
+        offsets.fdSelect = currentPos;
+        if (hasFDSelect) {
             writeByte(0);
             for (int i = 0; i < subsetCharStringsIndex.size(); i++) {
                 writeByte(0);
@@ -277,37 +272,31 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         }
 
         //Keep offset to modify later with the local subroutine index offset
-        int privateDictOffset = currentPos;
+        offsets.privateDict = currentPos;
         writePrivateDict();
 
         //Char Strings Index
-        int charStringOffset = currentPos;
+        offsets.charString = currentPos;
         writeIndex(subsetCharStringsIndex);
 
         //Local subroutine index
-        int localIndexOffset = currentPos;
+        offsets.localIndex = currentPos;
         if (!subsetLocalIndexSubr.isEmpty()) {
             writeIndex(subsetLocalIndexSubr);
         }
 
-        if (cffReader.getFDSelect() != null) {
-            int fdArrayOffset = currentPos;
-            writeCard16(1);
-            writeByte(1); //Offset size
-            writeByte(1); //First offset
-            int count = 1;
-            for (CFFDataReader.FontDict fdFont : cffReader.getFDFonts()) {
-                count += fdFont.getByteData().length;
-                writeByte(count);
-            }
-            int fdByteData = currentPos;
-            for (CFFDataReader.FontDict fdFont : cffReader.getFDFonts()) {
-                writeBytes(fdFont.getByteData());
-            }
+        if (hasFDSelect) {
+            offsets.fdArray = currentPos;
+            int fdByteData = currentPos + cffReader.getFDFonts().size() + 4;
+            List<byte[]> index = new ArrayList<byte[]>();
             List<Integer> privateDictOffsets = new ArrayList<Integer>();
-            for (CFFDataReader.FontDict curFDFont : cffReader.getFDFonts()) {
+            for (CFFDataReader.FontDict fdFont : cffReader.getFDFonts()) {
+                index.add(fdFont.getByteData());
+            }
+            writeIndex(index, 1);
+            for (CFFDataReader.FontDict fdFont : cffReader.getFDFonts()) {
                 privateDictOffsets.add(currentPos);
-                writeBytes(curFDFont.getPrivateDictData());
+                writeBytes(fdFont.getPrivateDictData());
                 writeIndex(new ArrayList<byte[]>());
             }
             currentPos = fdByteData;
@@ -325,12 +314,10 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                 i++;
             }
 
-            updateCIDOffsets(topDictDataOffset, fdArrayOffset, fdSelectOffset, charsetOffset, charStringOffset,
-                    encodingOffset);
+            updateCIDOffsets(offsets);
         } else {
             //Update the offsets
-            updateOffsets(topDictOffset, charsetOffset, charStringOffset, privateDictOffset, localIndexOffset,
-                    encodingOffset);
+            updateOffsets(offsets);
         }
     }
 
@@ -469,12 +456,11 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
     }
 
     @Override
-    protected void updateFixedOffsets(Map<String, CFFDataReader.DICTEntry> topDICT, int dataTopDictOffset,
-                                      int charsetOffset, int charStringOffset, int encodingOffset) {
+    protected void updateFixedOffsets(Map<String, CFFDataReader.DICTEntry> topDICT, Offsets offsets) {
         //Charset offset in the top dict
         final CFFDataReader.DICTEntry charset = topDICT.get("charset");
         if (charset != null) {
-            int oldCharsetOffset = dataTopDictOffset + charset.getOffset();
+            int oldCharsetOffset = offsets.topDictData + charset.getOffset();
             int oldCharset = Integer.parseInt(String.format("%02x", output[oldCharsetOffset] & 0xff), 16);
             if (oldCharset >= 32 && oldCharset <= 246) {
                 charsetOffset += 139;
@@ -484,30 +470,26 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
 
         //Char string index offset in the private dict
         final CFFDataReader.DICTEntry charString = topDICT.get("CharStrings");
-        int oldCharStringOffset = dataTopDictOffset + charString.getOffset();
+        int oldCharStringOffset = offsets.topDictData + charString.getOffset();
         int oldString = Integer.parseInt(String.format("%02x", output[oldCharStringOffset] & 0xff), 16);
         if (oldString >= 32 && oldString <= 246) {
-            charStringOffset += 139;
+            offsets.charString += 139;
         }
         if (!(fileFont.getCharset() instanceof CFFISOAdobeCharset)) {
-            updateOffset(output, oldCharStringOffset, charString.getOperandLength(), charStringOffset);
+            updateOffset(output, oldCharStringOffset, charString.getOperandLength(), offsets.charString);
         }
 
         final CFFDataReader.DICTEntry encodingEntry = topDICT.get("Encoding");
         if (encodingEntry != null && encodingEntry.getOperands().get(0).intValue() != 0
                 && encodingEntry.getOperands().get(0).intValue() != 1) {
-            int oldEncodingOffset = dataTopDictOffset + encodingEntry.getOffset();
+            int oldEncodingOffset = offsets.topDictData + encodingEntry.getOffset();
             int oldEnc = Integer.parseInt(String.format("%02x", output[oldEncodingOffset] & 0xff), 16);
             if (oldEnc >= 32 && oldEnc <= 246) {
-                encodingOffset += 139;
+                offsets.encoding += 139;
             } else {
-                encodingOffset--;
+                offsets.encoding--;
             }
-            updateOffset(output, oldEncodingOffset, encodingEntry.getOperandLength(), encodingOffset);
+            updateOffset(output, oldEncodingOffset, encodingEntry.getOperandLength(), offsets.encoding);
         }
-    }
-
-    protected void writeCIDCount(CFFDataReader.DICTEntry dictEntry) throws IOException {
-        writeBytes(dictEntry.getByteData());
     }
 }

@@ -67,27 +67,31 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
         super();
     }
 
-    protected void writeTopDICT() throws IOException {
+    protected int writeTopDICT() throws IOException {
         Map<String, DICTEntry> topDICT = cffReader.getTopDictEntries();
         List<String> topDictStringEntries = Arrays.asList("version", "Notice", "Copyright",
                 "FullName", "FamilyName", "Weight", "PostScript");
+        ByteArrayOutputStream dict = new ByteArrayOutputStream();
         for (Map.Entry<String, DICTEntry> dictEntry : topDICT.entrySet()) {
             String dictKey = dictEntry.getKey();
             DICTEntry entry = dictEntry.getValue();
             //If the value is an SID, update the reference but keep the size the same
             if (dictKey.equals("ROS")) {
-                writeROSEntry(entry);
+                dict.write(writeROSEntry(entry));
             } else if (dictKey.equals("CIDCount")) {
-                writeCIDCount(entry);
+                dict.write(writeCIDCount(entry));
             } else if (topDictStringEntries.contains(dictKey)) {
-                writeTopDictStringEntry(entry);
+                dict.write(writeTopDictStringEntry(entry));
             } else {
-                writeBytes(entry.getByteData());
+                dict.write(entry.getByteData());
             }
         }
+        byte[] topDictIndex = cffReader.getTopDictIndex().getByteData();
+        int offSize = topDictIndex[2];
+        return writeIndex(Arrays.asList(dict.toByteArray()), offSize) - dict.size();
     }
 
-    private void writeROSEntry(DICTEntry dictEntry) throws IOException {
+    private byte[] writeROSEntry(DICTEntry dictEntry) throws IOException {
         int sidA = dictEntry.getOperands().get(0).intValue();
         if (sidA > 390) {
             stringIndexData.add(cffReader.getStringIndex().getValue(sidA - NUM_STANDARD_STRINGS));
@@ -105,12 +109,14 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
                 dictEntry.getOperandLengths().get(1), sidBStringIndex);
         updateOffset(cidEntryByteData, dictEntry.getOperandLengths().get(0)
                 + dictEntry.getOperandLengths().get(1), dictEntry.getOperandLengths().get(2), 139);
-        writeBytes(cidEntryByteData);
+        return cidEntryByteData;
     }
 
-    protected abstract void writeCIDCount(DICTEntry dictEntry) throws IOException;
+    protected byte[] writeCIDCount(DICTEntry dictEntry) throws IOException {
+        return dictEntry.getByteData();
+    }
 
-    private void writeTopDictStringEntry(DICTEntry dictEntry) throws IOException {
+    private byte[] writeTopDictStringEntry(DICTEntry dictEntry) throws IOException {
         int sid = dictEntry.getOperands().get(0).intValue();
         if (sid > 391) {
             stringIndexData.add(cffReader.getStringIndex().getValue(sid - 391));
@@ -118,7 +124,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
 
         byte[] newDictEntry = createNewRef(stringIndexData.size() + 390, dictEntry.getOperator(),
                 dictEntry.getOperandLength());
-        writeBytes(newDictEntry);
+        return newDictEntry;
     }
 
     public static byte[] createNewRef(int newRef, int[] operatorCode, int forceLength) {
@@ -164,24 +170,21 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
     }
 
     protected int writeIndex(List<byte[]> dataArray) {
+        int totLength = 1;
+        for (byte[] aDataArray1 : dataArray) {
+            totLength += aDataArray1.length;
+        }
+        int offSize = getOffSize(totLength);
+        return writeIndex(dataArray, offSize);
+    }
+
+    protected int writeIndex(List<byte[]> dataArray, int offSize) {
         int hdrTotal = 3;
         //2 byte number of items
         this.writeCard16(dataArray.size());
         //Offset Size: 1 byte = 256, 2 bytes = 65536 etc.
-        int totLength = 0;
-        for (byte[] aDataArray1 : dataArray) {
-            totLength += aDataArray1.length;
-        }
-        int offSize = 1;
-        if (totLength <= (1 << 8)) {
-            offSize = 1;
-        } else if (totLength <= (1 << 16)) {
-            offSize = 2;
-        } else if (totLength <= (1 << 24)) {
-            offSize = 3;
-        } else {
-            offSize = 4;
-        }
+        //Offsets in the offset array are relative to the byte that precedes the object data.
+        //Therefore the first element of the offset array is always 1.
         this.writeByte(offSize);
         //Count the first offset 1
         hdrTotal += offSize;
@@ -228,6 +231,20 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
         return hdrTotal + total;
     }
 
+    private int getOffSize(int totLength) {
+        int offSize = 1;
+        if (totLength < (1 << 8)) {
+            offSize = 1;
+        } else if (totLength < (1 << 16)) {
+            offSize = 2;
+        } else if (totLength < (1 << 24)) {
+            offSize = 3;
+        } else {
+            offSize = 4;
+        }
+        return offSize;
+    }
+
     protected void writePrivateDict() throws IOException {
         Map<String, DICTEntry> topDICT = cffReader.getTopDictEntries();
 
@@ -237,8 +254,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
         }
     }
 
-    protected void updateOffsets(int topDictOffset, int charsetOffset, int charStringOffset,
-                                 int privateDictOffset, int localIndexOffset, int encodingOffset) throws IOException {
+    protected void updateOffsets(Offsets offsets) throws IOException {
         Map<String, DICTEntry> topDICT = cffReader.getTopDictEntries();
         Map<String, DICTEntry> privateDICT = null;
 
@@ -247,53 +263,57 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
             privateDICT = cffReader.getPrivateDict(privateEntry);
         }
 
-        int dataPos = 3 + (cffReader.getTopDictIndex().getOffSize()
-                * cffReader.getTopDictIndex().getOffsets().length);
-        int dataTopDictOffset = topDictOffset + dataPos;
-
-        updateFixedOffsets(topDICT, dataTopDictOffset, charsetOffset, charStringOffset, encodingOffset);
+        updateFixedOffsets(topDICT, offsets);
 
         if (privateDICT != null) {
             //Private index offset in the top dict
-            int oldPrivateOffset = dataTopDictOffset + privateEntry.getOffset();
+            int oldPrivateOffset = offsets.topDictData + privateEntry.getOffset();
             updateOffset(output, oldPrivateOffset + privateEntry.getOperandLengths().get(0),
-                    privateEntry.getOperandLengths().get(1), privateDictOffset);
+                    privateEntry.getOperandLengths().get(1), offsets.privateDict);
 
             //Update the local subroutine index offset in the private dict
             DICTEntry subroutines = privateDICT.get("Subrs");
             if (subroutines != null) {
-                int oldLocalSubrOffset = privateDictOffset + subroutines.getOffset();
+                int oldLocalSubrOffset = offsets.privateDict + subroutines.getOffset();
                 //Value needs to be converted to -139 etc.
                 int encodeValue = 0;
                 if (subroutines.getOperandLength() == 1) {
                     encodeValue = 139;
                 }
                 updateOffset(output, oldLocalSubrOffset, subroutines.getOperandLength(),
-                        (localIndexOffset - privateDictOffset) + encodeValue);
+                        (offsets.localIndex - offsets.privateDict) + encodeValue);
             }
         }
     }
 
-    protected abstract void updateFixedOffsets(Map<String, DICTEntry> topDICT, int dataTopDictOffset,
-                                               int charsetOffset, int charStringOffset, int encodingOffset);
+    static class Offsets {
+        Integer topDictData;
+        Integer encoding;
+        Integer fdSelect;
+        Integer charString;
+        Integer fdArray;
+        Integer privateDict;
+        Integer localIndex;
+    }
 
-    protected void updateCIDOffsets(int topDictDataOffset, int fdArrayOffset, int fdSelectOffset,
-                                    int charsetOffset, int charStringOffset, int encodingOffset) {
+    protected abstract void updateFixedOffsets(Map<String, DICTEntry> topDICT, Offsets offsets);
+
+    protected void updateCIDOffsets(Offsets offsets) {
         Map<String, DICTEntry> topDict = cffReader.getTopDictEntries();
 
         DICTEntry fdArrayEntry = topDict.get("FDArray");
         if (fdArrayEntry != null) {
-            updateOffset(output, topDictDataOffset + fdArrayEntry.getOffset() - 1,
-                    fdArrayEntry.getOperandLength(), fdArrayOffset);
+            updateOffset(output, offsets.topDictData + fdArrayEntry.getOffset() - 1,
+                    fdArrayEntry.getOperandLength(), offsets.fdArray);
         }
 
         DICTEntry fdSelect = topDict.get("FDSelect");
         if (fdSelect != null) {
-            updateOffset(output, topDictDataOffset + fdSelect.getOffset() - 1,
-                    fdSelect.getOperandLength(), fdSelectOffset);
+            updateOffset(output, offsets.topDictData + fdSelect.getOffset() - 1,
+                    fdSelect.getOperandLength(), offsets.fdSelect);
         }
 
-        updateFixedOffsets(topDict, topDictDataOffset, charsetOffset, charStringOffset, encodingOffset);
+        updateFixedOffsets(topDict, offsets);
     }
 
     protected void updateOffset(byte[] out, int position, int length, int replacement) {
@@ -302,6 +322,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
                 out[position] = (byte)(replacement & 0xFF);
                 break;
             case 2:
+                assert replacement <= 1131;
                 if (replacement <= 363) {
                     out[position] = (byte)247;
                 } else if (replacement <= 619) {
@@ -314,6 +335,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
                 out[position + 1] = (byte)(replacement - 108);
                 break;
             case 3:
+                assert replacement <= 32767;
                 out[position] = (byte)28;
                 out[position + 1] = (byte)((replacement >> 8) & 0xFF);
                 out[position + 2] = (byte)(replacement & 0xFF);
