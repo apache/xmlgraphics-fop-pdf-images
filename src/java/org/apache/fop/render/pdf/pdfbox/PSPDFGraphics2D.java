@@ -41,6 +41,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -152,22 +154,28 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                 }
             }
         } else if (paint.getClass().getSimpleName().equals("TilingPaint")) {
-            try {
-                Field f = paint.getClass().getDeclaredField("paint");
-                f.setAccessible(true);
-                TexturePaint texturePaint = (TexturePaint) f.get(paint);
-                f = paint.getClass().getDeclaredField("patternMatrix");
-                f.setAccessible(true);
-                Matrix matrix = (Matrix) f.get(paint);
-                Rectangle2D rect = getTransformedRect(matrix, texturePaint.getAnchorRect());
-                texturePaint = new TexturePaint(texturePaint.getImage(), rect);
-                super.applyPaint(texturePaint, fill);
-            } catch (NoSuchFieldException e) {
-                throw new RuntimeException(e);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
+            TexturePaint texturePaint = (TexturePaint) getField(paint, "paint");
+            Matrix matrix = (Matrix) getField(paint, "patternMatrix");
+            Rectangle2D rect = getTransformedRect(matrix, texturePaint.getAnchorRect());
+            texturePaint = new TexturePaint(texturePaint.getImage(), rect);
+            super.applyPaint(texturePaint, fill);
         }
+    }
+
+    private static Object getField(final Paint paint, final String field) {
+        return AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            public Object run() {
+                try {
+                    Field f = paint.getClass().getDeclaredField(field);
+                    f.setAccessible(true);
+                    return f.get(paint);
+                } catch (NoSuchFieldException e) {
+                    throw new RuntimeException(e);
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     private static Rectangle2D getTransformedRect(Matrix matrix, Rectangle2D anchorRect) {
