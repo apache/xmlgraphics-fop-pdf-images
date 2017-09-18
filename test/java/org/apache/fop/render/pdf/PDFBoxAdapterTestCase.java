@@ -112,6 +112,7 @@ public class PDFBoxAdapterTestCase {
     private static final String LOOP = "test/resources/loop.pdf";
     private static final String ERROR = "test/resources/error.pdf";
     private static final String LIBREOFFICE = "test/resources/libreoffice.pdf";
+    private static final String SMASK = "test/resources/smask.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -299,7 +300,7 @@ public class PDFBoxAdapterTestCase {
         pdfToPS(TTSubset3);
         pdfToPS(TTSubset5);
         stream = pdfToPS(CFFCID1);
-        Assert.assertEquals(countString(stream.toString("UTF-8"), "%AXGBeginBitmap:"), 1);
+        Assert.assertEquals(countString(stream.toString("UTF-8"), "%AXGBeginBitmap:"), 2);
         pdfToPS(CFFCID2);
         pdfToPS(Type1Subset1);
         pdfToPS(Type1Subset2);
@@ -357,6 +358,13 @@ public class PDFBoxAdapterTestCase {
         ig.getGraphics2DImagePainter().paint(g2d, rect);
         doc.close();
         return stream;
+    }
+
+    @Test
+    public void testSmask() throws IOException, ImageException {
+        ByteArrayOutputStream ps = pdfToPS(SMASK);
+        Assert.assertTrue(ps.toString("UTF-8").contains("/Pattern"));
+        Assert.assertTrue(ps.toString("UTF-8").contains("{<\nf1f1f1"));
     }
 
     @Test

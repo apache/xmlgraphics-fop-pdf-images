@@ -39,7 +39,6 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -200,11 +199,6 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                             PDResources formRes = form.getResources();
                             if (formRes != null && !visited.contains(formRes.getCOSObject())
                                     && pageHasTransparency(formRes)) {
-                                return true;
-                            }
-                        } else if (pdxObject instanceof PDImageXObject) {
-                            if (pdxObject.getCOSStream().containsKey(COSName.SMASK)
-                                    || ((PDImageXObject) pdxObject).isStencil()) {
                                 return true;
                             }
                         }

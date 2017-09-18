@@ -27,7 +27,10 @@ import java.awt.Image;
 import java.awt.Paint;
 import java.awt.PaintContext;
 import java.awt.Rectangle;
+import java.awt.TexturePaint;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.DataBufferInt;
@@ -148,7 +151,41 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                     handleIOException(ioe);
                 }
             }
+        } else if (paint.getClass().getSimpleName().equals("TilingPaint")) {
+            try {
+                Field f = paint.getClass().getDeclaredField("paint");
+                f.setAccessible(true);
+                TexturePaint texturePaint = (TexturePaint) f.get(paint);
+                f = paint.getClass().getDeclaredField("patternMatrix");
+                f.setAccessible(true);
+                Matrix matrix = (Matrix) f.get(paint);
+                Rectangle2D rect = getTransformedRect(matrix, texturePaint.getAnchorRect());
+                texturePaint = new TexturePaint(texturePaint.getImage(), rect);
+                super.applyPaint(texturePaint, fill);
+            } catch (NoSuchFieldException e) {
+                throw new RuntimeException(e);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
         }
+    }
+
+    private static Rectangle2D getTransformedRect(Matrix matrix, Rectangle2D anchorRect) {
+        double x = anchorRect.getX();
+        double y = anchorRect.getY();
+        double width = anchorRect.getWidth();
+        double height = anchorRect.getHeight();
+        AffineTransform at = matrix.createAffineTransform();
+        Point2D p1 = new Point2D.Double(x, y);
+        Point2D p2 = new Point2D.Double(x + width, y + height);
+        at.transform(p1, p1);
+        at.transform(p2, p2);
+        Rectangle2D rectangle = new Rectangle2D.Float(
+                (float) Math.min(p1.getX(), p2.getX()),
+                (float) Math.min(p1.getY(), p2.getY()),
+                (float) Math.abs(width),
+                (float) Math.abs(height));
+        return rectangle;
     }
 
     private void transformCoords(float[] coords, Paint paint, boolean axialShading) {
