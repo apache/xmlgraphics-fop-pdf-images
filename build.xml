@@ -26,15 +26,7 @@
   <property name="Name" value="PDF image support for Apache FOP"/>
   <property name="name" value="fop-pdf-images"/>
 
-  <property name="javac.debug" value="on"/>
   <property name="javac.optimize" value="off"/>
-  <property name="javac.deprecation" value="on"/>
-  <property name="javac.source" value="1.5"/>
-  <property name="javac.target" value="1.5"/>
-  <property name="javac.fork" value="no"/>
-
-  <property name="junit.fork" value="on"/>
-
   <property name="javadoc.packages" value="org.apache.fop.*"/>
   
   <property name="src.dir" value="${basedir}/src"/>
