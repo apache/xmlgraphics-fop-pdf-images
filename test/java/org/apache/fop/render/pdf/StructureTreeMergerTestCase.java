@@ -218,4 +218,17 @@ public class StructureTreeMergerTestCase {
         String test = name.getName();
         Assert.assertEquals(test, "P");
     }
+
+    @Test
+    public void testEmptyDict() throws IOException {
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        StructureTreeMerger structureTreeMerger = new StructureTreeMerger(null, null, adapter, null);
+        COSArray cosArray = new COSArray();
+        COSObject o = new COSObject(new COSDictionary());
+        o.setObjectNumber(1);
+        o.setGenerationNumber(1);
+        cosArray.add(o);
+        structureTreeMerger.copyStructure(cosArray);
+        structureTreeMerger.addToPageParentTreeArray();
+    }
 }

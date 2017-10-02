@@ -132,8 +132,10 @@ public class StructureTreeMerger {
         for (COSBase entry : markedContentParents) {
             COSObject elemCos = (COSObject)entry;
             COSObject elemParent = (COSObject)elemCos.getItem(COSName.P);
-            PDFStructElem elem = structElemCache.get((int)elemCos.getObjectNumber());
-            createParents(elemCos, elemParent, elem);
+            if (elemParent != null) {
+                PDFStructElem elem = structElemCache.get((int)elemCos.getObjectNumber());
+                createParents(elemCos, elemParent, elem);
+            }
         }
     }
 
