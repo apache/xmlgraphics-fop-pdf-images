@@ -268,7 +268,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
         if (privateDICT != null) {
             //Private index offset in the top dict
             int oldPrivateOffset = offsets.topDictData + privateEntry.getOffset();
-            updateOffset(output, oldPrivateOffset + privateEntry.getOperandLengths().get(0),
+            updateOffset(oldPrivateOffset + privateEntry.getOperandLengths().get(0),
                     privateEntry.getOperandLengths().get(1), offsets.privateDict);
 
             //Update the local subroutine index offset in the private dict
@@ -280,7 +280,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
                 if (subroutines.getOperandLength() == 1) {
                     encodeValue = 139;
                 }
-                updateOffset(output, oldLocalSubrOffset, subroutines.getOperandLength(),
+                updateOffset(oldLocalSubrOffset, subroutines.getOperandLength(),
                         (offsets.localIndex - offsets.privateDict) + encodeValue);
             }
         }
@@ -296,24 +296,31 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
         Integer localIndex;
     }
 
-    protected abstract void updateFixedOffsets(Map<String, DICTEntry> topDICT, Offsets offsets);
+    protected abstract void updateFixedOffsets(Map<String, DICTEntry> topDICT, Offsets offsets) throws IOException;
 
-    protected void updateCIDOffsets(Offsets offsets) {
+    protected void updateCIDOffsets(Offsets offsets) throws IOException {
         Map<String, DICTEntry> topDict = cffReader.getTopDictEntries();
 
         DICTEntry fdArrayEntry = topDict.get("FDArray");
         if (fdArrayEntry != null) {
-            updateOffset(output, offsets.topDictData + fdArrayEntry.getOffset() - 1,
+            updateOffset(offsets.topDictData + fdArrayEntry.getOffset() - 1,
                     fdArrayEntry.getOperandLength(), offsets.fdArray);
         }
 
         DICTEntry fdSelect = topDict.get("FDSelect");
         if (fdSelect != null) {
-            updateOffset(output, offsets.topDictData + fdSelect.getOffset() - 1,
+            updateOffset(offsets.topDictData + fdSelect.getOffset() - 1,
                     fdSelect.getOperandLength(), offsets.fdSelect);
         }
 
         updateFixedOffsets(topDict, offsets);
+    }
+
+    protected void updateOffset(int position, int length, int replacement) throws IOException {
+        byte[] out = output.toByteArray();
+        updateOffset(out, position, length, replacement);
+        output.reset();
+        output.write(out);
     }
 
     protected void updateOffset(byte[] out, int position, int length, int replacement) {
