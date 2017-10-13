@@ -147,6 +147,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
         /** {@inheritDoc} */
         public void paint(Graphics2D g2d, Rectangle2D area) {
+            fopFontProvider.start();
             try {
                 PDRectangle mediaBox = page.getCropBox();
                 AffineTransform at = new AffineTransform();
@@ -156,17 +157,19 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 }
                 if (g2d instanceof PSGraphics2D && new PageUtil().pageHasTransparency(page.getResources())) {
                     drawPageAsImage(at, g2d);
-                    return;
+                } else {
+                    at.translate(area.getX(), area.getY());
+                    at.scale(area.getWidth() / mediaBox.getWidth(),
+                            area.getHeight() / mediaBox.getHeight());
+                    g2d.transform(at);
+                    new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
                 }
-                at.translate(area.getX(), area.getY());
-                at.scale(area.getWidth() / mediaBox.getWidth(),
-                        area.getHeight() / mediaBox.getHeight());
-                g2d.transform(at);
-                new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
             } catch (UnsupportedOperationException e) {
                 throw e;
             } catch (Throwable t) {
                 throw new RuntimeException("Error while painting PDF page: " + uri + " " + t.getMessage(), t);
+            } finally {
+                fopFontProvider.close();
             }
         }
 
@@ -243,8 +246,12 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         private Map<String, Object> fonts = new HashMap<String, Object>();
         private Map<String, TrueTypeFont> ttFonts = new HashMap<String, TrueTypeFont>();
 
-        FopFontProvider() {
+        void start() {
             fopFontMapper.fopFontProvider.set(this);
+        }
+
+        void close() {
+            fopFontMapper.fopFontProvider.remove();
         }
 
         private CustomFont getFont(String name) throws IOException {
@@ -285,8 +292,16 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
             defaultFontMapper = FontMappers.instance();
         }
 
+        private TrueTypeFont getTrueTypeFont(String baseFont) {
+            FopFontProvider fontProvider = fopFontProvider.get();
+            if (fontProvider == null) {
+                return null;
+            }
+            return fontProvider.getTrueTypeFont(baseFont);
+        }
+
         public FontMapping<TrueTypeFont> getTrueTypeFont(String baseFont, PDFontDescriptor fontDescriptor) {
-            TrueTypeFont fopFont = fopFontProvider.get().getTrueTypeFont(baseFont);
+            TrueTypeFont fopFont = getTrueTypeFont(baseFont);
             if (fopFont != null) {
                 return new FontMapping<TrueTypeFont>(fopFont, true);
             }
@@ -295,7 +310,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
 
         public FontMapping<FontBoxFont> getFontBoxFont(String baseFont, PDFontDescriptor fontDescriptor) {
-            TrueTypeFont fopFont = fopFontProvider.get().getTrueTypeFont(baseFont);
+            TrueTypeFont fopFont = getTrueTypeFont(baseFont);
             if (fopFont != null) {
                 return new FontMapping<FontBoxFont>(fopFont, true);
             }
