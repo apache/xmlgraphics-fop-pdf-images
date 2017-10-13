@@ -26,17 +26,27 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.fontbox.FontBoxFont;
+import org.apache.fontbox.ttf.TTFParser;
+import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.CIDFontMapping;
+import org.apache.pdfbox.pdmodel.font.FontMapper;
+import org.apache.pdfbox.pdmodel.font.FontMappers;
+import org.apache.pdfbox.pdmodel.font.FontMapping;
+import org.apache.pdfbox.pdmodel.font.PDCIDSystemInfo;
+import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading;
@@ -52,6 +62,12 @@ import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.Graphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
 import org.apache.xmlgraphics.ps.PSGenerator;
+
+import org.apache.fop.fonts.CustomFont;
+import org.apache.fop.fonts.LazyFont;
+import org.apache.fop.fonts.MultiByteFont;
+import org.apache.fop.fonts.Typeface;
+import org.apache.fop.render.java2d.CustomFontMetricsMapper;
 
 /**
  * Image converter implementation to convert PDF pages into Java2D images.
@@ -110,6 +126,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         private final PDDocument pdDocument;
         private float dpi;
         private int selectedPage;
+        private FopFontProvider fopFontProvider = new FopFontProvider();
         private String uri;
 
         public Graphics2DImagePainterPDF(PDDocument pddoc, float dpi, int selectedPage, String uri) {
@@ -211,6 +228,84 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         public Graphics2D getGraphics(boolean textAsShapes, PSGenerator gen) {
             PSPDFGraphics2D graphics = new PSPDFGraphics2D(textAsShapes, gen);
             return graphics;
+        }
+
+        public void addFallbackFont(String s, Object font) {
+            fopFontProvider.fonts.put(s, font);
+        }
+    }
+
+    static class FopFontProvider {
+        private static FopFontMapper fopFontMapper = new FopFontMapper();
+        static {
+            FontMappers.set(fopFontMapper);
+        }
+        private Map<String, Object> fonts = new HashMap<String, Object>();
+        private Map<String, TrueTypeFont> ttFonts = new HashMap<String, TrueTypeFont>();
+
+        FopFontProvider() {
+            fopFontMapper.fopFontProvider.set(this);
+        }
+
+        private CustomFont getFont(String name) throws IOException {
+            Object typeface = fonts.get(name);
+            if (typeface instanceof LazyFont) {
+                Typeface rf = ((LazyFont) typeface).getRealFont();
+                return (CustomFont) rf;
+            } else if (typeface instanceof CustomFontMetricsMapper) {
+                Typeface rf = ((CustomFontMetricsMapper) typeface).getRealFont();
+                return (CustomFont) rf;
+            }
+            return null;
+        }
+
+        public TrueTypeFont getTrueTypeFont(String postScriptName) {
+            if (!ttFonts.containsKey(postScriptName)) {
+                try {
+                    CustomFont font = getFont(postScriptName);
+                    if (font instanceof MultiByteFont && !((MultiByteFont)font).isOTFFile()) {
+                        TTFParser ttfParser = new TTFParser(false, true);
+                        TrueTypeFont ttf = ttfParser.parse(font.getInputStream());
+                        ttFonts.put(postScriptName, ttf);
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            return ttFonts.get(postScriptName);
+        }
+    }
+
+
+    static class FopFontMapper implements FontMapper {
+        private FontMapper defaultFontMapper;
+        private ThreadLocal<FopFontProvider> fopFontProvider = new ThreadLocal<FopFontProvider>();
+
+        FopFontMapper() {
+            defaultFontMapper = FontMappers.instance();
+        }
+
+        public FontMapping<TrueTypeFont> getTrueTypeFont(String baseFont, PDFontDescriptor fontDescriptor) {
+            TrueTypeFont fopFont = fopFontProvider.get().getTrueTypeFont(baseFont);
+            if (fopFont != null) {
+                return new FontMapping<TrueTypeFont>(fopFont, true);
+            }
+            return defaultFontMapper.getTrueTypeFont(baseFont, fontDescriptor);
+        }
+
+
+        public FontMapping<FontBoxFont> getFontBoxFont(String baseFont, PDFontDescriptor fontDescriptor) {
+            TrueTypeFont fopFont = fopFontProvider.get().getTrueTypeFont(baseFont);
+            if (fopFont != null) {
+                return new FontMapping<FontBoxFont>(fopFont, true);
+            }
+            return defaultFontMapper.getFontBoxFont(baseFont, fontDescriptor);
+        }
+
+
+        public CIDFontMapping getCIDFont(String baseFont, PDFontDescriptor fontDescriptor,
+                                         PDCIDSystemInfo cidSystemInfo) {
+            return defaultFontMapper.getCIDFont(baseFont, fontDescriptor, cidSystemInfo);
         }
     }
 
