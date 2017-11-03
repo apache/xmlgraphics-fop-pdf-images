@@ -113,6 +113,8 @@ public class PDFBoxAdapterTestCase {
     private static final String ERROR = "test/resources/error.pdf";
     private static final String LIBREOFFICE = "test/resources/libreoffice.pdf";
     private static final String SMASK = "test/resources/smask.pdf";
+    private static final String TYPE0TT = "test/resources/type0tt.pdf";
+    private static final String TYPE0CFF = "test/resources/type0cff.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -158,7 +160,18 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(msg, msg.contains("/URWChanceryL-MediItal_Type1 20 Tf"));
         msg = writeText(fi, Type1Subset4);
         Assert.assertTrue(msg, msg.contains("/F15-1521012718 40 Tf"));
+        parseFonts(fi);
+    }
 
+    @Test
+    public void testMergeTTCFF() throws IOException {
+        FontInfo fi = new FontInfo();
+        writeText(fi, TYPE0TT);
+        writeText(fi, TYPE0CFF);
+        parseFonts(fi);
+    }
+
+    private void parseFonts(FontInfo fi) throws IOException {
         for (Typeface font : fi.getUsedFonts().values()) {
             InputStream is = ((CustomFont) font).getInputStream();
             if (font.getFontType() == FontType.TYPE1C || font.getFontType() == FontType.CIDTYPE0) {

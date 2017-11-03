@@ -44,6 +44,7 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSString;
 
 import org.apache.pdfbox.pdmodel.common.PDStream;
+import org.apache.pdfbox.pdmodel.font.PDCIDFont;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType0;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDFont;
@@ -164,22 +165,22 @@ public class MergeFontsPDFWriter extends PDFWriter {
         if (font.getName() != null) {
             String extra = "";
             String name = getName(font.getName()) + "_" + ((COSName)fontData.getItem(COSName.SUBTYPE)).getName();
-            if (font instanceof PDType0Font
-                    && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType0) {
-                CFFFont cffFont = ((PDCIDFontType0) ((PDType0Font) font).getDescendantFont()).getCFFFont();
-                if (cffFont instanceof CFFCIDFont
-                        && ((CFFCIDFont)cffFont).getFdSelect().getClass().getName()
-                        .equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
-                    extra += "format0";
+            if (font instanceof PDType0Font) {
+                PDCIDFont descendantFont = ((PDType0Font) font).getDescendantFont();
+                if (descendantFont instanceof PDCIDFontType0) {
+                    CFFFont cffFont = ((PDCIDFontType0) descendantFont).getCFFFont();
+                    if (cffFont instanceof CFFCIDFont
+                            && ((CFFCIDFont) cffFont).getFdSelect().getClass().getName()
+                            .equals("org.apache.fontbox.cff.CFFParser$Format0FDSelect")) {
+                        extra += "format0";
+                    }
+                    return name + extra + "cff";
+                } else if (descendantFont instanceof PDCIDFontType2 && fontContainer.getToUnicode() != null) {
+                    if (!isSubsetFont(font.getName())) {
+                        extra = "f3";
+                    }
+                    return name + extra;
                 }
-                return name + extra;
-            } else if (font instanceof PDType0Font
-                    && fontContainer.getToUnicode() != null
-                    && ((PDType0Font) font).getDescendantFont() instanceof PDCIDFontType2) {
-                if (!isSubsetFont(font.getName())) {
-                    extra = "f3";
-                }
-                return name + extra;
             } else if (font instanceof PDTrueTypeFont && isSubsetFont(font.getName())) {
                 TrueTypeFont tt = ((PDTrueTypeFont) font).getTrueTypeFont();
                 for (CmapSubtable c : tt.getCmap().getCmaps()) {
