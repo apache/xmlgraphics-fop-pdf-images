@@ -17,6 +17,7 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.pdfbox.cos.COSDictionary;
 
@@ -28,4 +29,5 @@ interface FOPPDFFont extends RefPDFFont {
     void setRef(PDFDictionary d);
     String addFont(COSDictionary fontdata) throws IOException;
     int size();
+    String getMappedWord(List<String> word, byte[] bytes, FontContainer oldFont);
 }

@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
@@ -54,7 +53,6 @@ import org.apache.pdfbox.pdmodel.font.PDType1CFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import org.apache.fop.fonts.FontInfo;
-import org.apache.fop.fonts.SingleByteFont;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.fonts.truetype.OTFSubSetFile;
 
@@ -120,7 +118,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
                 if (word == null) {
                     s.append(PDFText.escapeString(getString((COSString) c)));
                 } else {
-                    String x = getMappedWord(word, font, ((COSString) c).getBytes());
+                    String x = ((FOPPDFFont)font).getMappedWord(word, ((COSString) c).getBytes(), oldFont);
                     if (x == null) {
                         s.append(PDFText.escapeString(getString((COSString) c)));
                     } else {
@@ -238,43 +236,6 @@ public class MergeFontsPDFWriter extends PDFWriter {
             }
         }
         return new String(data, start, data.length - start, encoding);
-    }
-
-    private String getMappedWord(List<String> word, Typeface font, byte[] bytes) throws IOException {
-        StringBuffer newOct = new StringBuffer();
-        StringBuilder newHex = new StringBuilder();
-        int i = 0;
-        for (String str : word) {
-            Integer mapped = getMapping(bytes[i]);
-            if (mapped == null) {
-                char c = str.charAt(0);
-                if (str.length() > 1) {
-                    c = (char) str.hashCode();
-                }
-                if (font.hasChar(c)) {
-                    mapped = (int)font.mapChar(c);
-                } else {
-                    return null;
-                }
-            }
-            newHex.append(String.format("%1$04x", mapped & 0xFFFF).toUpperCase(Locale.getDefault()));
-            PDFText.escapeStringChar((char)mapped.intValue(), newOct);
-            i++;
-        }
-        if (font instanceof SingleByteFont) {
-            return "(" + newOct.toString() + ")";
-        }
-        return "<" + newHex.toString() + ">";
-    }
-
-    private Integer getMapping(byte i) throws IOException {
-        if (oldFont.getEncoding() != null && font instanceof FOPPDFSingleByteFont) {
-            String name = oldFont.getEncoding().getName(i);
-            if (!name.equals(".notdef") && ((FOPPDFSingleByteFont)font).charMapGlobal.containsKey(name)) {
-                return ((FOPPDFSingleByteFont)font).charMapGlobal.get(name);
-            }
-        }
-        return null;
     }
 
     private List<String> readCOSString(COSString s, FontContainer oldFont) throws IOException {

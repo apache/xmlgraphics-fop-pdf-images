@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -152,22 +154,23 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
                 mappedChar = "" + (char)mappedChar.hashCode();
             }
             if (!charMapGlobal.containsKey(mappedChar)) {
+                char c = mappedChar.charAt(0);
                 if (glyphData.length > 0
                         && glyphData[key] == null
-                        && !CharUtilities.isAdjustableSpace(mappedChar.charAt(0))) {
+                        && !CharUtilities.isAdjustableSpace(c)) {
                     continue;
                 }
                 boolean addToEnd = charMapGlobal.containsValue(key);
                 if (addToEnd) {
-                    addPrivateUseMapping(mappedChar.charAt(0), charMapGlobal.size() + 1);
+                    addPrivateUseMapping(c, charMapGlobal.size() + 1);
                     charMapGlobal.put(mappedChar, charMapGlobal.size() + 1);
                 } else {
-                    addPrivateUseMapping(mappedChar.charAt(0), key);
+                    addPrivateUseMapping(c, key);
                     charMapGlobal.put(mappedChar, key);
                 }
                 int glyph = 0;
-                if (hasChar(mappedChar.charAt(0))) {
-                    glyph = (int) mapChar(mappedChar.charAt(0));
+                if (hasChar(c)) {
+                    glyph = (int) mapChar(c);
                 }
                 oldToNewGIMap.put(key, glyph);
                 if (!skipWidth) {
@@ -369,5 +372,22 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         outMaxp.setMaxSizeOfInstructions(outMaxp.getMaxSizeOfInstructions() + mp.getMaxSizeOfInstructions());
         outMaxp.setMaxComponentElements(outMaxp.getMaxComponentElements() + mp.getMaxComponentElements());
         outMaxp.setMaxComponentDepth(outMaxp.getMaxComponentDepth() + mp.getMaxComponentDepth());
+    }
+
+    public String getMappedWord(List<String> word, byte[] bytes, FontContainer oldFont) {
+        StringBuilder newHex = new StringBuilder();
+        for (String str : word) {
+            char c = str.charAt(0);
+            if (str.length() > 1) {
+                c = (char) str.hashCode();
+            }
+            if (hasChar(c)) {
+                int mapped = (int)mapChar(c);
+                newHex.append(String.format("%1$04x", mapped & 0xFFFF).toUpperCase(Locale.getDefault()));
+            } else {
+                return null;
+            }
+        }
+        return "<" + newHex.toString() + ">";
     }
 }

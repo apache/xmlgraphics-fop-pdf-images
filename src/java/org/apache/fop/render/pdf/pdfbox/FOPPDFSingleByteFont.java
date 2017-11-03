@@ -54,6 +54,7 @@ import org.apache.fop.fonts.FontType;
 import org.apache.fop.fonts.SingleByteEncoding;
 import org.apache.fop.fonts.SingleByteFont;
 import org.apache.fop.pdf.PDFDictionary;
+import org.apache.fop.pdf.PDFText;
 
 public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private int fontCount;
@@ -476,5 +477,37 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             fontMap.put(fontData, new FontContainer(fontData));
         }
         return fontMap.get(fontData);
+    }
+
+    public String getMappedWord(List<String> word, byte[] bytes, FontContainer oldFont) {
+        StringBuffer newOct = new StringBuffer();
+        int i = 0;
+        for (String str : word) {
+            Integer mapped = getMapping(bytes[i], oldFont);
+            if (mapped == null) {
+                char c = str.charAt(0);
+                if (str.length() > 1) {
+                    c = (char) str.hashCode();
+                }
+                if (hasChar(c)) {
+                    mapped = (int)mapChar(c);
+                } else {
+                    return null;
+                }
+            }
+            PDFText.escapeStringChar((char)mapped.intValue(), newOct);
+            i++;
+        }
+        return "(" + newOct.toString() + ")";
+    }
+
+    private Integer getMapping(byte i, FontContainer oldFont) {
+        if (oldFont.getEncoding() != null) {
+            String name = oldFont.getEncoding().getName(i);
+            if (!name.equals(".notdef") && charMapGlobal.containsKey(name)) {
+                return charMapGlobal.get(name);
+            }
+        }
+        return null;
     }
 }
