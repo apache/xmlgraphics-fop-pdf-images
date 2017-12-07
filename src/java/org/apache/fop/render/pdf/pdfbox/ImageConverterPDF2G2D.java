@@ -320,6 +320,10 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
         public CIDFontMapping getCIDFont(String baseFont, PDFontDescriptor fontDescriptor,
                                          PDCIDSystemInfo cidSystemInfo) {
+            TrueTypeFont ttFont = getTrueTypeFont(baseFont);
+            if (ttFont != null) {
+                return new CIDFontMapping(null, ttFont, true);
+            }
             return defaultFontMapper.getCIDFont(baseFont, fontDescriptor, cidSystemInfo);
         }
     }

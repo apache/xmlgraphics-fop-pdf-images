@@ -46,11 +46,15 @@ import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 
 public class ImageConverterPDF2G2DTestCase {
     private static final String FONTSNOTEMBEDDED = "test/resources/fontsnotembedded.pdf";
+    private static final String FONTSNOTEMBEDDEDCID = "test/resources/fontsnotembeddedcid.pdf";
 
     @Test
     public void testFontsNotEmbedded() throws IOException, ImageException {
         Assert.assertTrue(pdfToPS(FONTSNOTEMBEDDED, "Helvetica-Bold"));
         Assert.assertFalse(pdfToPS(FONTSNOTEMBEDDED, "xyz"));
+
+        Assert.assertTrue(pdfToPS(FONTSNOTEMBEDDEDCID, "NewsMinIWA-Th"));
+        Assert.assertFalse(pdfToPS(FONTSNOTEMBEDDEDCID, "xyz"));
     }
 
     private boolean pdfToPS(String pdf, String font) throws IOException, ImageException {
@@ -68,7 +72,7 @@ public class ImageConverterPDF2G2DTestCase {
         Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
         GraphicContext gc = new GraphicContext();
         g2d.setGraphicContext(gc);
-        ig.getGraphics2DImagePainter().paint(g2d, rect);
+        g.paint(g2d, rect);
         doc.close();
         return lazyFont.font.fontUsed;
     }
