@@ -484,7 +484,7 @@
       <include name="maven/pom.xml"/>
       </patternset>
     </fileset>
-    <checksum algorithm="sha256">
+    <checksum algorithm="sha-256" fileext=".sha256">
       <fileset refid="bundle-files"/>
     </checksum>
     <input message="Passphrase for your default private key (attention: passphrase will be echoed in clear text on the display!)" addproperty="pwd"/>
