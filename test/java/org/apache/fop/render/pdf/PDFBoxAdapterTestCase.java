@@ -543,4 +543,21 @@ public class PDFBoxAdapterTestCase {
         getPDFBoxAdapter(false).createStreamFromPDFBoxPage(doc, page, CFF1, at, new FontInfo(), new Rectangle());
         doc.close();
     }
+
+    @Test
+    public void testPDFBoxImageHandlerAccessibilityEnabled() throws Exception {
+        ImageInfo imgi = new ImageInfo("a", "b");
+        PDDocument doc = PDDocument.load(new File(SHADING));
+        ImagePDF img = new ImagePDF(imgi, doc);
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        pdfpage.setDocument(pdfdoc);
+        PDFContentGenerator con = new PDFContentGenerator(pdfdoc, null, null);
+        FOUserAgent mockedAgent = mock(FOUserAgent.class);
+        when(mockedAgent.isAccessibilityEnabled()).thenReturn(true);
+        when(mockedAgent.getPDFObjectCache()).thenReturn(new SoftMapCache(true));
+        PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, pdfpage, null);
+        c.setPageNumbers(new HashMap<Integer, PDFArray>());
+        new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
+    }
 }

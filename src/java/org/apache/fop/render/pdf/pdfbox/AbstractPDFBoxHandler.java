@@ -110,7 +110,7 @@ public abstract class AbstractPDFBoxHandler {
         }
         String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri,
                  at, fontinfo, pos);
-        if (userAgent.isAccessibilityEnabled()) {
+        if (userAgent.isAccessibilityEnabled() && curentSessionElem != null) {
             TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, page, adapter);
             conductor.handleLogicalStructure(pddoc);
         }
