@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 2.0 or later
-- Apache XML Graphics Commons 2.2 or later (for the image converter)
-- Apache XML FOP 2.2 or later (for the FOP functionality)
+- Apache XML Graphics Commons 2.3 or later (for the image converter)
+- Apache XML FOP 2.3 or later (for the FOP functionality)
 - Java 1.6 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.2 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.3 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -155,6 +155,22 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.3
+=========================
+
+Changes:
+FOP-2251: PDF to Postscript not showing transparency
+FOP-2715: Optimise PDFWriter writing out floats
+FOP-2719: PDF to PS NPE when encode param not set
+FOP-2720: PDF to PCL exception on clipping
+FOP-2723: PDF to PDF deduplicate more types of streams
+FOP-2739: Upgrade to PDFBox 2.0.7
+FOP-2739: Avoid rastering PDF with Smask to image
+FOP-2746: PDF to PDF NPE during structuretree merge
+FOP-2750: Use streams for OTF subsetting
+FOP-2753: PDF to PS allow fop fonts as fallback
+FOP-2754: Error when merging True Type font with CFF PDF font
 
 Version 2.2
 =========================

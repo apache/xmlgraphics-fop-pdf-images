@@ -347,28 +347,28 @@
     <input message="Passphrase for your default private key" addproperty="pwd">
       <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
     </input>
-    <antcall target="sha256">
+    <antcall target="sha512">
       <param name="sign.archive" value="${name}-${version}-src.zip"/>
     </antcall>
     <antcall target="sign-file">
       <param name="sign.archive" value="${name}-${version}-src.zip"/>
       <param name="pwd" value="${pwd}"/>
     </antcall>
-    <antcall target="sha256">
+    <antcall target="sha512">
       <param name="sign.archive" value="${name}-${version}-src.tar.gz"/>
     </antcall>
     <antcall target="sign-file">
       <param name="sign.archive" value="${name}-${version}-src.tar.gz"/>
       <param name="pwd" value="${pwd}"/>
     </antcall>
-    <antcall target="sha256">
+    <antcall target="sha512">
       <param name="sign.archive" value="${name}-${version}-${bin.suffix}.zip"/>
     </antcall>
     <antcall target="sign-file">
       <param name="sign.archive" value="${name}-${version}-${bin.suffix}.zip"/>
       <param name="pwd" value="${pwd}"/>
     </antcall>
-    <antcall target="sha256">
+    <antcall target="sha512">
       <param name="sign.archive" value="${name}-${version}-${bin.suffix}.tar.gz"/>
     </antcall>
     <antcall target="sign-file">
@@ -377,11 +377,11 @@
     </antcall>
   </target>
 
-  <target name="sha256">
-    <property name="sha256sum.exec" value="sha256sum"/>
-    <property name="sha256sum.options" value=""/>
-    <exec executable="${sha256sum.exec}" output="${sign.archive}.sha256">
-      <arg line="${sha256sum.options} ${sign.archive}"/>
+  <target name="sha512">
+    <property name="sha512sum.exec" value="sha512sum"/>
+    <property name="sha512sum.options" value=""/>
+    <exec executable="${sha512sum.exec}" output="${sign.archive}.sha512">
+      <arg line="${sha512sum.options} ${sign.archive}"/>
     </exec>
   </target>
 
@@ -484,7 +484,7 @@
       <include name="maven/pom.xml"/>
       </patternset>
     </fileset>
-    <checksum algorithm="sha-256" fileext=".sha256">
+    <checksum algorithm="sha-512" fileext=".sha512">
       <fileset refid="bundle-files"/>
     </checksum>
     <input message="Passphrase for your default private key (attention: passphrase will be echoed in clear text on the display!)" addproperty="pwd"/>
