@@ -25,6 +25,8 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,6 +60,7 @@ import org.apache.xmlgraphics.image.loader.ImageFlavor;
 import org.apache.xmlgraphics.image.loader.impl.AbstractImageConverter;
 import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
+import org.apache.xmlgraphics.java2d.AbstractGraphics2D;
 import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.Graphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
@@ -162,6 +165,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                     at.scale(area.getWidth() / mediaBox.getWidth(),
                             area.getHeight() / mediaBox.getHeight());
                     g2d.transform(at);
+                normaliseScale(g2d);
                     new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
                 }
             } catch (UnsupportedOperationException e) {
@@ -170,6 +174,17 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 throw new RuntimeException("Error while painting PDF page: " + uri + " " + t.getMessage(), t);
             } finally {
                 fopFontProvider.close();
+            }
+        }
+
+        private void normaliseScale(Graphics2D g2d) {
+            if (!(g2d instanceof AbstractGraphics2D)) {
+                AffineTransform old = g2d.getTransform();
+                double scaleX = BigDecimal.valueOf(old.getScaleX()).setScale(2, RoundingMode.HALF_UP).doubleValue();
+                double scaleY = BigDecimal.valueOf(old.getScaleY()).setScale(2, RoundingMode.HALF_UP).doubleValue();
+                AffineTransform newat = new AffineTransform(scaleX, old.getShearY(), old.getShearX(), scaleY,
+                        old.getTranslateX(), old.getTranslateY());
+                g2d.setTransform(newat);
             }
         }
 

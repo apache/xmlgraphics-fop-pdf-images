@@ -18,7 +18,10 @@
 /* $Id: ImageConverterPDF2G2D.java 1808727 2017-09-18 15:02:56Z ssteiner $ */
 package org.apache.fop.render.pdf;
 
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -96,5 +99,19 @@ public class ImageConverterPDF2G2DTestCase {
             fontUsed = true;
             return true;
         }
+    }
+
+    @Test
+    public void testPDFToImage() throws IOException, ImageException {
+        PDDocument doc = PDDocument.load(new File(FONTSNOTEMBEDDED));
+        ImageInfo imgi = new ImageInfo(FONTSNOTEMBEDDED, "b");
+        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+        ImageConverterPDF2G2D imageConverterPDF2G2D = new ImageConverterPDF2G2D();
+        ImageGraphics2D fopGraphics2D = (ImageGraphics2D) imageConverterPDF2G2D.convert(img, null);
+        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics2D = image.createGraphics();
+        fopGraphics2D.getGraphics2DImagePainter().paint(graphics2D, new Rectangle(0, 0, 1000, 1000));
+        doc.close();
+        Assert.assertEquals(graphics2D.getTransform().getScaleX(), 1.63, 0);
     }
 }
