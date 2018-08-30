@@ -451,7 +451,7 @@ public class PDFBoxAdapter {
                 .append(PDFNumber.doubleOut(mediaBox.getLowerLeftY())).append(' ')
                 .append(PDFNumber.doubleOut(mediaBox.getWidth())).append(' ')
                 .append(PDFNumber.doubleOut(mediaBox.getHeight())).append(" re W n\n");
-        return boxStr.toString() + IOUtils.toString(pdStream.createInputStream(null), "ISO-8859-1");
+        return boxStr.toString() + IOUtils.toString(pdStream.createInputStream(), "ISO-8859-1");
     }
 
     private PDStream getContents(PDPage page) throws IOException {
