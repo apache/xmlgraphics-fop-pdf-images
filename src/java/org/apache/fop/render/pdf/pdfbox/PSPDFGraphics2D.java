@@ -62,6 +62,7 @@ import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingPaint;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingPaint;
+import org.apache.pdfbox.pdmodel.graphics.shading.ShadingPaint;
 import org.apache.pdfbox.util.Matrix;
 
 import org.apache.xmlgraphics.image.loader.ImageInfo;
@@ -120,7 +121,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                 try {
                     AxialShadingContext asc = (AxialShadingContext) paintContext;
                     float[] fCoords = asc.getCoords();
-                    transformCoords(fCoords, paint, true);
+                    transformCoords(fCoords, (ShadingPaint) paint, true);
                     PDFunction function = asc.getFunction();
                     Function targetFT = getFunction(function);
                     if (targetFT != null) {
@@ -141,7 +142,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
                 try {
                     RadialShadingContext rsc = (RadialShadingContext) paintContext;
                     float[] fCoords = rsc.getCoords();
-                    transformCoords(fCoords, paint, false);
+                    transformCoords(fCoords, (ShadingPaint) paint, false);
                     PDFunction function = rsc.getFunction();
                     Function targetFT3 = getFunction(function);
                     List<Double> dCoords = floatArrayToDoubleList(fCoords);
@@ -196,25 +197,16 @@ public class PSPDFGraphics2D extends PSGraphics2D {
         return rectangle;
     }
 
-    private void transformCoords(float[] coords, Paint paint, boolean axialShading) {
-        try {
-            Field f = paint.getClass().getDeclaredField("matrix");
-            f.setAccessible(true);
-            Matrix ctm = (Matrix) f.get(paint);
-            AffineTransform at = ctm.createAffineTransform();
-            if (axialShading) {
-                at.transform(coords, 0, coords, 0, 2);
-            } else {
-                at.transform(coords, 0, coords, 0, 1);
-                at.transform(coords, 3, coords, 3, 1);
-                coords[2] *= ctm.getScalingFactorX();
-                coords[5] *= ctm.getScalingFactorX();
-            }
-
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+    private void transformCoords(float[] coords, ShadingPaint paint, boolean axialShading) {
+        Matrix ctm = paint.getMatrix();
+        AffineTransform at = ctm.createAffineTransform();
+        if (axialShading) {
+            at.transform(coords, 0, coords, 0, 2);
+        } else {
+            at.transform(coords, 0, coords, 0, 1);
+            at.transform(coords, 3, coords, 3, 1);
+            coords[2] *= ctm.getScalingFactorX();
+            coords[5] *= ctm.getScalingFactorX();
         }
     }
 
