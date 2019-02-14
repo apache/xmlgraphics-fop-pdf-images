@@ -20,6 +20,7 @@ package org.apache.fop.render.pdf;
 import java.io.File;
 import java.io.IOException;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -35,7 +36,7 @@ import org.apache.pdfbox.pdmodel.common.PDNumberTreeNode;
 
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 
-import junit.framework.Assert;
+
 
 public class PageParentTreeFinderTestCase {
     private static final String LINK = "test/resources/linkTagged.pdf";

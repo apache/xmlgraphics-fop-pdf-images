@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.mockito.Matchers.any;
@@ -84,7 +85,7 @@ import org.apache.fop.render.ps.PSDocumentHandler;
 import org.apache.fop.render.ps.PSImageFormResource;
 import org.apache.fop.render.ps.PSRenderingUtil;
 
-import junit.framework.Assert;
+
 
 public class PDFBoxAdapterTestCase {
     protected static final String CFF1 = "test/resources/2fonts.pdf";

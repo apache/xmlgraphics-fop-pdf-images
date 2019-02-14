@@ -19,6 +19,7 @@ package org.apache.fop.render.pdf;
 
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSDictionary;
@@ -26,7 +27,7 @@ import org.apache.pdfbox.cos.COSName;
 
 import org.apache.fop.render.pdf.pdfbox.StructureTreeMergerUtil;
 
-import junit.framework.Assert;
+
 
 public class StructureTreeMergerUtilTestCase {
 

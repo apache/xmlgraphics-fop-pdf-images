@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -40,7 +41,7 @@ import org.apache.fop.pdf.PDFStructElem;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.TaggedPDFConductor;
 
-import junit.framework.Assert;
+
 
 public class TaggedPDFConductorTestCase {
     private static final String LINK = "test/resources/linkTagged.pdf";

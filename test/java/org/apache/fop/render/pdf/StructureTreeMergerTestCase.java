@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -49,7 +50,7 @@ import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 import org.apache.fop.render.pdf.pdfbox.StructureTreeMerger;
 
-import junit.framework.Assert;
+
 
 public class StructureTreeMergerTestCase {
     private static final String LINK = "test/resources/linkTagged.pdf";

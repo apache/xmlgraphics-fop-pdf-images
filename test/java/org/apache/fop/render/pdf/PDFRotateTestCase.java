@@ -25,6 +25,7 @@ import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -41,7 +42,7 @@ import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 
-import junit.framework.Assert;
+
 
 public class PDFRotateTestCase {
 
@@ -61,7 +62,7 @@ public class PDFRotateTestCase {
         GraphicContext gc = new GraphicContext();
         g2d.setGraphicContext(gc);
         ig.getGraphics2DImagePainter().paint(g2d, rect);
-        Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045735);
+        Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045735, 0);
     }
 
     @Test
@@ -70,7 +71,7 @@ public class PDFRotateTestCase {
         Assert.assertEquals(getTransform(270), new AffineTransform(0, -1, -1, 0, 842, 595));
         AffineTransform at = getTransform(180);
         Assert.assertEquals((int)at.getTranslateX(), 842);
-        Assert.assertEquals(at.getTranslateY(), 0.0);
+        Assert.assertEquals(at.getTranslateY(), 0.0, 0);
     }
 
     private AffineTransform getTransform(int angle) throws IOException {

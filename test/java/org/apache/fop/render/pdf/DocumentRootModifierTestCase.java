@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSDictionary;
@@ -38,7 +39,7 @@ import org.apache.fop.pdf.PDFStructTreeRoot;
 import org.apache.fop.render.pdf.pdfbox.DocumentRootModifier;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 
-import junit.framework.Assert;
+
 
 public class DocumentRootModifierTestCase {
     private static final String CLASSMAP = "test/resources/classMap.pdf";

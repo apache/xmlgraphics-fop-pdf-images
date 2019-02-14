@@ -27,6 +27,7 @@ import java.io.InputStream;
 import javax.imageio.ImageIO;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -41,7 +42,7 @@ import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData;
 import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
 
-import junit.framework.Assert;
+
 
 public class PreloaderPDFTestCase {
 
