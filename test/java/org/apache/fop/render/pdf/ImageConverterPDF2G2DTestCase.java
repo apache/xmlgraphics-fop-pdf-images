@@ -25,11 +25,16 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.common.PDStream;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
@@ -61,13 +66,19 @@ public class ImageConverterPDF2G2DTestCase {
     }
 
     private boolean pdfToPS(String pdf, String font) throws IOException, ImageException {
+        PDDocument doc = PDDocument.load(new File(pdf));
+        MyLazyFont lazyFont = new MyLazyFont();
+        pdfToPS(doc, pdf, font, lazyFont);
+        return lazyFont.font.fontUsed;
+    }
+
+    private String pdfToPS(PDDocument doc, String pdf, String font, MyLazyFont lazyFont)
+            throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
-        PDDocument doc = PDDocument.load(new File(pdf));
         org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
         ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
         GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
-        MyLazyFont lazyFont = new MyLazyFont();
         g.addFallbackFont(font, lazyFont);
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         PSPDFGraphics2D g2d = (PSPDFGraphics2D)
@@ -77,7 +88,7 @@ public class ImageConverterPDF2G2DTestCase {
         g2d.setGraphicContext(gc);
         g.paint(g2d, rect);
         doc.close();
-        return lazyFont.font.fontUsed;
+        return stream.toString("UTF-8");
     }
 
     static class MyLazyFont extends LazyFont {
@@ -113,5 +124,25 @@ public class ImageConverterPDF2G2DTestCase {
         fopGraphics2D.getGraphics2DImagePainter().paint(graphics2D, new Rectangle(0, 0, 1000, 1000));
         doc.close();
         Assert.assertEquals(graphics2D.getTransform().getScaleX(), 1.63, 0);
+    }
+
+    @Test
+    public void testCheckImageMask() throws IOException, ImageException {
+        String pdf = PDFBoxAdapterTestCase.CFFCID1;
+        PDDocument doc = PDDocument.load(new File(pdf));
+        COSStream cosStream = new COSStream();
+        OutputStream outputStream = cosStream.createOutputStream();
+        outputStream.write("/Fm0 Do\n".getBytes("UTF-8"));
+        outputStream.close();
+        PDStream pdStream = new PDStream(cosStream);
+        doc.getPage(0).setContents(pdStream);
+
+        PDXObject form = doc.getPage(0).getResources().getXObject(COSName.getPDFName("Fm0"));
+        OutputStream formStream = form.getCOSObject().createOutputStream();
+        formStream.write("1 g".getBytes("UTF-8"));
+        formStream.close();
+
+        String ps = pdfToPS(doc, pdf, null, null);
+        Assert.assertTrue(ps.contains("/ImageType 1"));
     }
 }

@@ -97,7 +97,7 @@ public class PDFBoxAdapterTestCase {
     protected static final String TTSubset2 = "test/resources/ttsubset2.pdf";
     private static final String TTSubset3 = "test/resources/ttsubset3.pdf";
     private static final String TTSubset5 = "test/resources/ttsubset5.pdf";
-    private static final String CFFCID1 = "test/resources/cffcid1.pdf";
+    protected static final String CFFCID1 = "test/resources/cffcid1.pdf";
     private static final String CFFCID2 = "test/resources/cffcid2.pdf";
     protected static final String Type1Subset1 = "test/resources/t1subset.pdf";
     protected static final String Type1Subset2 = "test/resources/t1subset2.pdf";

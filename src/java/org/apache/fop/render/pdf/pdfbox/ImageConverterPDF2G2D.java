@@ -37,7 +37,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.fontbox.FontBoxFont;
 import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.ttf.TrueTypeFont;
+import org.apache.pdfbox.contentstream.PDFStreamEngine;
+import org.apache.pdfbox.contentstream.operator.Operator;
+import org.apache.pdfbox.contentstream.operator.color.SetNonStrokingDeviceGrayColor;
+import org.apache.pdfbox.contentstream.operator.graphics.DrawObject;
+import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -51,6 +57,7 @@ import org.apache.pdfbox.pdmodel.font.PDCIDSystemInfo;
 import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
@@ -158,7 +165,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 if (rotation == 90 || rotation == 270) {
                     at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
                 }
-                if (g2d instanceof PSGraphics2D && new PageUtil().pageHasTransparency(page.getResources())) {
+                if (g2d instanceof PSGraphics2D && new PageUtil().pageHasTransparency(page.getResources(), page)) {
                     drawPageAsImage(at, g2d);
                 } else {
                     at.translate(area.getX(), area.getY());
@@ -197,8 +204,9 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
         static class PageUtil {
             private List<COSDictionary> visited = new ArrayList<COSDictionary>();
+            private Map<String, PDXObject> visitedXOjects = new HashMap<String, PDXObject>();
 
-            private boolean pageHasTransparency(PDResources res) throws IOException {
+            private boolean pageHasTransparency(PDResources res, final PDPage page) throws IOException {
                 if (res != null) {
                     visited.add(res.getCOSObject());
                     if (res.getShadingNames() != null) {
@@ -225,6 +233,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                     }
                     for (COSName pdxObjectName : res.getXObjectNames()) {
                         PDXObject pdxObject = res.getXObject(pdxObjectName);
+                        visitedXOjects.put(pdxObjectName.getName(), pdxObject);
                         if (pdxObject instanceof PDFormXObject) {
                             PDFormXObject form = (PDFormXObject) pdxObject;
                             if (form.getGroup() != null && COSName.TRANSPARENCY.equals(
@@ -233,13 +242,14 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                             }
                             PDResources formRes = form.getResources();
                             if (formRes != null && !visited.contains(formRes.getCOSObject())
-                                    && pageHasTransparency(formRes)) {
+                                    && pageHasTransparency(formRes, page)) {
                                 return true;
                             }
                         }
                     }
                 }
-                return false;
+                CheckImageMask checkImageMask = new CheckImageMask(visitedXOjects, page);
+                return checkImageMask.foundWhite;
             }
         }
 
@@ -250,6 +260,48 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
         public void addFallbackFont(String s, Object font) {
             fopFontProvider.fonts.put(s, font);
+        }
+    }
+
+    static final class CheckImageMask extends PDFStreamEngine {
+        private static final String DRAWOBJECT = new DrawObject().getName();
+        private static final String SETNONSTROKINGDEVICEGRAYCOLOR = new SetNonStrokingDeviceGrayColor().getName();
+        private boolean foundWhite;
+        private boolean checkColor;
+        private Map<String, PDXObject> xobjects;
+        private PDPage page;
+
+        private CheckImageMask(Map<String, PDXObject> visitedXOjects, PDPage page) throws IOException {
+            xobjects = visitedXOjects;
+            this.page = page;
+            for (PDXObject pdxObject : xobjects.values()) {
+                if (pdxObject instanceof PDImageXObject) {
+                    if (((PDImageXObject) pdxObject).isStencil()) {
+                        processChildStream(page, page);
+                        return;
+                    }
+                }
+            }
+        }
+
+        protected void processOperator(Operator operator, List<COSBase> arguments) throws IOException {
+            if (!foundWhite) {
+                String op = operator.getName();
+                if (checkColor && op.equals(SETNONSTROKINGDEVICEGRAYCOLOR)) {
+                    COSBase color = arguments.get(0);
+                    if (color instanceof COSInteger && ((COSInteger) color).intValue() == 1) {
+                        foundWhite = true;
+                    }
+                } else if (op.equals(DRAWOBJECT)) {
+                    COSName name = (COSName) arguments.get(0);
+                    PDXObject xobject = xobjects.get(name.getName());
+                    if (xobject instanceof PDFormXObject) {
+                        checkColor = true;
+                        processChildStream((PDFormXObject)xobject, page);
+                    }
+                    checkColor = false;
+                }
+            }
         }
     }
 
