@@ -273,9 +273,12 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
     }
 
     public byte[] getMergedFontSubset() throws IOException {
+        int sgsize = added.size();
+        if (sgsize == 1 && size == fontFile.getAllBytes().length) {
+            return fontFile.getAllBytes();
+        }
         output = new byte[size * 2];
         createDirectory();     // Create the TrueType header and directory
-        int sgsize = added.size();
         if (!cid) {
             writeCMAP(cmap);
 //            copyTable(fontFile, OFTableName.CMAP);

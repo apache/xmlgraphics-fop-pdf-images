@@ -21,6 +21,7 @@ import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -50,6 +51,8 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
@@ -78,14 +81,13 @@ import org.apache.fop.render.pcl.PCLGenerator;
 import org.apache.fop.render.pcl.PCLGraphics2D;
 import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
+import org.apache.fop.render.pdf.pdfbox.MergeTTFonts;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
 import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 import org.apache.fop.render.ps.PSDocumentHandler;
 import org.apache.fop.render.ps.PSImageFormResource;
 import org.apache.fop.render.ps.PSRenderingUtil;
-
-
 
 public class PDFBoxAdapterTestCase {
     protected static final String CFF1 = "test/resources/2fonts.pdf";
@@ -170,6 +172,23 @@ public class PDFBoxAdapterTestCase {
         writeText(fi, TYPE0TT);
         writeText(fi, TYPE0CFF);
         parseFonts(fi);
+    }
+
+    @Test
+    public void testMergeTT() throws IOException {
+        PDDocument doc = PDDocument.load(new File(TYPE0TT));
+        PDType0Font type0Font = (PDType0Font) doc.getPage(0).getResources().getFont(COSName.getPDFName("C2_0"));
+        PDCIDFontType2 ttf = (PDCIDFontType2) type0Font.getDescendantFont();
+        InputStream originalData = ttf.getTrueTypeFont().getOriginalData();
+        byte[] originalDataBytes = IOUtils.toByteArray(originalData);
+        doc.close();
+
+        MergeTTFonts mergeTTFonts = new MergeTTFonts(null);
+        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+        map.put(0, 0);
+        mergeTTFonts.readFont(new ByteArrayInputStream(originalDataBytes), null, null, map, true);
+        byte[] mergedData = mergeTTFonts.getMergedFontSubset();
+        Assert.assertArrayEquals(mergedData, originalDataBytes);
     }
 
     private void parseFonts(FontInfo fi) throws IOException {
