@@ -369,10 +369,12 @@ public class PDFBoxAdapter {
 //            }
         }
         if (newStream == null) {
-            PDFWriter writer = new PDFWriter(uniqueName, currentMCID);
-            newStream = writer.writeText(pdStream);
-            currentMCID = writer.getCurrentMCID();
-
+            newStream = (String) clonedVersion.get(key);
+            if (newStream == null) {
+                PDFWriter writer = new PDFWriter(uniqueName, currentMCID);
+                newStream = writer.writeText(pdStream);
+                clonedVersion.put(key, newStream);
+            }
         }
         pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
         mergeXObj(sourcePageResources, fontinfo, uniqueName);

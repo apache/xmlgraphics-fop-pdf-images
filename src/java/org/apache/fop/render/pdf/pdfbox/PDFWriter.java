@@ -149,8 +149,4 @@ public class PDFWriter {
         dictArgs.add(cn.getKey());
         dictArgs.add(updatedID);
     }
-
-    protected int getCurrentMCID() {
-        return currentMCID;
-    }
 }

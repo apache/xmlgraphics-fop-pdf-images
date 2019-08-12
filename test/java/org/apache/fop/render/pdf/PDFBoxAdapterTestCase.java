@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -478,55 +479,60 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testPDFCache() throws IOException {
-        PDFDocument pdfdoc = new PDFDocument("");
-        Map<Object, Object> pdfCache = new LinkedHashMap<Object, Object>();
-        Map<Object, Object> objectCachePerFile = loadPDFWithCache(pdfdoc, pdfCache, LOOP);
+        LoadPDFWithCache loadPDFWithCache = new LoadPDFWithCache();
+        loadPDFWithCache.run(LOOP);
 
-        Object item = pdfCache.values().iterator().next();
+        Object item = loadPDFWithCache.pdfCache.values().iterator().next();
         Assert.assertEquals(item.getClass(), PDFStream.class);
-        item = pdfCache.keySet().iterator().next();
+        item = loadPDFWithCache.pdfCache.keySet().iterator().next();
         Assert.assertEquals(item.getClass(), Integer.class);
-        Assert.assertEquals(pdfCache.size(), 12);
+        Assert.assertEquals(loadPDFWithCache.pdfCache.size(), 12);
 
-        int pdfDictionary = 0;
-        int strings = 0;
-        for (Map.Entry<Object, Object> o : objectCachePerFile.entrySet()) {
-            if (o.getValue().getClass().equals(PDFDictionary.class)) {
-                pdfDictionary++;
-            }
-            if (o.getKey() instanceof String) {
-                strings++;
-            }
-        }
-        Assert.assertEquals(pdfDictionary, 26);
-        Assert.assertEquals(strings, 33);
-        Assert.assertEquals(objectCachePerFile.size(), 45);
+        Iterator<Object> iterator = loadPDFWithCache.objectCachePerFile.values().iterator();
+        iterator.next();
+        item = iterator.next();
+        Assert.assertEquals(item.getClass(), PDFDictionary.class);
+        item = loadPDFWithCache.objectCachePerFile.keySet().iterator().next();
+        Assert.assertEquals(item.getClass(), String.class);
+        Assert.assertEquals(loadPDFWithCache.objectCachePerFile.size(), 46);
     }
 
-    private Map<Object, Object> loadPDFWithCache(PDFDocument pdfdoc, Map<Object, Object> pdfCache, String pdf)
-        throws IOException {
-        Map<Object, Object> objectCachePerFile = new LinkedHashMap<Object, Object>();
-        PDFPage pdfpage = getPDFPage(pdfdoc);
-        pdfdoc.assignObjectNumber(pdfpage);
-        pdfpage.setDocument(pdfdoc);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(
-                pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
-        PDDocument doc = PDDocument.load(new File(pdf));
-        PDPage page = doc.getPage(0);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
-        doc.close();
-        return objectCachePerFile;
+    @Test
+    public void testPDFCache2() throws IOException {
+        LoadPDFWithCache loadPDFWithCache = new LoadPDFWithCache();
+        String stream = loadPDFWithCache.run(LOOP);
+        String cachedStream = (String) loadPDFWithCache.objectCachePerFile.get(LOOP);
+        Assert.assertTrue(cachedStream.contains("EMC"));
+        Assert.assertTrue(stream.endsWith(cachedStream));
+    }
+
+    private static class LoadPDFWithCache {
+        private PDFDocument pdfdoc = new PDFDocument("");
+        private Map<Object, Object> pdfCache = new LinkedHashMap<Object, Object>();
+        private Map<Object, Object> objectCachePerFile = new LinkedHashMap<Object, Object>();
+        private String run(String pdf) throws IOException {
+            PDFPage pdfpage = getPDFPage(pdfdoc);
+            pdfdoc.assignObjectNumber(pdfpage);
+            pdfpage.setDocument(pdfdoc);
+            PDFBoxAdapter adapter = new PDFBoxAdapter(
+                    pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
+            PDDocument doc = PDDocument.load(new File(pdf));
+            PDPage page = doc.getPage(0);
+            String stream = adapter.createStreamFromPDFBoxPage(
+                    doc, page, pdf, new AffineTransform(), null, new Rectangle());
+            doc.close();
+            return stream;
+        }
     }
 
     @Test
     public void testPDFSize() throws IOException {
-        PDFDocument pdfdoc = new PDFDocument("");
-        Map<Object, Object> pdfCache = new HashMap<Object, Object>();
-        loadPDFWithCache(pdfdoc, pdfCache, ANNOT);
-        loadPDFWithCache(pdfdoc, pdfCache, ANNOT);
+        LoadPDFWithCache loadPDFWithCache = new LoadPDFWithCache();
+        loadPDFWithCache.run(ANNOT);
+        loadPDFWithCache.run(ANNOT);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        pdfdoc.output(bos);
-        Assert.assertEquals(pdfCache.size(), 2);
+        loadPDFWithCache.pdfdoc.output(bos);
+        Assert.assertEquals(loadPDFWithCache.pdfCache.size(), 2);
         Assert.assertTrue(bos.size() <= 6418);
     }
 
