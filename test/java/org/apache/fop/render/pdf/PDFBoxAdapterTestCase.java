@@ -74,6 +74,7 @@ import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFFilterList;
+import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
@@ -125,10 +126,11 @@ public class PDFBoxAdapterTestCase {
         return new PDFPage(new PDFResources(doc), 0, r, r, r, r);
     }
 
-    protected static PDFBoxAdapter getPDFBoxAdapter(boolean mergeFonts) {
+    protected static PDFBoxAdapter getPDFBoxAdapter(boolean mergeFonts, boolean formXObject) {
         PDFDocument doc = new PDFDocument("");
         PDFPage pdfpage = getPDFPage(doc);
         doc.setMergeFontsEnabled(mergeFonts);
+        doc.setFormXObjectEnabled(formXObject);
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
         return new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
@@ -221,24 +223,21 @@ public class PDFBoxAdapterTestCase {
         PDDocument doc = PDDocument.load(new File(pdf));
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
-        String c = getPDFBoxAdapter(true).createStreamFromPDFBoxPage(doc, page, pdf, at, fi, new Rectangle());
-//        PDResources sourcePageResources = page.findResources();
-//        COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSDictionary().getDictionaryObject(COSName.FONT);
-//        PDFBoxAdapter.PDFWriter w = adapter. new MergeFontsPDFWriter(fonts, fi, "", new ArrayList<COSName>());
-//        String c = w.writeText(page.getContents());
+        String c = (String) getPDFBoxAdapter(true, false)
+                .createStreamFromPDFBoxPage(doc, page, pdf, at, fi, new Rectangle());
         doc.close();
         return c;
     }
 
     @Test
     public void testTaggedPDFWriter() throws IOException {
-        PDFBoxAdapter adapter = getPDFBoxAdapter(false);
+        PDFBoxAdapter adapter = getPDFBoxAdapter(false, false);
         adapter.setCurrentMCID(5);
         PDDocument doc = PDDocument.load(new File(HELLOTagged));
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
         Assert.assertTrue(stream, stream.contains("/P <</MCID 5 >>BDC"));
         doc.close();
     }
@@ -265,7 +264,7 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testAnnot2() throws Exception {
-        PDFBoxAdapter adapter = getPDFBoxAdapter(false);
+        PDFBoxAdapter adapter = getPDFBoxAdapter(false, false);
         PDDocument doc = PDDocument.load(new File(ANNOT));
         PDPage page = doc.getPage(0);
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
@@ -290,7 +289,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
         Assert.assertTrue(stream.contains("/Link <</MCID 5 >>BDC"));
         Assert.assertEquals(pageNumbers.size(), 4);
         PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
@@ -518,7 +517,7 @@ public class PDFBoxAdapterTestCase {
                     pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
             PDDocument doc = PDDocument.load(new File(pdf));
             PDPage page = doc.getPage(0);
-            String stream = adapter.createStreamFromPDFBoxPage(
+            String stream = (String) adapter.createStreamFromPDFBoxPage(
                     doc, page, pdf, new AffineTransform(), null, new Rectangle());
             doc.close();
             return stream;
@@ -566,7 +565,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         page.setResources(null);
         AffineTransform at = new AffineTransform();
-        getPDFBoxAdapter(false).createStreamFromPDFBoxPage(doc, page, CFF1, at, new FontInfo(), new Rectangle());
+        getPDFBoxAdapter(false, false).createStreamFromPDFBoxPage(doc, page, CFF1, at, new FontInfo(), new Rectangle());
         doc.close();
     }
 
@@ -585,5 +584,34 @@ public class PDFBoxAdapterTestCase {
         PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, pdfpage, null);
         c.setPageNumbers(new HashMap<Integer, PDFArray>());
         new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
+    }
+
+    @Test
+    public void testMergeFontsAndFormXObject() throws IOException {
+        String msg = "";
+        PDDocument doc = PDDocument.load(new File(IMAGE));
+        PDPage page = doc.getPage(0);
+        AffineTransform at = new AffineTransform();
+        try {
+            getPDFBoxAdapter(true, true)
+                    .createStreamFromPDFBoxPage(doc, page, IMAGE, at, new FontInfo(), new Rectangle());
+        } catch (RuntimeException e) {
+            msg = e.getMessage();
+        }
+        doc.close();
+        Assert.assertEquals(msg, "merge-fonts and form-xobject can't both be enabled");
+    }
+
+    @Test
+    public void testFormXObject() throws IOException {
+        PDDocument doc = PDDocument.load(new File(IMAGE));
+        PDPage page = doc.getPage(0);
+        AffineTransform at = new AffineTransform();
+        PDFFormXObject formXObject = (PDFFormXObject) getPDFBoxAdapter(false, true)
+                .createStreamFromPDFBoxPage(doc, page, IMAGE, at, new FontInfo(), new Rectangle());
+        doc.close();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        formXObject.output(bos);
+        Assert.assertTrue(bos.toString("UTF-8").contains("/Type /XObject"));
     }
 }

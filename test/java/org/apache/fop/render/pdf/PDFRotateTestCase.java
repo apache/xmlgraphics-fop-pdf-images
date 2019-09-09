@@ -75,13 +75,13 @@ public class PDFRotateTestCase {
     }
 
     private AffineTransform getTransform(int angle) throws IOException {
-        PDFBoxAdapter adapter = PDFBoxAdapterTestCase.getPDFBoxAdapter(false);
+        PDFBoxAdapter adapter = PDFBoxAdapterTestCase.getPDFBoxAdapter(false, false);
         PDDocument doc = PDDocument.load(new File(PDFBoxAdapterTestCase.ROTATE));
         PDPage page = doc.getPage(0);
         page.setRotation(angle);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
         Assert.assertTrue(stream.contains("/GS0106079 gs"));
         Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
         doc.close();

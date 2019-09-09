@@ -21,6 +21,7 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,6 +70,7 @@ import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFName;
 import org.apache.fop.pdf.PDFNumber;
 import org.apache.fop.pdf.PDFObject;
@@ -341,8 +343,8 @@ public class PDFBoxAdapter {
      * @return the stream
      * @throws IOException if an I/O error occurs
      */
-    public String createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
-                                             AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
+    public Object createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
+                                                     AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
         throws IOException {
         handleAnnotations(sourceDoc, page, atdoc);
         if (pageNumbers.containsKey(targetPage.getPageIndex())) {
@@ -359,24 +361,18 @@ public class PDFBoxAdapter {
             fontsBackup = new COSDictionary(fonts);
             MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID);
             newStream = m.writeText(pdStream);
-//            if (newStream != null) {
-//                for (Object f : fonts.keySet().toArray()) {
-//                    COSDictionary fontdata = (COSDictionary)fonts.getDictionaryObject((COSName)f);
-//                    if (getUniqueFontName(fontdata) != null) {
-//                        fonts.removeItem((COSName)f);
-//                    }
-//                }
-//            }
         }
-        if (newStream == null) {
-            newStream = (String) clonedVersion.get(key);
+        if (!pdfDoc.isFormXObjectEnabled()) {
             if (newStream == null) {
-                PDFWriter writer = new PDFWriter(uniqueName, currentMCID);
-                newStream = writer.writeText(pdStream);
-                clonedVersion.put(key, newStream);
+                newStream = (String) clonedVersion.get(key);
+                if (newStream == null) {
+                    PDFWriter writer = new PDFWriter(uniqueName, currentMCID);
+                    newStream = writer.writeText(pdStream);
+                    clonedVersion.put(key, newStream);
+                }
             }
+            pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
         }
-        pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
         mergeXObj(sourcePageResources, fontinfo, uniqueName);
         PDFDictionary pageResources = (PDFDictionary)cloneForNewDocument(sourcePageResources);
 
@@ -419,6 +415,11 @@ public class PDFBoxAdapter {
         if (pageStream == null) {
             pageStream = new PDFStream();
         }
+
+        if (pdfDoc.isFormXObjectEnabled()) {
+            return getFormXObject(pageResources, pageStream, key, page);
+        }
+
         if (originalPageContents != null) {
             transferDict(originalPageContents, pageStream, filter);
         }
@@ -462,6 +463,57 @@ public class PDFBoxAdapter {
         IOUtils.copy(page.getContents(), os);
         os.close();
         return pdStream;
+    }
+
+    private PDFFormXObject getFormXObject(PDFDictionary pageResources, PDFStream pageStream, String key, PDPage page)
+        throws IOException {
+        if (pdfDoc.isMergeFontsEnabled()) {
+            throw new RuntimeException("merge-fonts and form-xobject can't both be enabled");
+        }
+        if (!pageResources.hasObjectNumber()) {
+            pdfDoc.registerObject(pageResources);
+        }
+        PDFFormXObject form = pdfDoc.addFormXObject(null, pageStream, pageResources.makeReference(), key);
+        final Set<String> page2Form = new HashSet<String>(Arrays.asList("Group", "LastModified", "Metadata"));
+        transferDict(page.getCOSObject(), pageStream, page2Form, true);
+
+        AffineTransform at = form.getMatrix();
+        PDRectangle mediaBox = page.getMediaBox();
+        PDRectangle cropBox = page.getCropBox();
+        PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
+
+        //Handle the /Rotation entry on the page dict
+        int rotation = PDFUtil.getNormalizedRotation(page);
+
+        //Transform to FOP's user space
+        at.scale(1 / viewBox.getWidth(), 1 / viewBox.getHeight());
+        at.translate(mediaBox.getLowerLeftX() - viewBox.getLowerLeftX(),
+                mediaBox.getLowerLeftY() - viewBox.getLowerLeftY());
+        switch (rotation) {
+            case 90:
+                at.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
+                at.translate(0, viewBox.getWidth());
+                at.rotate(-Math.PI / 2.0);
+                break;
+            case 180:
+                at.translate(viewBox.getWidth(), viewBox.getHeight());
+                at.rotate(-Math.PI);
+                break;
+            case 270:
+                at.scale(viewBox.getWidth() / viewBox.getHeight(), viewBox.getHeight() / viewBox.getWidth());
+                at.translate(viewBox.getHeight(), 0);
+                at.rotate(-Math.PI * 1.5);
+                break;
+            default:
+                //no additional transformations necessary
+                break;
+        }
+        form.setMatrix(at);
+
+        form.setBBox(new Rectangle2D.Float(
+                viewBox.getLowerLeftX(), viewBox.getLowerLeftY(),
+                viewBox.getUpperRightX(), viewBox.getUpperRightY()));
+        return form;
     }
 
     private COSDictionary getResources(PDPage page) {

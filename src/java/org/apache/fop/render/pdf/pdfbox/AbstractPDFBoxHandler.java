@@ -49,7 +49,7 @@ import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
  */
 public abstract class AbstractPDFBoxHandler {
 
-    protected String createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
+    protected Object createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
                                         AffineTransform at, FontInfo fontinfo, Rectangle pos,
                                         Map<Integer, PDFArray> pageNumbers,
                                         PDFLogicalStructureHandler handler,
@@ -108,8 +108,7 @@ public abstract class AbstractPDFBoxHandler {
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }
-        String stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri,
-                 at, fontinfo, pos);
+        Object stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri, at, fontinfo, pos);
         if (userAgent.isAccessibilityEnabled() && curentSessionElem != null) {
             TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, page, adapter);
             conductor.handleLogicalStructure(pddoc);

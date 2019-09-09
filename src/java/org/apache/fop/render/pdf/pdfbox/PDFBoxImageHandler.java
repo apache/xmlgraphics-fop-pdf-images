@@ -30,6 +30,7 @@ import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;
 
 import org.apache.fop.fonts.FontInfo;
+import org.apache.fop.pdf.PDFXObject;
 import org.apache.fop.render.ImageHandler;
 import org.apache.fop.render.RenderingContext;
 import org.apache.fop.render.pdf.PDFContentGenerator;
@@ -58,6 +59,7 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         try {
             float x = (float)pos.getX() / 1000f;
             float y = (float)pos.getY() / 1000f;
+            float w = (float)pos.getWidth() / 1000f;
             float h = (float)pos.getHeight() / 1000f;
 
             AffineTransform pageAdjust = new AffineTransform();
@@ -68,17 +70,21 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
                     (float)(generator.getState().getTransform().getTranslateY() - h - y));
             }
             FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
-            String stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
+            Object stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
                     pageAdjust, fontinfo, pos, pdfContext.getPageNumbers(),
                     pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem());
 
             if (stream == null) {
                 return;
             }
-            if (pageAdjust.getScaleX() != 0) {
-                pageAdjust.translate(x * (1 / pageAdjust.getScaleX()), -y * (1 / -pageAdjust.getScaleY()));
+            if (stream instanceof String) {
+                if (pageAdjust.getScaleX() != 0) {
+                    pageAdjust.translate(x * (1 / pageAdjust.getScaleX()), -y * (1 / -pageAdjust.getScaleY()));
+                }
+                generator.placeImage(pageAdjust, (String) stream);
+            } else {
+                generator.placeImage(x, y, w, h, (PDFXObject) stream);
             }
-            generator.placeImage(pageAdjust, stream);
             pdfImage.close();
         } catch (Throwable t) {
             throw new RuntimeException(
