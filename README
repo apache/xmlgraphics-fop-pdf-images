@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 2.0 or later
-- Apache XML Graphics Commons 2.3 or later (for the image converter)
-- Apache XML FOP 2.3 or later (for the FOP functionality)
-- Java 1.6 or later
+- Apache XML Graphics Commons 2.4 or later (for the image converter)
+- Apache XML FOP 2.4 or later (for the FOP functionality)
+- Java 1.7 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.3 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.4 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -155,6 +155,20 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.4
+=========================
+
+Changes:
+FOP-2802: Java 10 PDF/SVG to Image box not shown
+FOP-2812: Update PDFBox to 2.0.11
+FOP-2836: Update PDFBox to 2.0.13
+FOP-2840: Image mask in PDF not rendered to PS
+FOP-2841: PDF to PDF with merge-fonts checkbox misaligned
+FOP-2856: Support compile on Java 12
+FOP-2873: Update to PDFBox 2.0.16
+FOP-2879: Add caching to avoid parsing content stream
+FOP-2882: Allow PDFFormXObject to improve performance
 
 Version 2.3
 =========================
