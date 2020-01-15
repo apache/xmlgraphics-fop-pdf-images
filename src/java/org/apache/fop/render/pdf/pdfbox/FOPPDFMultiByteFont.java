@@ -307,8 +307,11 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             for (Map.Entry<COSName, COSBase> n : dict.entrySet()) {
                 readFontBBox(n.getValue());
                 if (n.getKey() == COSName.FONT_BBOX) {
-                    COSArray w = (COSArray)n.getValue();
-                    float[] bboxf = w.toFloatArray();
+                    COSBase bboxArray = n.getValue();
+                    if (bboxArray instanceof COSObject) {
+                        bboxArray = ((COSObject) bboxArray).getObject();
+                    }
+                    float[] bboxf = ((COSArray)bboxArray).toFloatArray();
                     int[] bbox = new int[bboxf.length];
                     for (int i = 0; i < bbox.length; i++) {
                         bbox[i] = (int)bboxf[i];

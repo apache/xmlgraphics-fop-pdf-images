@@ -31,8 +31,11 @@ import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.GlyphTable;
 import org.apache.fontbox.type1.Type1Font;
+import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSNumber;
+import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
@@ -194,4 +197,23 @@ public class FOPPDFSingleMultiByteFontTestCase {
             return getFont(fontData);
         }
     }
+
+    @Test
+    public void testBBox() throws IOException {
+        COSDictionary dict = new COSDictionary();
+        COSArray array = new COSArray();
+        array.add(COSNumber.get("1"));
+        dict.setItem(COSName.FONT_BBOX, new COSObject(array));
+        FOPPDFMultiByteFont multiByteFont = new NoAddFontFOPPDFMultiByteFont(dict, "");
+        Assert.assertEquals(multiByteFont.getFontBBox()[0], 1);
+    }
+
+    private static class NoAddFontFOPPDFMultiByteFont extends FOPPDFMultiByteFont {
+        NoAddFontFOPPDFMultiByteFont(COSDictionary fontData, String name) throws IOException {
+            super(fontData, name);
+        }
+        public String addFont(COSDictionary fontData) {
+            return null;
+        }
+    };
 }
