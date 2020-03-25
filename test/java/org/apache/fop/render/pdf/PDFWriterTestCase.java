@@ -60,5 +60,14 @@ public class PDFWriterTestCase {
             super.addCache(f);
             i++;
         }
-    };
+    }
+
+    @Test
+    public void testBoolean() throws IOException {
+        String text = "[true true ] a\n";
+        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDFWriter pdfWriter = new MyPDFWriter();
+        String out = pdfWriter.writeText(pdStream);
+        Assert.assertEquals(out, text);
+    }
 }

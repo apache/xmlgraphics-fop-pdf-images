@@ -130,7 +130,7 @@ public class PDFWriter {
             readPDFArguments(op, dictArgs);
             s.append(">>");
         } else if (c instanceof COSBoolean) {
-            s.append(((COSBoolean) c).getValue());
+            s.append(((COSBoolean) c).getValue()).append(" ");
         } else {
             throw new IOException(c + " not supported");
         }
