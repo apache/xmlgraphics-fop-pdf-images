@@ -710,6 +710,7 @@ public class PDFBoxAdapter {
 
                 PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot1, annot1, exclude);
                 if (clonedAnnot instanceof PDFDictionary) {
+                    cloneAnnotParent(annot1, (PDFDictionary) clonedAnnot, exclude);
                     clonedAnnot.setParent(targetPage);
                     PDFBoxAdapterUtil.updateAnnotationLink((PDFDictionary) clonedAnnot);
                 }
@@ -717,6 +718,17 @@ public class PDFBoxAdapter {
             }
         }
         return fields;
+    }
+
+    private void cloneAnnotParent(Object annot1, PDFDictionary clonedAnnot, Collection<COSName> exclude)
+        throws IOException {
+        if (annot1 instanceof COSObject) {
+            COSDictionary dictionary = (COSDictionary) ((COSObject) annot1).getObject();
+            COSBase parent = dictionary.getItem(COSName.PARENT);
+            if (parent != null) {
+                clonedAnnot.put(COSName.PARENT.getName(), cloneForNewDocument(parent, parent, exclude));
+            }
+        }
     }
 
     private COSDictionary getField(COSObject fieldObject, Set<COSObject> fields) {

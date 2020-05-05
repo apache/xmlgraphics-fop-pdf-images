@@ -120,6 +120,7 @@ public class PDFBoxAdapterTestCase {
     private static final String SMASK = "test/resources/smask.pdf";
     private static final String TYPE0TT = "test/resources/type0tt.pdf";
     private static final String TYPE0CFF = "test/resources/type0cff.pdf";
+    private static final String ACCESSIBLERADIOBUTTONS = "test/resources/accessibleradiobuttons.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -274,6 +275,27 @@ public class PDFBoxAdapterTestCase {
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        doc.close();
+    }
+
+
+    @Test
+    public void testAnnot3() throws Exception {
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        pdfpage.setDocument(pdfdoc);
+        pdfpage.setObjectNumber(1);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDDocument doc = PDDocument.load(new File(ACCESSIBLERADIOBUTTONS));
+        PDPage page = doc.getPage(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        pdfdoc.output(os);
+        String out = os.toString("UTF-8");
+        Assert.assertTrue(out.contains("/Parent "));
+        Assert.assertTrue(out.contains("/Kids "));
         doc.close();
     }
 
