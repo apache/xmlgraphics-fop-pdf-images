@@ -70,4 +70,13 @@ public class PDFWriterTestCase {
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }
+
+    @Test
+    public void testNull() throws IOException {
+        String text = "[null ] a\n";
+        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDFWriter pdfWriter = new MyPDFWriter();
+        String out = pdfWriter.writeText(pdStream);
+        Assert.assertEquals(out, text);
+    }
 }

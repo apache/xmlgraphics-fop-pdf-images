@@ -34,6 +34,7 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSFloat;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSNull;
 import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.common.PDStream;
@@ -131,6 +132,8 @@ public class PDFWriter {
             s.append(">>");
         } else if (c instanceof COSBoolean) {
             s.append(((COSBoolean) c).getValue()).append(" ");
+        } else if (c instanceof COSNull) {
+            s.append("null ");
         } else {
             throw new IOException(c + " not supported");
         }
