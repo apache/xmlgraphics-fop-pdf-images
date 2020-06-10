@@ -45,10 +45,12 @@ public final class StructureTreeMergerUtil {
         List<String> keys = new ArrayList<String>();
         if (roleMap != null) {
             for (Entry<COSName, COSBase> entry : roleMap.entrySet()) {
-                String value = ((COSName)entry.getValue()).getName();
-                String key = entry.getKey().getName();
-                if (type.equals(value)) {
-                    keys.add(key);
+                if (entry.getValue() instanceof COSName) {
+                    String value = ((COSName) entry.getValue()).getName();
+                    String key = entry.getKey().getName();
+                    if (type.equals(value)) {
+                        keys.add(key);
+                    }
                 }
             }
         }

@@ -24,10 +24,9 @@ import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSNull;
 
 import org.apache.fop.render.pdf.pdfbox.StructureTreeMergerUtil;
-
-
 
 public class StructureTreeMergerUtilTestCase {
 
@@ -46,5 +45,13 @@ public class StructureTreeMergerUtilTestCase {
         String test = result.get(0);
         String expected = "Icon";
         Assert.assertEquals(test, expected);
+    }
+
+    @Test
+    public void testCOSNull() {
+        COSDictionary rolemap = new COSDictionary();
+        rolemap.setItem(COSName.A, COSNull.NULL);
+        List<String> result = StructureTreeMergerUtil.findRoleMapKeyByValue(null, rolemap);
+        Assert.assertTrue(result.isEmpty());
     }
 }

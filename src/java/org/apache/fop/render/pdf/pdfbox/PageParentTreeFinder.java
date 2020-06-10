@@ -121,7 +121,9 @@ public class PageParentTreeFinder {
             if (keyFlag) {
                 if (kid instanceof COSObject) {
                     tempObject = ((COSObject)kid).getObject();
-                    return (COSArray)tempObject;
+                    if (tempObject instanceof COSArray) {
+                        return (COSArray) tempObject;
+                    }
                 } else if (kid instanceof COSArray) {
                     return (COSArray)kid;
                 }

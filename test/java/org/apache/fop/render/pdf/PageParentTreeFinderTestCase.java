@@ -27,6 +27,7 @@ import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.cos.COSNull;
 import org.apache.pdfbox.cos.COSObject;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -35,8 +36,6 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDNumberTreeNode;
 
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
-
-
 
 public class PageParentTreeFinderTestCase {
     private static final String LINK = "test/resources/linkTagged.pdf";
@@ -88,6 +87,20 @@ public class PageParentTreeFinderTestCase {
         COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
         nums.add(0, COSInteger.get(9));
         nums.add(1, new COSDictionary());
+        COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
+        Assert.assertEquals(numList.size(), 3);
+        doc.close();
+    }
+
+    @Test
+    public void testCOSNull() throws IOException {
+        PDDocument doc = PDDocument.load(new File(LINK));
+        PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
+        COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
+        COSObject kidCOSObj = (COSObject) parentTree.get(0);
+        COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
+        nums.add(0, COSInteger.ZERO);
+        nums.add(1, new COSObject(COSNull.NULL));
         COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
         Assert.assertEquals(numList.size(), 3);
         doc.close();
