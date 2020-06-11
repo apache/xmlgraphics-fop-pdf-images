@@ -24,7 +24,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -45,21 +44,15 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
-import org.apache.pdfbox.cos.COSBoolean;
 import org.apache.pdfbox.cos.COSDictionary;
-import org.apache.pdfbox.cos.COSFloat;
-import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
-import org.apache.pdfbox.cos.COSNull;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
-import org.apache.pdfbox.cos.COSString;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentCatalog;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
-import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 
@@ -71,7 +64,6 @@ import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFFormXObject;
-import org.apache.fop.pdf.PDFName;
 import org.apache.fop.pdf.PDFNumber;
 import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
@@ -88,14 +80,14 @@ public class PDFBoxAdapter {
     /** logging instance */
     protected static final Log log = LogFactory.getLog(PDFBoxAdapter.class);
 
-    private static final Set FILTER_FILTER = new HashSet(
-            Arrays.asList(new String[] {"Filter", "DecodeParms"}));
+    protected static final Set<String> FILTER_FILTER = Collections.unmodifiableSet(
+            new HashSet<String>(Arrays.asList("Filter", "DecodeParms")));
 
     private final PDFPage targetPage;
-    private final PDFDocument pdfDoc;
+    protected final PDFDocument pdfDoc;
 
-    private final Map<Object, Object> clonedVersion;
-    private final Map<Object, Object> objectCache;
+    protected final Map<Object, Object> clonedVersion;
+    protected final Map<Object, Object> objectCache;
     private Map<COSName, String> newXObj = new HashMap<COSName, String>();
     private Map<Integer, PDFArray> pageNumbers;
     private Collection<String> parentFonts = new ArrayList<String>();
@@ -134,157 +126,6 @@ public class PDFBoxAdapter {
         this.currentMCID = currentMCID;
     }
 
-    protected Object cloneForNewDocument(Object base) throws IOException {
-        return cloneForNewDocument(base, base);
-    }
-
-    protected Object cloneForNewDocument(Object base, Object keyBase) throws IOException {
-        return cloneForNewDocument(base, keyBase, Collections.EMPTY_LIST);
-    }
-
-    protected Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
-        if (base == null) {
-            return null;
-        }
-        Object cached = getCachedClone(keyBase);
-        if (cached != null) {
-            // we are done, it has already been converted.
-            return cached;
-        } else if (base instanceof List) {
-            PDFArray array = new PDFArray();
-            cacheClonedObject(keyBase, array);
-            List list = (List)base;
-            for (Object o : list) {
-                array.add(cloneForNewDocument(o, o, exclude));
-            }
-            return array;
-        } else if (base instanceof COSObjectable && !(base instanceof COSBase)) {
-            Object o = ((COSObjectable)base).getCOSObject();
-            Object retval = cloneForNewDocument(o, o, exclude);
-            return cacheClonedObject(keyBase, retval);
-        } else if (base instanceof COSObject) {
-            return readCOSObject((COSObject) base, exclude);
-        } else if (base instanceof COSArray) {
-            PDFArray newArray = new PDFArray();
-            cacheClonedObject(keyBase, newArray);
-            COSArray array = (COSArray)base;
-            for (int i = 0; i < array.size(); i++) {
-                newArray.add(cloneForNewDocument(array.get(i), array.get(i), exclude));
-            }
-            return newArray;
-//        } else if (base instanceof COSStreamArray) {
-//            COSStreamArray array = (COSStreamArray)base;
-//            PDFArray newArray = new PDFArray();
-//            cacheClonedObject(keyBase, newArray);
-//            for (int i = 0, c = array.getStreamCount(); i < c; i++) {
-//                newArray.add(cloneForNewDocument(array.get(i)));
-//            }
-//            return newArray;
-        } else if (base instanceof COSStream) {
-            return readCOSStream((COSStream) base, keyBase);
-        } else if (base instanceof COSDictionary) {
-            return readCOSDictionary((COSDictionary) base, keyBase, exclude);
-        } else if (base instanceof COSName) {
-            byte[] name = ((COSName)base).getName().getBytes("ISO-8859-1");
-            PDFName newName = new PDFName(new String(name, "ISO-8859-1"));
-            return cacheClonedObject(keyBase, newName);
-        } else if (base instanceof COSInteger) {
-            PDFNumber number = new PDFNumber();
-            number.setNumber(((COSInteger)base).longValue());
-            return cacheClonedObject(keyBase, number);
-        } else if (base instanceof COSFloat) {
-            PDFNumber number = new PDFNumber();
-            number.setNumber(((COSFloat)base).floatValue());
-            return cacheClonedObject(keyBase, number);
-        } else if (base instanceof COSBoolean) {
-            //TODO Do we need a PDFBoolean here?
-            Boolean retval = ((COSBoolean)base).getValueAsObject();
-            if (keyBase instanceof COSObject) {
-                return cacheClonedObject(keyBase, new PDFBoolean(retval));
-            } else {
-                return cacheClonedObject(keyBase, retval);
-            }
-        } else if (base instanceof COSString) {
-            return readCOSString((COSString) base, keyBase);
-        } else if (base instanceof COSNull) {
-            return cacheClonedObject(keyBase, null);
-        } else {
-            throw new UnsupportedOperationException("NYI: " + base.getClass().getName());
-        }
-    }
-
-    private PDFDictionary readCOSDictionary(COSDictionary dic, Object keyBase, Collection exclude) throws IOException {
-        PDFDictionary newDict = new PDFDictionary();
-        cacheClonedObject(keyBase, newDict);
-        for (Map.Entry<COSName, COSBase> e : dic.entrySet()) {
-            if (!exclude.contains(e.getKey())) {
-                newDict.put(e.getKey().getName(), cloneForNewDocument(e.getValue(), e.getValue(), exclude));
-            }
-        }
-        return newDict;
-    }
-
-    private Object readCOSObject(COSObject object, Collection exclude) throws IOException {
-        if (log.isTraceEnabled()) {
-            log.trace("Cloning indirect object: "
-                    + object.getObjectNumber()
-                    + " " + object.getGenerationNumber());
-        }
-        Object obj = cloneForNewDocument(object.getObject(), object, exclude);
-        if (obj instanceof PDFObject) {
-            PDFObject pdfobj = (PDFObject)obj;
-            //pdfDoc.registerObject(pdfobj);
-            if (!pdfobj.hasObjectNumber()) {
-                throw new IllegalStateException("PDF object was not registered!");
-            }
-            if (log.isTraceEnabled()) {
-                log.trace("Object registered: "
-                        + pdfobj.getObjectNumber()
-                        + " " + pdfobj.getGeneration()
-                        + " for COSObject: "
-                        + object.getObjectNumber()
-                        + " " + object.getGenerationNumber());
-            }
-        }
-        return obj;
-    }
-
-    private Object readCOSString(COSString string, Object keyBase) throws IOException {
-        //retval = ((COSString)base).getString(); //this is unsafe for binary content
-        byte[] bytes = string.getBytes();
-        //Be on the safe side and use the byte array to avoid encoding problems
-        //as PDFBox doesn't indicate whether the string is just
-        //a string (PDF 1.4, 3.2.3) or a text string (PDF 1.4, 3.8.1).
-        if (keyBase instanceof COSObject) {
-            return cacheClonedObject(keyBase, new PDFString(bytes));
-        } else {
-            if (PDFString.isUSASCII(bytes)) {
-                return cacheClonedObject(keyBase, string.getString());
-            } else {
-                return cacheClonedObject(keyBase, bytes);
-            }
-        }
-    }
-
-    private Object readCOSStream(COSStream originalStream, Object keyBase) throws IOException {
-        InputStream in;
-        Set filter;
-        if (pdfDoc.isEncryptionActive()
-                || (originalStream.containsKey(COSName.DECODE_PARMS) && !originalStream.containsKey(COSName.FILTER))) {
-            in = originalStream.getUnfilteredStream();
-            filter = FILTER_FILTER;
-        } else {
-            //transfer encoded data (don't reencode)
-            in = originalStream.getFilteredStream();
-            filter = Collections.EMPTY_SET;
-        }
-        PDFStream stream = new PDFStream();
-        OutputStream out = stream.getBufferOutputStream();
-        IOUtils.copyLarge(in, out);
-        transferDict(originalStream, stream, filter);
-        return cacheClonedObject(keyBase, stream);
-    }
-
     protected Object getCachedClone(Object base) throws IOException {
         Object key = PDFBoxAdapterUtil.getBaseKey(base);
         Object o = clonedVersion.get(key);
@@ -294,27 +135,19 @@ public class PDFBoxAdapter {
         return o;
     }
 
-    protected Object cacheClonedObject(Object base, Object cloned) throws IOException {
-        Object key = PDFBoxAdapterUtil.getBaseKey(base);
-        if (key == null) {
-            return cloned;
-        }
-        PDFObject pdfobj = (PDFObject) cloned;
-        if (pdfobj != null && !pdfobj.hasObjectNumber() && !(base instanceof COSDictionary)) {
-            pdfDoc.registerObject(pdfobj);
-            if (log.isTraceEnabled()) {
-                log.trace(key + ": " + pdfobj.getClass().getName() + " registered as "
-                        + pdfobj.getObjectNumber() + " " + pdfobj.getGeneration());
-            }
-        }
-        clonedVersion.put(key, cloned);
-        if (key instanceof Integer) {
-            objectCache.put(key, cloned);
-        }
-        return cloned;
+    protected Object cloneForNewDocument(Object base) throws IOException {
+        return new PDFCloner(this).cloneForNewDocument(base);
     }
 
-    private void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter) throws IOException {
+    protected Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
+        return new PDFCloner(this).cloneForNewDocument(base, keyBase, exclude);
+    }
+
+    protected void cacheClonedObject(Object base, Object cloned) throws IOException {
+        new PDFCloner(this).cacheClonedObject(base, cloned);
+    }
+
+    protected void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter) throws IOException {
         transferDict(orgDict, targetDict, filter, false);
     }
 
