@@ -654,7 +654,7 @@ public class PDFBoxAdapter {
             throw new IOException("Illegal PDF. Page not part of parent page node.");
         }
 
-        Set<COSObject> fields = copyAnnotations(page);
+        Set<COSObject> fields = copyAnnotations(page, srcAcroForm);
 
         boolean formAlreadyCopied = getCachedClone(srcAcroForm) != null;
         PDFRoot catalog = this.pdfDoc.getRoot();
@@ -690,7 +690,7 @@ public class PDFBoxAdapter {
         }
     }
 
-    private Set<COSObject> copyAnnotations(PDPage page) throws IOException {
+    private Set<COSObject> copyAnnotations(PDPage page, PDAcroForm srcAcroForm) throws IOException {
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
         Set<COSObject> fields = Collections.emptySet();
         if (annots != null) {
@@ -700,9 +700,7 @@ public class PDFBoxAdapter {
                 exclude.add(COSName.P);
                 if (annot1 instanceof COSObject) {
                     COSObject annot = (COSObject) annot1;
-                    getField(annot, fields);
-
-
+                    getField(annot, fields, srcAcroForm);
                     if (((COSDictionary) annot.getObject()).getItem(COSName.STRUCT_PARENT) != null) {
                         exclude.add(COSName.PARENT);
                     }
@@ -731,14 +729,21 @@ public class PDFBoxAdapter {
         }
     }
 
-    private COSDictionary getField(COSObject fieldObject, Set<COSObject> fields) {
+    private COSDictionary getField(COSObject fieldObject, Set<COSObject> fields, PDAcroForm srcAcroForm) {
         COSDictionary field = (COSDictionary) fieldObject.getObject();
         COSObject parent;
         while ((parent = getParent(field)) != null) {
             fieldObject = parent;
             field = (COSDictionary) fieldObject.getObject();
         }
-        fields.add(fieldObject);
+        if (srcAcroForm != null) {
+            COSArray srcFields = (COSArray) srcAcroForm.getCOSObject().getDictionaryObject(COSName.FIELDS);
+            if (srcFields.toList().contains(fieldObject)) {
+                fields.add(fieldObject);
+            }
+        } else {
+            fields.add(fieldObject);
+        }
         return field;
     }
 

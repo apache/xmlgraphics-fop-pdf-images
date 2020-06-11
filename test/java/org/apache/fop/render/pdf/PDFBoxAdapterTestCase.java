@@ -300,6 +300,27 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
+    public void testAnnotFields() throws Exception {
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        pdfpage.setDocument(pdfdoc);
+        pdfpage.setObjectNumber(1);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDDocument doc = PDDocument.load(new File(ACCESSIBLERADIOBUTTONS));
+        COSArray fields = (COSArray)
+                doc.getDocumentCatalog().getAcroForm().getCOSObject().getDictionaryObject(COSName.FIELDS);
+        fields.remove(0);
+        PDPage page = doc.getPage(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        pdfdoc.outputTrailer(os);
+        Assert.assertTrue(os.toString("UTF-8").contains("/Fields []"));
+        doc.close();
+    }
+
+    @Test
     public void testLink() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = getPDFPage(pdfdoc);
