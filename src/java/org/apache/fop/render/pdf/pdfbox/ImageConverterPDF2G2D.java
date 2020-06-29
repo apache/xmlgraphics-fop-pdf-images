@@ -324,8 +324,9 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         private CustomFont getFont(String name) throws IOException {
             Object typeface = fonts.get(name);
             if (typeface instanceof LazyFont) {
-                Typeface rf = ((LazyFont) typeface).getRealFont();
-                return (CustomFont) rf;
+                ((LazyFont) typeface).getEncodingName(); //used so exception raised on error
+                Typeface realFont = ((LazyFont) typeface).getRealFont();
+                return (CustomFont) realFont;
             } else if (typeface instanceof CustomFontMetricsMapper) {
                 Typeface rf = ((CustomFontMetricsMapper) typeface).getRealFont();
                 return (CustomFont) rf;

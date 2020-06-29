@@ -26,6 +26,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -42,6 +43,8 @@ import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 import org.apache.xmlgraphics.java2d.GeneralGraphics2DImagePainter;
 import org.apache.xmlgraphics.java2d.GraphicContext;
 
+import org.apache.fop.apps.io.InternalResourceResolver;
+import org.apache.fop.apps.io.ResourceResolverFactory;
 import org.apache.fop.fonts.EmbedFontInfo;
 import org.apache.fop.fonts.EmbeddingMode;
 import org.apache.fop.fonts.FontUris;
@@ -58,10 +61,7 @@ public class ImageConverterPDF2G2DTestCase {
 
     @Test
     public void testFontsNotEmbedded() throws IOException, ImageException {
-        Assert.assertTrue(pdfToPS(FONTSNOTEMBEDDED, "Helvetica-Bold"));
         Assert.assertFalse(pdfToPS(FONTSNOTEMBEDDED, "xyz"));
-
-        Assert.assertTrue(pdfToPS(FONTSNOTEMBEDDEDCID, "NewsMinIWA-Th"));
         Assert.assertFalse(pdfToPS(FONTSNOTEMBEDDEDCID, "xyz"));
     }
 
@@ -72,7 +72,12 @@ public class ImageConverterPDF2G2DTestCase {
         return lazyFont.font.fontUsed;
     }
 
-    private String pdfToPS(PDDocument doc, String pdf, String font, MyLazyFont lazyFont)
+    private void pdfToPS(String pdf, LazyFont lazyFont) throws IOException, ImageException {
+        PDDocument doc = PDDocument.load(new File(pdf));
+        pdfToPS(doc, pdf, "NewsMinIWA-Th", lazyFont);
+    }
+
+    private String pdfToPS(PDDocument doc, String pdf, String font, LazyFont lazyFont)
             throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
@@ -144,5 +149,19 @@ public class ImageConverterPDF2G2DTestCase {
 
         String ps = pdfToPS(doc, pdf, null, null);
         Assert.assertTrue(ps.contains("/ImageType 1"));
+    }
+
+    @Test
+    public void testPDFToPSFontError() throws Exception {
+        String msg = "";
+        InternalResourceResolver rr = ResourceResolverFactory.createDefaultInternalResourceResolver(new URI("."));
+        EmbedFontInfo embedFontInfo = new EmbedFontInfo(new FontUris(
+                new File("pom.xml").toURI(), null), false, false, null, "");
+        try {
+            pdfToPS(FONTSNOTEMBEDDEDCID, new LazyFont(embedFontInfo, rr, false));
+        } catch (Exception e) {
+            msg = e.getMessage();
+        }
+        Assert.assertTrue(msg, msg.contains("Reached EOF"));
     }
 }
