@@ -21,15 +21,18 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.MemoryCacheImageInputStream;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 
 import org.apache.xmlgraphics.image.loader.ImageException;
@@ -39,10 +42,9 @@ import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 import org.apache.xmlgraphics.image.loader.impl.ImageRendered;
 
 import org.apache.fop.render.pdf.pdfbox.ImagePDF;
+import org.apache.fop.render.pdf.pdfbox.LastResortPreloaderPDF;
 import org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData;
 import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
-
-
 
 public class PreloaderPDFTestCase {
 
@@ -83,5 +85,17 @@ public class PreloaderPDFTestCase {
         PDDocument doc = img.getPDDocument();
         doc.save(new ByteArrayOutputStream());
         img.close();
+    }
+
+    @Test
+    public void testLastResortPreloaderPDF() throws Exception {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        bos.write("xx".getBytes("UTF-8"));
+        IOUtils.copy(new FileInputStream(PDFBoxAdapterTestCase.ROTATE), bos);
+        InputStream pdf = new ByteArrayInputStream(bos.toByteArray());
+        ImageInputStream inputStream = ImageIO.createImageInputStream(pdf);
+        ImageSource imageSource = new ImageSource(inputStream, "", true);
+        ImageInfo imageInfo = new LastResortPreloaderPDF().preloadImage("", imageSource, new DefaultImageContext());
+        Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
     }
 }

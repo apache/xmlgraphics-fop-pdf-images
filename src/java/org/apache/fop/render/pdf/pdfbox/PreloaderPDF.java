@@ -48,7 +48,7 @@ import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
 public class PreloaderPDF extends AbstractImagePreloader {
 
     /** PDF header text */
-    private static final String PDF_HEADER = "%PDF-";
+    protected static final String PDF_HEADER = "%PDF-";
 
     /** {@inheritDoc} */
     public ImageInfo preloadImage(String uri, Source src, ImageContext context)
