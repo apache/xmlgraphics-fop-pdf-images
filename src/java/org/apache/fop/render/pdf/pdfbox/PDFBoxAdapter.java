@@ -210,20 +210,7 @@ public class PDFBoxAdapter {
         mergeXObj(sourcePageResources, fontinfo, uniqueName);
         PDFDictionary pageResources = (PDFDictionary)cloneForNewDocument(sourcePageResources);
 
-        PDFDictionary fontDict = (PDFDictionary)pageResources.get("Font");
-        if (fontDict != null && pdfDoc.isMergeFontsEnabled()) {
-            for (Map.Entry<String, Typeface> fontEntry : fontinfo.getUsedFonts().entrySet()) {
-                Typeface font = fontEntry.getValue();
-                if (font instanceof FOPPDFFont) {
-                    FOPPDFFont pdfFont = (FOPPDFFont)font;
-                    if (pdfFont.getRef() == null) {
-                        pdfFont.setRef(new PDFDictionary());
-                        pdfDoc.assignObjectNumber(pdfFont.getRef());
-                    }
-                    fontDict.put(fontEntry.getKey(), pdfFont.getRef());
-                }
-            }
-        }
+        updateMergeFontInfo(pageResources, fontinfo);
         updateXObj(sourcePageResources, pageResources);
         if (fontsBackup != null) {
             sourcePageResources.setItem(COSName.FONT, fontsBackup);
