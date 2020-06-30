@@ -19,6 +19,7 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.pdfbox.cos.COSBase;
@@ -30,9 +31,14 @@ public class UniqueName {
     private String key;
     private List<COSName> resourceNames;
 
-    public UniqueName(String key, COSDictionary sourcePageResources) {
-        this.key = Integer.toString(key.hashCode());
-        resourceNames = getResourceNames(sourcePageResources);
+    public UniqueName(String key, COSDictionary sourcePageResources, boolean disable) {
+        if (disable) {
+            resourceNames = Collections.emptyList();
+        } else {
+            key = key.split("#")[0];
+            this.key = Integer.toString(key.hashCode());
+            resourceNames = getResourceNames(sourcePageResources);
+        }
     }
 
     protected String getName(COSName cn) {

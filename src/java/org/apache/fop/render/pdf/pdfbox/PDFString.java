@@ -59,7 +59,7 @@ public class PDFString extends PDFObject {
      */
     public String getString() {
         if (this.text == null) {
-            String encoding = "ISO-8859-1";
+            String encoding = PDFDocument.ENCODING;
             int start = 0;
             if (this.binary.length > 2) {
                 if (this.binary[0] == (byte)0xFF && this.binary[1] == (byte)0xFE) {
@@ -103,7 +103,7 @@ public class PDFString extends PDFObject {
                     binary[1] = (byte)0xFF;
                     System.arraycopy(data, 0, binary, 2, data.length);
                 } else {
-                    byte[] data = this.text.getBytes("ISO-8859-1");
+                    byte[] data = this.text.getBytes(PDFDocument.ENCODING);
                     binary = new byte[data.length];
                     System.arraycopy(data, 0, binary, 0, data.length);
                 }

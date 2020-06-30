@@ -56,8 +56,8 @@ import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.fonts.truetype.OTFSubSetFile;
 
+import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFText;
-
 
 public class MergeFontsPDFWriter extends PDFWriter {
     protected static final Log log = LogFactory.getLog(MergeFontsPDFWriter.class);
@@ -223,7 +223,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
     }
 
     private String getString(COSString s) throws UnsupportedEncodingException {
-        String encoding = "ISO-8859-1";
+        String encoding = PDFDocument.ENCODING;
         byte[] data = s.getBytes();
         int start = 0;
         if (data.length > 2) {

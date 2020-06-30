@@ -39,6 +39,7 @@ import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.pdfparser.PDFStreamParser;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 
+import org.apache.fop.pdf.PDFDocument;
 
 public class PDFWriter {
     private DecimalFormat df = new DecimalFormat("#.####", new DecimalFormatSymbols(Locale.US));
@@ -46,6 +47,7 @@ public class PDFWriter {
     protected StringBuilder s = new StringBuilder();
     protected UniqueName key;
     private int currentMCID;
+    protected boolean keyUsed;
 
     public PDFWriter(UniqueName key, int currentMCID) {
         this.key = key;
@@ -69,7 +71,7 @@ public class PDFWriter {
                         arguments.add(cn.getValue());
                     }
                     readPDFArguments(op, arguments);
-                    s.append("ID " + new String(op.getImageData(), "ISO-8859-1"));
+                    s.append("ID " + new String(op.getImageData(), PDFDocument.ENCODING));
                     arguments.clear();
                     s.append("EI\n");
                 }
@@ -102,8 +104,12 @@ public class PDFWriter {
             }
         } else if (c instanceof COSName) {
             COSName cn = (COSName)c;
-            s.append("/" + key.getName(cn));
+            String name = key.getName(cn);
+            s.append("/" + name);
             s.append(" ");
+            if (!name.equals(cn.getName())) {
+                keyUsed = true;
+            }
         } else if (c instanceof COSString) {
             s.append("<" + ((COSString) c).toHexString() + ">");
         } else if (c instanceof COSArray) {

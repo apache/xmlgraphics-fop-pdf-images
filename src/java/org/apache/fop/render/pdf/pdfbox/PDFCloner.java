@@ -40,9 +40,11 @@ import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
+import org.apache.pdfbox.pdmodel.common.PDStream;
 
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
+import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFName;
 import org.apache.fop.pdf.PDFNumber;
 import org.apache.fop.pdf.PDFObject;
@@ -142,7 +144,11 @@ public class PDFCloner {
         cacheClonedObject(keyBase, newDict);
         for (Map.Entry<COSName, COSBase> e : dic.entrySet()) {
             if (!exclude.contains(e.getKey())) {
-                newDict.put(e.getKey().getName(), cloneForNewDocument(e.getValue(), e.getValue(), exclude));
+                String name = e.getKey().getName();
+                if (adapter.uniqueName != null) {
+                    name = adapter.uniqueName.getName(e.getKey());
+                }
+                newDict.put(name, cloneForNewDocument(e.getValue(), e.getValue(), exclude));
             }
         }
         return newDict;
@@ -179,7 +185,23 @@ public class PDFCloner {
         }
         PDFStream stream = new PDFStream();
         OutputStream out = stream.getBufferOutputStream();
-        IOUtils.copyLarge(in, out);
+        if (originalStream.getItem(COSName.SUBTYPE) == COSName.FORM && adapter.uniqueName != null) {
+            PDFWriter writer = new PDFWriter(adapter.uniqueName, adapter.currentMCID);
+            try {
+                String newStream = writer.writeText(new PDStream(originalStream));
+                if (writer.keyUsed) {
+                    filter = adapter.FILTER_FILTER;
+                    out.write(newStream.getBytes(PDFDocument.ENCODING));
+                    out.close();
+                    in = null;
+                }
+            } catch (IOException e) {
+                //ignore
+            }
+        }
+        if (in != null) {
+            IOUtils.copyLarge(in, out);
+        }
         adapter.transferDict(originalStream, stream, filter);
         return cacheClonedObject(keyBase, stream);
     }

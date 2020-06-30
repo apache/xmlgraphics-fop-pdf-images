@@ -92,7 +92,8 @@ public class PDFBoxAdapter {
     private Map<Integer, PDFArray> pageNumbers;
     private Collection<String> parentFonts = new ArrayList<String>();
 
-    private int currentMCID;
+    protected int currentMCID;
+    protected UniqueName uniqueName;
 
     /**
      * Creates a new PDFBoxAdapter.
@@ -179,16 +180,16 @@ public class PDFBoxAdapter {
     public Object createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
                                                      AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
         throws IOException {
+        COSDictionary sourcePageResources = getResources(page);
+        uniqueName = new UniqueName(key, sourcePageResources, pdfDoc.isFormXObjectEnabled());
         handleAnnotations(sourceDoc, page, atdoc);
         if (pageNumbers.containsKey(targetPage.getPageIndex())) {
             pageNumbers.get(targetPage.getPageIndex()).set(0, targetPage.makeReference());
         }
-        COSDictionary sourcePageResources = getResources(page);
         PDStream pdStream = getContents(page);
 
         COSDictionary fonts = (COSDictionary)sourcePageResources.getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
-        UniqueName uniqueName = new UniqueName(key, sourcePageResources);
         String newStream = null;
         if (fonts != null && pdfDoc.isMergeFontsEnabled()) {
             fontsBackup = new COSDictionary(fonts);
@@ -298,6 +299,23 @@ public class PDFBoxAdapter {
         return pdStream;
     }
 
+    private void updateMergeFontInfo(PDFDictionary pageResources, FontInfo fontinfo) {
+        PDFDictionary fontDict = (PDFDictionary)pageResources.get("Font");
+        if (fontDict != null && pdfDoc.isMergeFontsEnabled()) {
+            for (Map.Entry<String, Typeface> fontEntry : fontinfo.getUsedFonts().entrySet()) {
+                Typeface font = fontEntry.getValue();
+                if (font instanceof FOPPDFFont) {
+                    FOPPDFFont pdfFont = (FOPPDFFont)font;
+                    if (pdfFont.getRef() == null) {
+                        pdfFont.setRef(new PDFDictionary());
+                        pdfDoc.assignObjectNumber(pdfFont.getRef());
+                    }
+                    fontDict.put(fontEntry.getKey(), pdfFont.getRef());
+                }
+            }
+        }
+    }
+
     private PDFFormXObject getFormXObject(PDFDictionary pageResources, PDFStream pageStream, String key, PDPage page)
         throws IOException {
         if (pdfDoc.isMergeFontsEnabled()) {
@@ -401,8 +419,8 @@ public class PDFBoxAdapter {
             PDFDictionary target = (PDFDictionary) pageResources.get("XObject");
             for (COSName entry : xobj.keySet()) {
                 if (newXObj.containsKey(entry)) {
-                    PDFStream s = (PDFStream) target.get(entry.getName());
-                    s.setData(newXObj.get(entry).getBytes("ISO-8859-1"));
+                    PDFStream s = (PDFStream) target.get(uniqueName.getName(entry));
+                    s.setData(newXObj.get(entry).getBytes(PDFDocument.ENCODING));
                     PDFDictionary xobjr = (PDFDictionary) s.get("Resources");
                     xobjr.put("Font", pageResources.get("Font"));
                 }

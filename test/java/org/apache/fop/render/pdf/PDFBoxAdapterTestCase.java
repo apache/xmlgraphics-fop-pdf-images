@@ -28,10 +28,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Assert;
@@ -656,5 +658,28 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         formXObject.output(bos);
         Assert.assertTrue(bos.toString("UTF-8").contains("/Type /XObject"));
+    }
+
+    @Test
+    public void testRewriteOfForms() throws Exception {
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        pdfpage.setDocument(pdfdoc);
+        pdfpage.setObjectNumber(1);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDDocument doc = PDDocument.load(new File(ACCESSIBLERADIOBUTTONS));
+        PDPage page = doc.getPage(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", at, null, r);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        Map<String, List<String>> filterMap = new HashMap<String, List<String>>();
+        List<String> filterList = new ArrayList<String>();
+        filterList.add("null");
+        filterMap.put("default", filterList);
+        pdfdoc.setFilterMap(filterMap);
+        pdfdoc.output(os);
+        Assert.assertTrue(os.toString("UTF-8").contains("/F15106079 12 Tf"));
+        doc.close();
     }
 }

@@ -44,6 +44,7 @@ import org.apache.fontbox.cff.CFFType1Font;
 
 import org.apache.fop.fonts.cff.CFFDataReader;
 import org.apache.fop.fonts.truetype.FontFileReader;
+import org.apache.fop.pdf.PDFDocument;
 
 public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
     protected List<Map<Integer, Integer>> subsetGlyphsList = new ArrayList<Map<Integer, Integer>>();
@@ -338,7 +339,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
             } else {
                 String notice = (String)fileFont.getTopDict().get("Notice");
                 if (notice != null && !(fileFont instanceof CFFCIDFont)) {
-                    stringIndexData.add(notice.getBytes("ISO-8859-1"));
+                    stringIndexData.add(notice.getBytes(PDFDocument.ENCODING));
                 }
             }
             stringIndexData.add(embeddedName.getBytes("UTF-8"));
@@ -346,7 +347,8 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         } else {
             String notice = (String)fileFont.getTopDict().get("Notice");
             if (notice != null) {
-                writeIndex(Arrays.<byte[]>asList(notice.getBytes("ISO-8859-1"), embeddedName.getBytes("UTF-8")));
+                writeIndex(Arrays.<byte[]>asList(notice.getBytes(PDFDocument.ENCODING),
+                        embeddedName.getBytes("UTF-8")));
             } else {
                 List<byte[]> sindex = new ArrayList<byte[]>();
                 sindex.add(cffReader.getStringIndex().getData());
