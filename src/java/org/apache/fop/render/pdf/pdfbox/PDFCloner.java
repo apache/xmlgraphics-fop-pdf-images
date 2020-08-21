@@ -42,6 +42,7 @@ import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 
+import org.apache.fop.pdf.DCTFilter;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
@@ -174,7 +175,12 @@ public class PDFCloner {
     private Object readCOSStream(COSStream originalStream, Object keyBase) throws IOException {
         InputStream in;
         Set filter;
-        if (adapter.pdfDoc.isEncryptionActive()
+        PDFStream stream = new PDFStream();
+        if (adapter.pdfDoc.isEncryptionActive() && originalStream.getItem(COSName.FILTER) == COSName.DCT_DECODE) {
+            stream.getFilterList().addFilter(new DCTFilter());
+            in = originalStream.getFilteredStream();
+            filter = Collections.EMPTY_SET;
+        } else if (adapter.pdfDoc.isEncryptionActive()
                 || (originalStream.containsKey(COSName.DECODE_PARMS) && !originalStream.containsKey(COSName.FILTER))) {
             in = originalStream.getUnfilteredStream();
             filter = adapter.FILTER_FILTER;
@@ -183,7 +189,7 @@ public class PDFCloner {
             in = originalStream.getFilteredStream();
             filter = Collections.EMPTY_SET;
         }
-        PDFStream stream = new PDFStream();
+
         OutputStream out = stream.getBufferOutputStream();
         if (originalStream.getItem(COSName.SUBTYPE) == COSName.FORM && adapter.uniqueName != null) {
             PDFWriter writer = new PDFWriter(adapter.uniqueName, adapter.currentMCID);

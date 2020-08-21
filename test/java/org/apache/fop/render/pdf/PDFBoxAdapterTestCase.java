@@ -75,6 +75,7 @@ import org.apache.fop.pdf.PDFAnnotList;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFEncryptionParams;
 import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFGState;
@@ -497,6 +498,17 @@ public class PDFBoxAdapterTestCase {
         }
     }
 
+    private void loadPage(PDFDocument pdfdoc, String src) throws IOException {
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        pdfdoc.assignObjectNumber(pdfpage);
+        pdfpage.setDocument(pdfdoc);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDDocument doc = PDDocument.load(new File(src));
+        PDPage page = doc.getPage(0);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
+        doc.close();
+    }
+
     @Test
     public void testPDFBoxImageHandler() throws Exception {
         ImageInfo imgi = new ImageInfo("a", "b");
@@ -681,5 +693,15 @@ public class PDFBoxAdapterTestCase {
         pdfdoc.output(os);
         Assert.assertTrue(os.toString("UTF-8").contains("/F15106079 12 Tf"));
         doc.close();
+    }
+
+    @Test
+    public void testDCTEncryption() throws IOException {
+        PDFDocument pdfdoc = new PDFDocument("");
+        pdfdoc.setEncryption(new PDFEncryptionParams());
+        loadPage(pdfdoc, IMAGE);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        Assert.assertTrue(bos.toString("UTF-8").contains("/Filter /DCTDecode"));
     }
 }
