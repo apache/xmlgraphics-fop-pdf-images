@@ -191,7 +191,8 @@ public class PDFCloner {
         }
 
         OutputStream out = stream.getBufferOutputStream();
-        if (originalStream.getItem(COSName.SUBTYPE) == COSName.FORM && adapter.uniqueName != null) {
+        if ((originalStream.getItem(COSName.TYPE) == COSName.PATTERN
+                || originalStream.getItem(COSName.SUBTYPE) == COSName.FORM) && adapter.uniqueName != null) {
             PDFWriter writer = new PDFWriter(adapter.uniqueName, adapter.currentMCID);
             try {
                 String newStream = writer.writeText(new PDStream(originalStream));

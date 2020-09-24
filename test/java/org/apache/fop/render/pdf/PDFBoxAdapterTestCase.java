@@ -124,6 +124,7 @@ public class PDFBoxAdapterTestCase {
     private static final String TYPE0TT = "test/resources/type0tt.pdf";
     private static final String TYPE0CFF = "test/resources/type0cff.pdf";
     private static final String ACCESSIBLERADIOBUTTONS = "test/resources/accessibleradiobuttons.pdf";
+    private static final String PATTERN = "test/resources/pattern.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -673,13 +674,17 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testRewriteOfForms() throws Exception {
+    public void testRewriteOfForms() throws IOException {
+        Assert.assertTrue(getPDFToPDF(ACCESSIBLERADIOBUTTONS).contains("/F15106079 12 Tf"));
+    }
+
+    private String getPDFToPDF(String pdf) throws IOException {
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(ACCESSIBLERADIOBUTTONS));
+        PDDocument doc = PDDocument.load(new File(pdf));
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
@@ -691,8 +696,13 @@ public class PDFBoxAdapterTestCase {
         filterMap.put("default", filterList);
         pdfdoc.setFilterMap(filterMap);
         pdfdoc.output(os);
-        Assert.assertTrue(os.toString("UTF-8").contains("/F15106079 12 Tf"));
         doc.close();
+        return os.toString("UTF-8");
+    }
+
+    @Test
+    public void testRewriteOfPatternForms() throws IOException {
+        Assert.assertTrue(getPDFToPDF(PATTERN).contains("/R1106079 gs\n1 1 m"));
     }
 
     @Test
