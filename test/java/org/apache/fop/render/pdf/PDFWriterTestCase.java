@@ -27,6 +27,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 
 import org.apache.fop.render.pdf.pdfbox.PDFWriter;
+import org.apache.fop.render.pdf.pdfbox.UniqueName;
 
 public class PDFWriterTestCase {
     @Test
@@ -76,6 +77,15 @@ public class PDFWriterTestCase {
         String text = "[null ] a\n";
         PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
         PDFWriter pdfWriter = new MyPDFWriter();
+        String out = pdfWriter.writeText(pdStream);
+        Assert.assertEquals(out, text);
+    }
+
+    @Test
+    public void testSpaceInName() throws IOException {
+        String text = "/a#20a a\n";
+        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, true), 0);
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }

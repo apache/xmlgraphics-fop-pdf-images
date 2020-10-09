@@ -101,7 +101,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
                     internalName = getNewFont(fontData, fontInfo, fontsToRemove.values());
                 }
                 if (fontData == null || internalName == null) {
-                    s.append("/" + key.getName(cn));
+                    key.writeName(s, cn);
                     if (op.getName().equals("Tf")) {
                         font = null;
                         oldFont = null;

@@ -18,6 +18,8 @@
 /* $Id$ */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +28,8 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
+
+import org.apache.fop.pdf.PDFDocument;
 
 public class UniqueName {
     private String key;
@@ -46,6 +50,16 @@ public class UniqueName {
             return cn.getName() + key;
         }
         return cn.getName();
+    }
+
+    protected void writeName(StringBuilder sb, COSName cn) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        cn.writePDF(bos);
+        String name = bos.toString(PDFDocument.ENCODING);
+        sb.append(name);
+        if (resourceNames.contains(cn)) {
+            sb.append(key);
+        }
     }
 
     private List<COSName> getResourceNames(COSDictionary sourcePageResources) {

@@ -104,9 +104,9 @@ public class PDFWriter {
             }
         } else if (c instanceof COSName) {
             COSName cn = (COSName)c;
-            String name = key.getName(cn);
-            s.append("/" + name);
+            key.writeName(s, cn);
             s.append(" ");
+            String name = key.getName(cn);
             if (!name.equals(cn.getName())) {
                 keyUsed = true;
             }

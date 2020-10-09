@@ -240,7 +240,7 @@ public class StructureTreeMerger {
         if (baseKid instanceof COSInteger) {
             COSInteger number = (COSInteger) baseKid;
             createKids(number, parentDict, parent, originatedFromTableRow);
-        } else {
+        } else if (baseKid instanceof COSDictionary) {
             COSDictionary unwrappedDict = (COSDictionary)baseKid;
             if (unwrappedDict.getDictionaryObject(COSName.S) == null) {
                 COSDictionary mcrDict = (COSDictionary)baseKid;
@@ -417,13 +417,15 @@ public class StructureTreeMerger {
         } else if (kid instanceof COSObject) {
             COSObject kidObject = (COSObject)kid;
             COSBase base = kidObject.getObject();
-            COSDictionary temp = (COSDictionary)base;
-            if (temp.getDictionaryObject(COSName.S) != null && temp.getItem(COSName.K) != null) {
+            if (base instanceof COSDictionary) {
+                COSDictionary temp = (COSDictionary) base;
+                if (temp.getDictionaryObject(COSName.S) != null && temp.getItem(COSName.K) != null) {
 
-                COSBase tempKids = temp.getItem(COSName.K);
-                findLeafKids(tempKids, kidObject);
-            } else {
-                findLeafKids(temp, parent);
+                    COSBase tempKids = temp.getItem(COSName.K);
+                    findLeafKids(tempKids, kidObject);
+                } else {
+                    findLeafKids(temp, parent);
+                }
             }
         } else if (kid instanceof COSDictionary) {
             COSDictionary kidDictionary = (COSDictionary)kid;
