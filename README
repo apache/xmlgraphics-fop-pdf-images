@@ -156,6 +156,16 @@ http://www.jeremias-maerki.ch/development/fop/index.html
   RELEASE NOTES
 ==============================================================================
 
+Version 2.6
+=========================
+
+Changes:
+FOP-2951: Add uniquename to xobj form
+FOP-2965: Keep streams with DCT compression
+FOP-2971: Update unique name inside patterns
+FOP-2974: Handle space in COSName
+FOP-2979: Update PDFBox to 2.0.19
+
 Version 2.5
 =========================
 
