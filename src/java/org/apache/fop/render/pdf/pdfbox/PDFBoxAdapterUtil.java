@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
@@ -78,6 +79,24 @@ public final class PDFBoxAdapterUtil {
         } else if (base instanceof COSObject) {
             COSObject obj = (COSObject) base;
             return "COSObject{" + getDictionaryHash(obj.getObject(), objs) + "}";
+        } else if (base instanceof COSArray) {
+            COSArray array = (COSArray) base;
+            StringBuilder sb = new StringBuilder("COSArray[");
+            for (Object o : array) {
+                if (o instanceof COSObject) {
+                    COSBase obj = ((COSObject) o).getObject();
+                    if (obj instanceof COSStream) {
+                        sb.append(getDictionaryHash(obj, objs));
+                    } else {
+                        sb.append(o);
+                    }
+                } else {
+                    sb.append(o);
+                }
+                sb.append(",");
+            }
+            sb.append("]");
+            return sb.toString();
         } else {
             return base.toString();
         }
