@@ -18,6 +18,7 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -351,51 +352,49 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         }
 
         for (Cmap cmap : cmaps) {
-            writeUShort(12); //subtableFormat
-            writeUShort(0);
-            writeULong(currentPos, (cmap.glyphIdToCharacterCode.size() * 12) + 16);
-            currentPos += 4;
-            writeULong(currentPos, 0);
-            currentPos += 4;
-            writeULong(currentPos, cmap.glyphIdToCharacterCode.size());
-            currentPos += 4;
+            if (cmap.platformId == 1 && cmaps.size() == 1) {
+                writeUShort(6); //subtableFormat
+                int firstCode = -1;
+                int lastCode = -1;
+                List<Integer> codes = new ArrayList<Integer>();
+                for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
+                    if (firstCode < 0) {
+                        firstCode = g.getKey();
+                    }
+                    while (lastCode > 0 && lastCode + 1 < g.getKey()) {
+                        codes.add(0);
+                        lastCode++;
+                    }
+                    codes.add(g.getValue());
+                    lastCode = g.getKey();
+                }
+                writeUShort((codes.size() * 2) + 6); //length
+                writeUShort(0); //version
+                writeUShort(firstCode); //firstCode
+                writeUShort(codes.size()); //entryCount
+                for (int i : codes) {
+                    writeUShort(i);
+                }
+            } else {
+                writeUShort(12); //subtableFormat
+                writeUShort(0);
+                writeULong(currentPos, (cmap.glyphIdToCharacterCode.size() * 12) + 16);
+                currentPos += 4;
+                writeULong(currentPos, 0);
+                currentPos += 4;
+                writeULong(currentPos, cmap.glyphIdToCharacterCode.size());
+                currentPos += 4;
 
-            for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
-                writeULong(currentPos, g.getKey());
-                currentPos += 4;
-                writeULong(currentPos, g.getKey());
-                currentPos += 4;
-                writeULong(currentPos, g.getValue());
-                currentPos += 4;
+                for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
+                    writeULong(currentPos, g.getKey());
+                    currentPos += 4;
+                    writeULong(currentPos, g.getKey());
+                    currentPos += 4;
+                    writeULong(currentPos, g.getValue());
+                    currentPos += 4;
+                }
             }
         }
-
-//            writeUShort(6); //subtableFormat
-//            int firstCode = -1;
-//            int lastCode = -1;
-//            List<Integer> codes = new ArrayList<Integer>();
-//            for (Map.Entry<Integer, Integer> g : glyphIdToCharacterCode.entrySet()) {
-//                if (firstCode < 0) {
-//                    firstCode = g.getKey();
-//                }
-//                while (lastCode > 0 && lastCode + 1 < g.getKey()) {
-//                    codes.add(0);
-//                    lastCode++;
-//                }
-//                codes.add(g.getValue());
-//
-//                lastCode = g.getKey();
-//            }
-//
-//            writeUShort((codes.size() * 2) + 6); //length
-//            writeUShort(0); //version
-//
-//            writeUShort(firstCode); //firstCode
-//            writeUShort(codes.size()); //entryCount
-//
-//            for (int i : codes) {
-//                writeUShort(i);
-//            }
 
         updateCheckSum(checksum, currentPos - cmapPos, OFTableName.CMAP);
         realSize += currentPos - cmapPos;

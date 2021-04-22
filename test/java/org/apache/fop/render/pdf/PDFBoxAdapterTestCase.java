@@ -152,9 +152,9 @@ public class PDFBoxAdapterTestCase {
         msg = writeText(fi, TTSubset2);
         Assert.assertTrue(msg, msg.contains("(t)-0.168 (e)-0.1523 (s)0.1528 (t)"));
         msg = writeText(fi, TTSubset3);
-        Assert.assertTrue(msg, msg.contains("[<0001>3 <0002>-7 <0003>] TJ"));
+        Assert.assertTrue(msg, msg.contains("[<01>3 <02>-7 <03>] TJ"));
         msg = writeText(fi, TTSubset5);
-        Assert.assertTrue(msg, msg.contains("[<0003>2 <0004>-7 <0007>] TJ"));
+        Assert.assertTrue(msg, msg.contains("[(\u0001)2 (\u0002)-7 (\u0003)] TJ"));
         msg = writeText(fi, TTCID1);
         Assert.assertTrue(msg, msg.contains("<0028003B0034003000420034>"));
         msg = writeText(fi, TTCID2);
@@ -713,5 +713,12 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         Assert.assertTrue(bos.toString("UTF-8").contains("/Filter /DCTDecode"));
+    }
+
+    @Test
+    public void testCmapLengthInName() throws IOException {
+        FontInfo fi = new FontInfo();
+        String msg = writeText(fi, TTSubset3);
+        Assert.assertTrue(msg, msg.contains("/ArialMT_TrueTypecidcmap1"));
     }
 }
