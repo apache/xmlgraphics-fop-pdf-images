@@ -215,5 +215,5 @@ public class FOPPDFSingleMultiByteFontTestCase {
         public String addFont(COSDictionary fontData) {
             return null;
         }
-    };
+    }
 }

@@ -104,6 +104,8 @@ public class PDFBoxAdapterTestCase {
     protected static final String TTSubset2 = "test/resources/ttsubset2.pdf";
     private static final String TTSubset3 = "test/resources/ttsubset3.pdf";
     private static final String TTSubset5 = "test/resources/ttsubset5.pdf";
+    private static final String TTSubset6 = "test/resources/ttsubset6.pdf";
+    private static final String TTSubset7 = "test/resources/ttsubset7.pdf";
     protected static final String CFFCID1 = "test/resources/cffcid1.pdf";
     private static final String CFFCID2 = "test/resources/cffcid2.pdf";
     protected static final String Type1Subset1 = "test/resources/t1subset.pdf";
@@ -720,5 +722,13 @@ public class PDFBoxAdapterTestCase {
         FontInfo fi = new FontInfo();
         String msg = writeText(fi, TTSubset3);
         Assert.assertTrue(msg, msg.contains("/ArialMT_TrueTypecidcmap1"));
+    }
+
+    @Test
+    public void testMapChar() throws Exception {
+        FontInfo fi = new FontInfo();
+        writeText(fi, TTSubset6);
+        String msg = writeText(fi, TTSubset7);
+        Assert.assertTrue(msg, msg.contains("( )Tj"));
     }
 }

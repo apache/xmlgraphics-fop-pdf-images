@@ -188,7 +188,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
                 for (int i = 0; i < 256 * 256; i++) {
                     int gid = c.getGlyphId(i);
-                    if (gid != 0) {
+                    if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(i)) {
                         tempCmap.glyphIdToCharacterCode.put(i, gid);
                     }
                 }
@@ -328,12 +328,16 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 }
             }
             String mappedChar = getChar(cmap, i);
-            if (mappedChar != null && !charMapGlobal.containsKey(mappedChar)) {
-                charMapGlobal.put(mappedChar, glyphIndexPos);
-                if (!addedWidth && w < font.getWidths().size()) {
-                    newWidth.put(newWidth.size() + getFirstChar(), neww);
+            if (mappedChar != null) {
+                if (!charMapGlobal.containsKey(mappedChar)) {
+                    charMapGlobal.put(mappedChar, glyphIndexPos);
+                    if (!addedWidth && w < font.getWidths().size()) {
+                        newWidth.put(newWidth.size() + getFirstChar(), neww);
+                    }
+                    skipGlyphIndex++;
+                } else if (glyphIndexPos < charMapGlobal.get(mappedChar)) {
+                    charMapGlobal.put(mappedChar, glyphIndexPos);
                 }
-                skipGlyphIndex++;
             }
             w++;
         }
