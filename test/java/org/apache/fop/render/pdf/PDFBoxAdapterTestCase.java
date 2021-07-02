@@ -23,7 +23,6 @@ import java.awt.geom.Rectangle2D;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -95,38 +94,38 @@ import org.apache.fop.render.ps.PSImageFormResource;
 import org.apache.fop.render.ps.PSRenderingUtil;
 
 public class PDFBoxAdapterTestCase {
-    protected static final String CFF1 = "test/resources/2fonts.pdf";
-    protected static final String CFF2 = "test/resources/2fonts2.pdf";
-    protected static final String CFF3 = "test/resources/simpleh.pdf";
-    protected static final String TTCID1 = "test/resources/ttcid1.pdf";
-    protected static final String TTCID2 = "test/resources/ttcid2.pdf";
-    protected static final String TTSubset1 = "test/resources/ttsubset.pdf";
-    protected static final String TTSubset2 = "test/resources/ttsubset2.pdf";
-    private static final String TTSubset3 = "test/resources/ttsubset3.pdf";
-    private static final String TTSubset5 = "test/resources/ttsubset5.pdf";
-    private static final String TTSubset6 = "test/resources/ttsubset6.pdf";
-    private static final String TTSubset7 = "test/resources/ttsubset7.pdf";
-    protected static final String CFFCID1 = "test/resources/cffcid1.pdf";
-    private static final String CFFCID2 = "test/resources/cffcid2.pdf";
-    protected static final String Type1Subset1 = "test/resources/t1subset.pdf";
-    protected static final String Type1Subset2 = "test/resources/t1subset2.pdf";
-    private static final String Type1Subset3 = "test/resources/t1subset3.pdf";
-    private static final String Type1Subset4 = "test/resources/t1subset4.pdf";
-    protected static final String ROTATE = "test/resources/rotate.pdf";
-    private static final String ANNOT = "test/resources/annot.pdf";
-    private static final String SHADING = "test/resources/shading.pdf";
-    private static final String LINK = "test/resources/link.pdf";
-    private static final String IMAGE = "test/resources/image.pdf";
-    private static final String HELLOTagged = "test/resources/taggedWorld.pdf";
-    private static final String XFORM = "test/resources/xform.pdf";
-    private static final String LOOP = "test/resources/loop.pdf";
-    private static final String ERROR = "test/resources/error.pdf";
-    private static final String LIBREOFFICE = "test/resources/libreoffice.pdf";
-    private static final String SMASK = "test/resources/smask.pdf";
-    private static final String TYPE0TT = "test/resources/type0tt.pdf";
-    private static final String TYPE0CFF = "test/resources/type0cff.pdf";
-    private static final String ACCESSIBLERADIOBUTTONS = "test/resources/accessibleradiobuttons.pdf";
-    private static final String PATTERN = "test/resources/pattern.pdf";
+    protected static final String CFF1 = "2fonts.pdf";
+    protected static final String CFF2 = "2fonts2.pdf";
+    protected static final String CFF3 = "simpleh.pdf";
+    protected static final String TTCID1 = "ttcid1.pdf";
+    protected static final String TTCID2 = "ttcid2.pdf";
+    protected static final String TTSubset1 = "ttsubset.pdf";
+    protected static final String TTSubset2 = "ttsubset2.pdf";
+    private static final String TTSubset3 = "ttsubset3.pdf";
+    private static final String TTSubset5 = "ttsubset5.pdf";
+    private static final String TTSubset6 = "ttsubset6.pdf";
+    private static final String TTSubset7 = "ttsubset7.pdf";
+    protected static final String CFFCID1 = "cffcid1.pdf";
+    private static final String CFFCID2 = "cffcid2.pdf";
+    protected static final String Type1Subset1 = "t1subset.pdf";
+    protected static final String Type1Subset2 = "t1subset2.pdf";
+    private static final String Type1Subset3 = "t1subset3.pdf";
+    private static final String Type1Subset4 = "t1subset4.pdf";
+    protected static final String ROTATE = "rotate.pdf";
+    private static final String ANNOT = "annot.pdf";
+    private static final String SHADING = "shading.pdf";
+    private static final String LINK = "link.pdf";
+    private static final String IMAGE = "image.pdf";
+    private static final String HELLOTagged = "taggedWorld.pdf";
+    private static final String XFORM = "xform.pdf";
+    private static final String LOOP = "loop.pdf";
+    private static final String ERROR = "error.pdf";
+    private static final String LIBREOFFICE = "libreoffice.pdf";
+    private static final String SMASK = "smask.pdf";
+    private static final String TYPE0TT = "type0tt.pdf";
+    private static final String TYPE0CFF = "type0cff.pdf";
+    private static final String ACCESSIBLERADIOBUTTONS = "accessibleradiobuttons.pdf";
+    private static final String PATTERN = "pattern.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -141,6 +140,10 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
         return new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+    }
+
+    protected static PDDocument load(String pdf) throws IOException {
+        return PDDocument.load(PDFBoxAdapterTestCase.class.getResourceAsStream(pdf));
     }
 
     @Test
@@ -162,9 +165,9 @@ public class PDFBoxAdapterTestCase {
         msg = writeText(fi, TTCID2);
         Assert.assertTrue(msg, msg.contains("<000F00100001002A0034003F00430034003C00310034004100010010000E000F0011>"));
         msg = writeText(fi, CFFCID1);
-        Assert.assertTrue(msg, msg.contains("/Fm01700251251 Do"));
+        Assert.assertTrue(msg, msg.contains("/Fm0-1998009062 Do"));
         msg = writeText(fi, CFFCID2);
-        Assert.assertTrue(msg, msg.contains("/Fm01701174772 Do"));
+        Assert.assertTrue(msg, msg.contains("/Fm0-1997085541 Do"));
         msg = writeText(fi, Type1Subset1);
         Assert.assertTrue(msg, msg.contains("/Verdana_Type1"));
         msg = writeText(fi, Type1Subset2);
@@ -172,7 +175,7 @@ public class PDFBoxAdapterTestCase {
         msg = writeText(fi, Type1Subset3);
         Assert.assertTrue(msg, msg.contains("/URWChanceryL-MediItal_Type1 20 Tf"));
         msg = writeText(fi, Type1Subset4);
-        Assert.assertTrue(msg, msg.contains("/F15-1521012718 40 Tf"));
+        Assert.assertTrue(msg, msg.contains("/F15_1683747577 40 Tf"));
         parseFonts(fi);
     }
 
@@ -186,7 +189,7 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testMergeTT() throws IOException {
-        PDDocument doc = PDDocument.load(new File(TYPE0TT));
+        PDDocument doc = load(TYPE0TT);
         PDType0Font type0Font = (PDType0Font) doc.getPage(0).getResources().getFont(COSName.getPDFName("C2_0"));
         PDCIDFontType2 ttf = (PDCIDFontType2) type0Font.getDescendantFont();
         InputStream originalData = ttf.getTrueTypeFont().getOriginalData();
@@ -227,7 +230,7 @@ public class PDFBoxAdapterTestCase {
     }
 
     private String writeText(FontInfo fi, String pdf) throws IOException {
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = load(pdf);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         String c = (String) getPDFBoxAdapter(true, false)
@@ -240,7 +243,7 @@ public class PDFBoxAdapterTestCase {
     public void testTaggedPDFWriter() throws IOException {
         PDFBoxAdapter adapter = getPDFBoxAdapter(false, false);
         adapter.setCurrentMCID(5);
-        PDDocument doc = PDDocument.load(new File(HELLOTagged));
+        PDDocument doc = load(HELLOTagged);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
@@ -256,7 +259,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(ANNOT));
+        PDDocument doc = load(ANNOT);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
@@ -272,7 +275,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testAnnot2() throws Exception {
         PDFBoxAdapter adapter = getPDFBoxAdapter(false, false);
-        PDDocument doc = PDDocument.load(new File(ANNOT));
+        PDDocument doc = load(ANNOT);
         PDPage page = doc.getPage(0);
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
         COSDictionary dict = (COSDictionary) ((COSObject)annots.get(0)).getObject();
@@ -292,7 +295,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(ACCESSIBLERADIOBUTTONS));
+        PDDocument doc = load(ACCESSIBLERADIOBUTTONS);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
@@ -312,7 +315,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(ACCESSIBLERADIOBUTTONS));
+        PDDocument doc = load(ACCESSIBLERADIOBUTTONS);
         COSArray fields = (COSArray)
                 doc.getDocumentCatalog().getAcroForm().getCOSObject().getDictionaryObject(COSName.FIELDS);
         fields.remove(0);
@@ -334,7 +337,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
-        PDDocument doc = PDDocument.load(new File(LINK));
+        PDDocument doc = load(LINK);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
@@ -356,7 +359,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
-        PDDocument doc = PDDocument.load(new File(XFORM));
+        PDDocument doc = load(XFORM);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
@@ -428,7 +431,7 @@ public class PDFBoxAdapterTestCase {
     private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = load(pdf);
         org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
         ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
         GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
@@ -463,7 +466,7 @@ public class PDFBoxAdapterTestCase {
     private void pdfToPCL(String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = load(pdf);
         org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
         ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -506,7 +509,7 @@ public class PDFBoxAdapterTestCase {
         pdfdoc.assignObjectNumber(pdfpage);
         pdfpage.setDocument(pdfdoc);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(src));
+        PDDocument doc = load(src);
         PDPage page = doc.getPage(0);
         adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
         doc.close();
@@ -515,7 +518,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testPDFBoxImageHandler() throws Exception {
         ImageInfo imgi = new ImageInfo("a", "b");
-        PDDocument doc = PDDocument.load(new File(SHADING));
+        PDDocument doc = load(SHADING);
         ImagePDF img = new ImagePDF(imgi, doc);
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = getPDFPage(pdfdoc);
@@ -575,7 +578,7 @@ public class PDFBoxAdapterTestCase {
             pdfpage.setDocument(pdfdoc);
             PDFBoxAdapter adapter = new PDFBoxAdapter(
                     pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
-            PDDocument doc = PDDocument.load(new File(pdf));
+            PDDocument doc = load(pdf);
             PDPage page = doc.getPage(0);
             String stream = (String) adapter.createStreamFromPDFBoxPage(
                     doc, page, pdf, new AffineTransform(), null, new Rectangle());
@@ -621,7 +624,7 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testNoPageResource() throws IOException {
-        PDDocument doc = PDDocument.load(new File(CFF1));
+        PDDocument doc = load(CFF1);
         PDPage page = doc.getPage(0);
         page.setResources(null);
         AffineTransform at = new AffineTransform();
@@ -632,7 +635,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testPDFBoxImageHandlerAccessibilityEnabled() throws Exception {
         ImageInfo imgi = new ImageInfo("a", "b");
-        PDDocument doc = PDDocument.load(new File(SHADING));
+        PDDocument doc = load(SHADING);
         ImagePDF img = new ImagePDF(imgi, doc);
         PDFDocument pdfdoc = new PDFDocument("");
         PDFPage pdfpage = getPDFPage(pdfdoc);
@@ -649,7 +652,7 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testMergeFontsAndFormXObject() throws IOException {
         String msg = "";
-        PDDocument doc = PDDocument.load(new File(IMAGE));
+        PDDocument doc = load(IMAGE);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         try {
@@ -664,7 +667,7 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testFormXObject() throws IOException {
-        PDDocument doc = PDDocument.load(new File(IMAGE));
+        PDDocument doc = load(IMAGE);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         PDFFormXObject formXObject = (PDFFormXObject) getPDFBoxAdapter(false, true)
@@ -686,7 +689,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = load(pdf);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);

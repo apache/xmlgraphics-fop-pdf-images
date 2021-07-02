@@ -20,8 +20,6 @@ import java.awt.image.DataBufferInt;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -64,10 +62,12 @@ public class PreloaderPDFTestCase {
 
     @Test
     public void testPreloaderPDF() throws Exception {
-        ImageSource imageSource = new ImageSource(
-                ImageIO.createImageInputStream(new File(PDFBoxAdapterTestCase.ROTATE)), "", true);
-        ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, new DefaultImageContext());
-        Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
+        try (InputStream is = PreloaderPDFTestCase.class.getResourceAsStream(PDFBoxAdapterTestCase.ROTATE)) {
+            ImageSource imageSource = new ImageSource(
+                    ImageIO.createImageInputStream(is), "", true);
+            ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, new DefaultImageContext());
+            Assert.assertEquals(imageInfo.getMimeType(), "application/pdf");
+        }
     }
 
     @Test
@@ -78,20 +78,21 @@ public class PreloaderPDFTestCase {
     }
 
     private void readPDF(DefaultImageContext context) throws IOException, ImageException {
-        ImageSource imageSource = new ImageSource(
-                ImageIO.createImageInputStream(new File(PDFBoxAdapterTestCase.ROTATE)), "", true);
-        ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, context);
-        ImagePDF img = (ImagePDF) imageInfo.getOriginalImage();
-        PDDocument doc = img.getPDDocument();
-        doc.save(new ByteArrayOutputStream());
-        img.close();
+        try (InputStream is = PreloaderPDFTestCase.class.getResourceAsStream(PDFBoxAdapterTestCase.ROTATE)) {
+            ImageSource imageSource = new ImageSource(ImageIO.createImageInputStream(is), "", true);
+            ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, context);
+            ImagePDF img = (ImagePDF) imageInfo.getOriginalImage();
+            PDDocument doc = img.getPDDocument();
+            doc.save(new ByteArrayOutputStream());
+            img.close();
+        }
     }
 
     @Test
     public void testLastResortPreloaderPDF() throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         bos.write("xx".getBytes("UTF-8"));
-        IOUtils.copy(new FileInputStream(PDFBoxAdapterTestCase.ROTATE), bos);
+        IOUtils.copy(PreloaderPDFTestCase.class.getResourceAsStream(PDFBoxAdapterTestCase.ROTATE), bos);
         InputStream pdf = new ByteArrayInputStream(bos.toByteArray());
         ImageInputStream inputStream = ImageIO.createImageInputStream(pdf);
         ImageSource imageSource = new ImageSource(inputStream, "", true);

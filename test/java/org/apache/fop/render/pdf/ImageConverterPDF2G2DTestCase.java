@@ -56,8 +56,8 @@ import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 
 public class ImageConverterPDF2G2DTestCase {
-    private static final String FONTSNOTEMBEDDED = "test/resources/fontsnotembedded.pdf";
-    private static final String FONTSNOTEMBEDDEDCID = "test/resources/fontsnotembeddedcid.pdf";
+    private static final String FONTSNOTEMBEDDED = "fontsnotembedded.pdf";
+    private static final String FONTSNOTEMBEDDEDCID = "fontsnotembeddedcid.pdf";
 
     @Test
     public void testFontsNotEmbedded() throws IOException, ImageException {
@@ -66,14 +66,14 @@ public class ImageConverterPDF2G2DTestCase {
     }
 
     private boolean pdfToPS(String pdf, String font) throws IOException, ImageException {
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         MyLazyFont lazyFont = new MyLazyFont();
         pdfToPS(doc, pdf, font, lazyFont);
         return lazyFont.font.fontUsed;
     }
 
     private void pdfToPS(String pdf, LazyFont lazyFont) throws IOException, ImageException {
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         pdfToPS(doc, pdf, "NewsMinIWA-Th", lazyFont);
     }
 
@@ -119,7 +119,7 @@ public class ImageConverterPDF2G2DTestCase {
 
     @Test
     public void testPDFToImage() throws IOException, ImageException {
-        PDDocument doc = PDDocument.load(new File(FONTSNOTEMBEDDED));
+        PDDocument doc = PDFBoxAdapterTestCase.load(FONTSNOTEMBEDDED);
         ImageInfo imgi = new ImageInfo(FONTSNOTEMBEDDED, "b");
         org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
         ImageConverterPDF2G2D imageConverterPDF2G2D = new ImageConverterPDF2G2D();
@@ -134,7 +134,7 @@ public class ImageConverterPDF2G2DTestCase {
     @Test
     public void testCheckImageMask() throws IOException, ImageException {
         String pdf = PDFBoxAdapterTestCase.CFFCID1;
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         COSStream cosStream = new COSStream();
         OutputStream outputStream = cosStream.createOutputStream();
         outputStream.write("/Fm0 Do\n".getBytes("UTF-8"));

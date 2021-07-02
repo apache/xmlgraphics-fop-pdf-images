@@ -18,7 +18,6 @@
 package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -44,12 +43,12 @@ import org.apache.fop.render.pdf.pdfbox.TaggedPDFConductor;
 
 
 public class TaggedPDFConductorTestCase {
-    private static final String LINK = "test/resources/linkTagged.pdf";
-    private static final String HELLO = "test/resources/helloWorld.pdf";
-    private static final String TABLE = "test/resources/emptyRowTable.pdf";
-    private static final String OTF = "test/resources/otf.pdf";
-    private static final String IMAGE = "test/resources/hello2.pdf";
-    private static final String NOPARENTTREE = "test/resources/NoParentTree.pdf";
+    private static final String LINK = "linkTagged.pdf";
+    private static final String HELLO = "helloWorld.pdf";
+    private static final String TABLE = "emptyRowTable.pdf";
+    private static final String OTF = "otf.pdf";
+    private static final String IMAGE = "hello2.pdf";
+    private static final String NOPARENTTREE = "NoParentTree.pdf";
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
 
@@ -91,7 +90,7 @@ public class TaggedPDFConductorTestCase {
 
     private void runConductor(String pdf, PDFStructElem elem) throws IOException {
         setUp();
-        PDDocument doc = PDDocument.load(new File(pdf));
+        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         PDPage srcPage = doc.getPage(0);
         elem.setObjectNumber(2);
         PDFBoxAdapter adapter = new PDFBoxAdapter(

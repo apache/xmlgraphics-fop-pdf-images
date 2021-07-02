@@ -17,7 +17,6 @@
 package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -42,7 +41,7 @@ import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 
 
 public class DocumentRootModifierTestCase {
-    private static final String CLASSMAP = "test/resources/classMap.pdf";
+    private static final String CLASSMAP = "classMap.pdf";
 
     @Test
     public void testStructTreeRootEntriesToCopy() throws IOException {
@@ -83,7 +82,7 @@ public class DocumentRootModifierTestCase {
         Assert.assertEquals(test, expected);
 
 
-        PDDocument doc = PDDocument.load(new File(CLASSMAP));
+        PDDocument doc = PDFBoxAdapterTestCase.load(CLASSMAP);
         COSDictionary temp = (COSDictionary)doc.getDocumentCatalog().getStructureTreeRoot().getCOSObject();
         PDFDictionary classMap = new PDFDictionary();
         PDFDictionary inner = new PDFDictionary();

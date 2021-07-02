@@ -17,7 +17,6 @@
 
 package org.apache.fop.render.pdf;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.junit.Assert;
@@ -38,11 +37,11 @@ import org.apache.pdfbox.pdmodel.common.PDNumberTreeNode;
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 
 public class PageParentTreeFinderTestCase {
-    private static final String LINK = "test/resources/linkTagged.pdf";
+    private static final String LINK = "linkTagged.pdf";
 
     @Test
     public void testGetPageParentTreeArray() throws IOException {
-        PDDocument doc = PDDocument.load(new File(LINK));
+        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -80,7 +79,7 @@ public class PageParentTreeFinderTestCase {
 
     @Test
     public void testTraverseKids() throws IOException {
-        PDDocument doc = PDDocument.load(new File(LINK));
+        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
         PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
         COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
         COSObject kidCOSObj = (COSObject) parentTree.get(0);
@@ -94,7 +93,7 @@ public class PageParentTreeFinderTestCase {
 
     @Test
     public void testCOSNull() throws IOException {
-        PDDocument doc = PDDocument.load(new File(LINK));
+        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
         PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
         COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
         COSObject kidCOSObj = (COSObject) parentTree.get(0);

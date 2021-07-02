@@ -22,7 +22,6 @@ package org.apache.fop.render.pdf;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
-import java.io.File;
 import java.io.IOException;
 
 import org.junit.Assert;
@@ -76,7 +75,7 @@ public class PDFRotateTestCase {
 
     private AffineTransform getTransform(int angle) throws IOException {
         PDFBoxAdapter adapter = PDFBoxAdapterTestCase.getPDFBoxAdapter(false, false);
-        PDDocument doc = PDDocument.load(new File(PDFBoxAdapterTestCase.ROTATE));
+        PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.ROTATE);
         PDPage page = doc.getPage(0);
         page.setRotation(angle);
         AffineTransform at = new AffineTransform();

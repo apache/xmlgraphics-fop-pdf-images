@@ -18,7 +18,6 @@
 package org.apache.fop.render.pdf;
 
 import java.awt.geom.Rectangle2D;
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -53,16 +52,16 @@ import org.apache.fop.render.pdf.pdfbox.StructureTreeMerger;
 
 
 public class StructureTreeMergerTestCase {
-    private static final String LINK = "test/resources/linkTagged.pdf";
-    private static final String BrokenLink = "test/resources/brokenLink.pdf";
-    private static final String MissingOBJR = "test/resources/missingOBJR.pdf";
+    private static final String LINK = "linkTagged.pdf";
+    private static final String BrokenLink = "brokenLink.pdf";
+    private static final String MissingOBJR = "missingOBJR.pdf";
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
     private PDFBoxAdapter adapter;
 
     @Test
     public void testCopyStructure() throws IOException {
-        PDDocument doc = PDDocument.load(new File(LINK));
+        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -81,7 +80,7 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testNullEntriesInParentTree() throws IOException {
-        PDDocument doc = PDDocument.load(new File(LINK));
+        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -98,7 +97,7 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testOBJRCorrectPosition() throws IOException {
-        PDDocument doc = PDDocument.load(new File(MissingOBJR));
+        PDDocument doc = PDFBoxAdapterTestCase.load(MissingOBJR);
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
@@ -174,7 +173,7 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testCheckNullCOSObject() throws IOException {
-        PDDocument doc = PDDocument.load(new File(BrokenLink));
+        PDDocument doc = PDFBoxAdapterTestCase.load(BrokenLink);
         PDPage srcPage = doc.getPage(0);
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);

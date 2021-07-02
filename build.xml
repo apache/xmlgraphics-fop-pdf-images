@@ -121,6 +121,7 @@
       <formatter type="xml" usefile="true"/>
       <classpath>
         <pathelement location="${coverage.dir}" />
+        <pathelement location="test/resources" />
         <path refid="standard-junit-classpath"/>
       </classpath>
       <assertions>
