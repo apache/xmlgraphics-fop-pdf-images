@@ -21,6 +21,7 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -172,8 +173,10 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                     at.scale(area.getWidth() / mediaBox.getWidth(),
                             area.getHeight() / mediaBox.getHeight());
                     g2d.transform(at);
-                normaliseScale(g2d);
-                    new PDFRenderer(pdDocument).renderPageToGraphics(selectedPage, g2d);
+                    normaliseScale(g2d);
+                    PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
+                    pdfRenderer.setRenderingHints(getDefaultRenderingHints());
+                    pdfRenderer.renderPageToGraphics(selectedPage, g2d);
                 }
             } catch (UnsupportedOperationException e) {
                 throw e;
@@ -182,6 +185,14 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
             } finally {
                 fopFontProvider.close();
             }
+        }
+
+        private RenderingHints getDefaultRenderingHints() {
+            RenderingHints r = new RenderingHints(null);
+            r.put(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            r.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            r.put(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            return r;
         }
 
         private void normaliseScale(Graphics2D g2d) {
