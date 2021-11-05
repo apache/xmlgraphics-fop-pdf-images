@@ -47,6 +47,7 @@ public class ImageConverterPDF2AFP extends AbstractImageConverter {
         pdDocument = splitter.split(pdDocument).get(0);
         ByteArrayOutputStream pdf = new ByteArrayOutputStream();
         pdDocument.save(pdf);
+        pdDocument.close();
         MimeEnabledImageFlavor imageFlavor = new MimeEnabledImageFlavor(src.getFlavor(), ImagePDF.MIME_PDF);
         return new ImageRawStream(src.getInfo(), imageFlavor, new ByteArrayInputStream(pdf.toByteArray()));
     }
@@ -56,7 +57,7 @@ public class ImageConverterPDF2AFP extends AbstractImageConverter {
     }
 
     public ImageFlavor getTargetFlavor() {
-        return ImageFlavor.RAW;
+        return ImageFlavor.RAW_PDF;
     }
 
     public int getConversionPenalty() {
