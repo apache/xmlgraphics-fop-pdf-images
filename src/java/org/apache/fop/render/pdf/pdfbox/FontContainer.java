@@ -74,7 +74,7 @@ public class FontContainer {
             // embedded CMap
             InputStream input = null;
             try {
-                input = ((COSStream)base).getUnfilteredStream();
+                input = ((COSStream)base).createInputStream();
                 CMapParser parser = new CMapParser();
                 return parser.parse(input);
             } finally {

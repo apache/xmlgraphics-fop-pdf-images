@@ -71,7 +71,7 @@ public final class PDFBoxAdapterUtil {
             }
             sb.append("}");
             if (base instanceof COSStream) {
-                InputStream stream = ((COSStream)base).getFilteredStream();
+                InputStream stream = ((COSStream)base).createRawInputStream();
                 byte[] b = IOUtils.toByteArray(stream);
                 sb.append("COSStream{").append(Arrays.hashCode(b)).append("}");
             }

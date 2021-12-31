@@ -37,6 +37,7 @@ import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSize;
 import org.apache.xmlgraphics.image.loader.impl.AbstractImagePreloader;
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
+import org.apache.xmlgraphics.io.XmlSourceUtil;
 import org.apache.xmlgraphics.util.io.SubInputStream;
 
 import org.apache.fop.datatypes.URISpecification;
@@ -172,12 +173,12 @@ public class PreloaderPDF extends AbstractImagePreloader {
         }
 
             public PDDocument make() throws Exception {
-                final InputStream in = ImageUtil.needInputStream(src);
+                final InputStream in = XmlSourceUtil.needInputStream(src);
                 try {
                     PDDocument pddoc = PDDocument.load(new SubInputStream(in, Integer.MAX_VALUE));
                     return Interceptors.getInstance().interceptOnLoad(pddoc, docURI);
                 } finally {
-                    ImageUtil.closeQuietly(src);
+                    XmlSourceUtil.closeQuietly(src);
                 }
             }
         };

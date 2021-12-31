@@ -178,15 +178,15 @@ public class PDFCloner {
         PDFStream stream = new PDFStream();
         if (adapter.pdfDoc.isEncryptionActive() && originalStream.getItem(COSName.FILTER) == COSName.DCT_DECODE) {
             stream.getFilterList().addFilter(new DCTFilter());
-            in = originalStream.getFilteredStream();
+            in = originalStream.createRawInputStream();
             filter = Collections.EMPTY_SET;
         } else if (adapter.pdfDoc.isEncryptionActive()
                 || (originalStream.containsKey(COSName.DECODE_PARMS) && !originalStream.containsKey(COSName.FILTER))) {
-            in = originalStream.getUnfilteredStream();
+            in = originalStream.createInputStream();
             filter = adapter.FILTER_FILTER;
         } else {
             //transfer encoded data (don't reencode)
-            in = originalStream.getFilteredStream();
+            in = originalStream.createRawInputStream();
             filter = Collections.EMPTY_SET;
         }
 

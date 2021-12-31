@@ -235,7 +235,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             int bits = ((COSInteger)s.getDictionaryObject(COSName.BITS_PER_SAMPLE)).intValue();
             COSArray size = (COSArray) s.getDictionaryObject(COSName.SIZE);
             COSArray encode = getEncode(s);
-            byte[] x = IOUtils.toByteArray(stream.getUnfilteredStream());
+            byte[] x = IOUtils.toByteArray(stream.createInputStream());
             for (byte y : x) {
                 if (y != 0) {
                     return new Function(floatArrayToDoubleList(domain.toFloatArray()),
