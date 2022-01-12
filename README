@@ -156,6 +156,16 @@ http://www.jeremias-maerki.ch/development/fop/index.html
   RELEASE NOTES
 ==============================================================================
 
+Version 2.7
+=========================
+
+Changes:
+FOP-3034: Update PDFBox to 2.0.24
+FOP-3032: Allow to embed native PDF in AFP
+FOP-3020: Add space to standard position for font merge
+FOP-3009: Avoid merging fonts with different number of cmap formats
+FOP-3001: Deduplicate streams in arrays
+
 Version 2.6
 =========================
 
