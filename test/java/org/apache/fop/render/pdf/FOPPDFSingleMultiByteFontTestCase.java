@@ -74,7 +74,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         Assert.assertEquals(sbfont.getFontName(), "MyriadPro-Regular_Type1f0encstdcs");
         Assert.assertEquals(sbfont.getEncodingName(), "WinAnsiEncoding");
         Assert.assertEquals(sbfont.mapChar('W'), 'W');
-        String x = IOUtils.toString(sbfont.getInputStream());
+        String x = IOUtils.toString(sbfont.getInputStream(), "utf8");
         Assert.assertTrue(x, x.contains("Adobe Systems"));
         Assert.assertEquals(sbfont.getEncoding().getName(), "FOPPDFEncoding");
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("A"));
