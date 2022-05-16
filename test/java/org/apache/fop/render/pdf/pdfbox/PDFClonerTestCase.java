@@ -18,7 +18,9 @@
 /* $Id$ */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.geom.Rectangle2D;
 import java.io.IOException;
+import java.util.HashMap;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -28,6 +30,11 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.cos.COSString;
+
+import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFPage;
+import org.apache.fop.pdf.PDFResources;
 
 public class PDFClonerTestCase {
     @Test
@@ -45,5 +52,16 @@ public class PDFClonerTestCase {
         COSDictionary root = new COSDictionary();
         root.setItem(COSName.C, array);
         return root;
+    }
+
+    @Test
+    public void testString() throws IOException {
+        COSString string = new COSString(new byte[]{(byte) 127, (byte) 127});
+        PDFDocument doc = new PDFDocument("");
+        Rectangle2D r = new Rectangle2D.Double();
+        PDFPage page = new PDFPage(new PDFResources(doc), 0, r, r, r, r);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), null, new HashMap<>());
+        String cloned = (String) new PDFCloner(adapter).cloneForNewDocument(string);
+        Assert.assertArrayEquals(cloned.getBytes(PDFDocument.ENCODING), string.getBytes());
     }
 }

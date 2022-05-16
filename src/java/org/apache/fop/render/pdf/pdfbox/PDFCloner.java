@@ -165,7 +165,7 @@ public class PDFCloner {
             return cacheClonedObject(keyBase, new PDFString(bytes));
         } else {
             if (PDFString.isUSASCII(bytes)) {
-                return cacheClonedObject(keyBase, string.getString());
+                return cacheClonedObject(keyBase, new String(string.getBytes(), PDFDocument.ENCODING));
             } else {
                 return cacheClonedObject(keyBase, bytes);
             }
