@@ -94,7 +94,7 @@ public class TaggedPDFConductorTestCase {
         PDPage srcPage = doc.getPage(0);
         elem.setObjectNumber(2);
         PDFBoxAdapter adapter = new PDFBoxAdapter(
-                pdfPage, new HashMap(),  new HashMap<Integer, PDFArray>());
+                pdfPage, new HashMap<>(),  new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
     }
@@ -135,9 +135,9 @@ public class TaggedPDFConductorTestCase {
             expected = 2;
             Assert.assertEquals(test, expected);
             PDFStructElem second = (PDFStructElem)list.get(1);
-            List secondKids = second.getKids();
+            List<PDFObject> secondKids = second.getKids();
             PDFStructElem secKid = (PDFStructElem) secondKids.get(0);
-            List secondKidKids = secKid.getKids();
+            List<PDFObject> secondKidKids = secKid.getKids();
             PDFDictionary leafElem = (PDFDictionary)secondKidKids.get(0);
             test = ((PDFNumber)leafElem.get("MCID")).getNumber().intValue();
             expected = 1;

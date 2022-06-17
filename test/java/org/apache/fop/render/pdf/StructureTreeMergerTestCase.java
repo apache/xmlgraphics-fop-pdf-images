@@ -67,7 +67,7 @@ public class StructureTreeMergerTestCase {
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         adapter.setCurrentMCID(1);
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
@@ -87,7 +87,7 @@ public class StructureTreeMergerTestCase {
         markedContentParents.add(0, null);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -103,7 +103,7 @@ public class StructureTreeMergerTestCase {
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -125,7 +125,7 @@ public class StructureTreeMergerTestCase {
 
     private void checkMarkedContentsParentsForLinkTest(PDFArray array) {
         PDFStructElem first = (PDFStructElem)array.get(0);
-        List firstKids = first.getKids();
+        List<PDFObject> firstKids = first.getKids();
         PDFDictionary firstKid = (PDFDictionary) firstKids.get(0);
         int test = ((PDFNumber)firstKid.get("MCID")).getNumber().intValue();
         int expected = 1;
@@ -135,7 +135,7 @@ public class StructureTreeMergerTestCase {
         expected = 3;
         Assert.assertEquals(test, expected);
         PDFStructElem second = (PDFStructElem)array.get(1);
-        List secondKids = second.getKids();
+        List<PDFObject> secondKids = second.getKids();
         PDFDictionary secKid = (PDFDictionary) secondKids.get(0);
         test = ((PDFNumber)secKid.get("MCID")).getNumber().intValue();
         expected = 2;
@@ -186,7 +186,7 @@ public class StructureTreeMergerTestCase {
         COSArray kids = (COSArray) parent.getDictionaryObject(COSName.K);
         COSDictionary kid = (COSDictionary) kids.get(1);
         kid.setItem(COSName.OBJ, nullObj);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -200,7 +200,7 @@ public class StructureTreeMergerTestCase {
     public void testDirectDescedants() throws IOException {
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(100);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         PDPage srcPage = new PDPage();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
@@ -221,7 +221,7 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testEmptyDict() throws IOException {
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         StructureTreeMerger structureTreeMerger = new StructureTreeMerger(null, null, adapter, null);
         COSArray cosArray = new COSArray();
         COSObject o = new COSObject(new COSDictionary());

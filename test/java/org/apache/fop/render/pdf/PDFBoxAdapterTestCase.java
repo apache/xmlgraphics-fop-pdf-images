@@ -139,7 +139,7 @@ public class PDFBoxAdapterTestCase {
         doc.setFormXObjectEnabled(formXObject);
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
-        return new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        return new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
     }
 
     protected static PDDocument load(String pdf) throws IOException {
@@ -258,7 +258,7 @@ public class PDFBoxAdapterTestCase {
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDDocument doc = load(ANNOT);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
@@ -294,7 +294,7 @@ public class PDFBoxAdapterTestCase {
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDDocument doc = load(ACCESSIBLERADIOBUTTONS);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
@@ -314,7 +314,7 @@ public class PDFBoxAdapterTestCase {
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDDocument doc = load(ACCESSIBLERADIOBUTTONS);
         COSArray fields = (COSArray)
                 doc.getDocumentCatalog().getAcroForm().getCOSObject().getDictionaryObject(COSName.FIELDS);
@@ -336,7 +336,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), pageNumbers);
         PDDocument doc = load(LINK);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
@@ -358,7 +358,7 @@ public class PDFBoxAdapterTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), pageNumbers);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), pageNumbers);
         PDDocument doc = load(XFORM);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();
@@ -508,7 +508,7 @@ public class PDFBoxAdapterTestCase {
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfdoc.assignObjectNumber(pdfpage);
         pdfpage.setDocument(pdfdoc);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDDocument doc = load(src);
         PDPage page = doc.getPage(0);
         adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, new Rectangle());
@@ -688,7 +688,7 @@ public class PDFBoxAdapterTestCase {
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap(), new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDDocument doc = load(pdf);
         PDPage page = doc.getPage(0);
         AffineTransform at = new AffineTransform();

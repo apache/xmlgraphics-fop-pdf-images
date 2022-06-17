@@ -53,7 +53,7 @@ public class DocumentRootModifierTestCase {
         pdfDoc.makeStructTreeRoot(null);
         PDFStructTreeRoot structTreeRoot = pdfDoc.getRoot().getStructTreeRoot();
         PDFDictionary rootBaseRoleMap = new PDFDictionary();
-        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap(),  new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(),  new HashMap<Integer, PDFArray>());
         DocumentRootModifier modifier = new DocumentRootModifier(adapter, pdfDoc);
         COSDictionary root = new COSDictionary();
         COSDictionary mapRole = new COSDictionary();
@@ -83,7 +83,7 @@ public class DocumentRootModifierTestCase {
 
 
         PDDocument doc = PDFBoxAdapterTestCase.load(CLASSMAP);
-        COSDictionary temp = (COSDictionary)doc.getDocumentCatalog().getStructureTreeRoot().getCOSObject();
+        COSDictionary temp = doc.getDocumentCatalog().getStructureTreeRoot().getCOSObject();
         PDFDictionary classMap = new PDFDictionary();
         PDFDictionary inner = new PDFDictionary();
         inner.put("StartIndent", 0);

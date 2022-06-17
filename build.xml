@@ -103,6 +103,7 @@
           <include name="fop*.jar"/>
         </fileset>
       </classpath>
+      <compilerarg value="-Xlint"/>
     </javac>
   </target>
   
