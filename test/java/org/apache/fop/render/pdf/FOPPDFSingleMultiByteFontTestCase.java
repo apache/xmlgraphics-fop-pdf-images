@@ -16,6 +16,7 @@
  */
 package org.apache.fop.render.pdf;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
@@ -29,6 +30,9 @@ import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.GlyphTable;
+import org.apache.fontbox.ttf.TTFParser;
+import org.apache.fontbox.ttf.TTFTable;
+import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.fontbox.type1.Type1Font;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -137,7 +141,14 @@ public class FOPPDFSingleMultiByteFontTestCase {
         Assert.assertEquals(name, "TimesNewRomanPSMT_TrueType");
         Assert.assertEquals(mbfont.getFontName(), "TimesNewRomanPSMT_TrueType");
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
-        Assert.assertEquals(is.length, 41112);
+        Assert.assertEquals(is.length, 41104);
+
+        TrueTypeFont trueTypeFont = new TTFParser().parse(new ByteArrayInputStream(is));
+        TTFTable ttfTable = trueTypeFont.getTableMap().get("cmap");
+        ByteArrayInputStream bis = new ByteArrayInputStream(is);
+        bis.skip(ttfTable.getOffset() + 21);
+        Assert.assertEquals(bis.read(), 4); //subtableFormat
+
         doc.close();
         doc2.close();
     }

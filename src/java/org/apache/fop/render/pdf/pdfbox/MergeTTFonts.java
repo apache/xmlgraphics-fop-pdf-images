@@ -18,7 +18,6 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -352,52 +351,42 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         }
 
         for (Cmap cmap : cmaps) {
-            if (cmap.platformId == 1 && cmaps.size() == 1) {
-                writeUShort(6); //subtableFormat
-                int firstCode = -1;
-                int lastCode = -1;
-                List<Integer> codes = new ArrayList<Integer>();
-                for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
-                    if (firstCode < 0) {
-                        firstCode = g.getKey();
-                    }
-                    while (lastCode > 0 && lastCode + 1 < g.getKey()) {
-                        codes.add(0);
-                        lastCode++;
-                    }
-                    codes.add(g.getValue());
-                    lastCode = g.getKey();
-                }
-                writeUShort((codes.size() * 2) + 6); //length
-                writeUShort(0); //version
-                writeUShort(firstCode); //firstCode
-                writeUShort(codes.size()); //entryCount
-                for (int i : codes) {
-                    writeUShort(i);
-                }
-            } else {
-                writeUShort(12); //subtableFormat
-                writeUShort(0);
-                writeULong(currentPos, (cmap.glyphIdToCharacterCode.size() * 12) + 16);
-                currentPos += 4;
-                writeULong(currentPos, 0);
-                currentPos += 4;
-                writeULong(currentPos, cmap.glyphIdToCharacterCode.size());
-                currentPos += 4;
-
-                for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
-                    writeULong(currentPos, g.getKey());
-                    currentPos += 4;
-                    writeULong(currentPos, g.getKey());
-                    currentPos += 4;
-                    writeULong(currentPos, g.getValue());
-                    currentPos += 4;
-                }
+            writeUShort(4); //subtableFormat
+            int segCount = cmap.glyphIdToCharacterCode.size() + 1;
+            writeUShort(16 + (segCount * 8)); //length
+            writeUShort(0); //lang
+            writeUShort(segCount * 2); //segCountX2
+            double searchRange = Math.pow(2, Math.floor(logBase2(segCount))) * 2;
+            writeUShort((int) searchRange); //searchRange
+            double entrySelector = Math.floor(logBase2(segCount));
+            writeUShort((int) entrySelector); //entrySelector
+            double rangeShift = (segCount * 2) - searchRange;
+            writeUShort((int) rangeShift); //rangeShift
+            for (int c : cmap.glyphIdToCharacterCode.keySet()) {
+                writeUShort(c); //endCode
             }
+            writeUShort(0xFFFF);
+            writeUShort(0); //reservedPad
+            for (int c : cmap.glyphIdToCharacterCode.keySet()) {
+                writeUShort(c); //startCode
+            }
+            writeUShort(0);
+            for (Map.Entry<Integer, Integer> entry : cmap.glyphIdToCharacterCode.entrySet()) {
+                writeUShort(entry.getValue() - entry.getKey()); //idDelta
+            }
+            writeUShort(0);
+            for (int g : cmap.glyphIdToCharacterCode.keySet()) {
+                writeUShort(0); //idRangeOffsets
+            }
+            writeUShort(0);
         }
 
         updateCheckSum(checksum, currentPos - cmapPos, OFTableName.CMAP);
         realSize += currentPos - cmapPos;
+    }
+
+    private int logBase2(int n) {
+        return (int)(Math.log(n) / Math.log(2));
     }
 
     private void mergeUniCmap(List<Cmap> cmaps) {
@@ -418,7 +407,8 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         int result = 0;
         for (int i = 0; i < index; i++) {
             Cmap curCmap = cmaps.get(i);
-            result += (curCmap.glyphIdToCharacterCode.size() * 12) + 16;
+            int segCount = curCmap.glyphIdToCharacterCode.size() + 1;
+            result += 16 + (segCount * 8); //length
         }
         return result;
     }
