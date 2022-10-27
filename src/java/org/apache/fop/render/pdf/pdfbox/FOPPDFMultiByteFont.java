@@ -130,11 +130,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         }
         if (mergeFonts instanceof MergeTTFonts) {
             mergeMaxp(ttf, ((MergeTTFonts)mergeFonts).maxp);
-            int sizeNoCompGlyphs = oldToNewGIMap.size();
             mergeFonts.readFont(ffr, null, null, oldToNewGIMap, true);
-            if (oldToNewGIMap.size() > sizeNoCompGlyphs) {
-                cidSet.mapChar(256 * 256, (char) 0);
-            }
         } else {
             mergeFonts.readFont(ffr, getEmbedFontName(), null, null, true);
         }

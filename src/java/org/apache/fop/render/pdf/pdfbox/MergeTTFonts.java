@@ -16,10 +16,17 @@
  */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.fop.fonts.truetype.FontFileReader;
@@ -30,19 +37,27 @@ import org.apache.fop.fonts.truetype.OFTableName;
 import org.apache.fop.fonts.truetype.TTFSubSetFile;
 
 public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
-    private Map<Integer, Glyph> added = new TreeMap<Integer, Glyph>();
+    private Map<Integer, Glyph> added = new TreeMap<>();
     private int origIndexesLen;
     private int size;
     protected MaximumProfileTable maxp = new MaximumProfileTable();
     private Integer nhmtxDiff = null;
     private List<Cmap> cmap;
+    private Set<Integer> composedGlyphs = Collections.emptySet();
+    private Set<Integer> compositeGlyphs = Collections.emptySet();
 
     static class Glyph {
         final byte[] data;
         final OFMtxEntry mtx;
-        Glyph(byte[] d, OFMtxEntry m) {
-            data = d;
-            mtx = m;
+        final boolean composed;
+        final boolean composite;
+        final int origGlyphIndex;
+        Glyph(byte[] data, OFMtxEntry mtx, boolean composed, boolean composite, int origGlyphIndex) {
+            this.data = data;
+            this.mtx = mtx;
+            this.composed = composed;
+            this.composite = composite;
+            this.origGlyphIndex = origGlyphIndex;
         }
     }
 
@@ -77,7 +92,9 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                         (int)entry.getOffset() + glyphOffset,
                         glyphLength);
 
-                Glyph g = new Glyph(glyphData, mtxTab[origGlyphIndex]);
+                Glyph g = new Glyph(glyphData, mtxTab[origGlyphIndex],
+                        composedGlyphs.contains(origGlyphIndex),
+                        compositeGlyphs.contains(origGlyphIndex), origGlyphIndex);
                 if (!cid && (origIndexesLen == 0 || (glyphLength > 0 && i > 0))) {
                     added.put(i, g);
                 } else if (cid) {
@@ -248,7 +265,9 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         if (glyfTableInfo == null) {
             throw new IOException("Glyf table could not be found");
         }
-        new MergeGlyfTable(in, mtxTab, glyfTableInfo, subsetGlyphs);
+        MergeGlyfTable mergeGlyfTable = new MergeGlyfTable(in, mtxTab, glyfTableInfo, subsetGlyphs);
+        composedGlyphs = mergeGlyfTable.getComposedGlyphs();
+        compositeGlyphs = mergeGlyfTable.getCompositeGlyphs();
     }
 
     static class MergeGlyfTable extends GlyfTable {
@@ -256,6 +275,34 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                               Map<Integer, Integer> glyphs) throws IOException {
             super(in, metrics, dirTableEntry, glyphs);
             populateGlyphsWithComposites();
+        }
+
+        protected void populateGlyphsWithComposites() throws IOException {
+            for (int indexInOriginal : subset.keySet()) {
+                scanGlyphsRecursively(indexInOriginal);
+            }
+            addAllComposedGlyphsToSubset();
+        }
+
+        private void scanGlyphsRecursively(int indexInOriginal) throws IOException {
+            if (!subset.containsKey(indexInOriginal)) {
+                composedGlyphs.add(indexInOriginal);
+            }
+            if (isComposite(indexInOriginal)) {
+                compositeGlyphs.add(indexInOriginal);
+                Set<Integer> composedGlyphs = retrieveComposedGlyphs(indexInOriginal);
+                for (Integer composedGlyph : composedGlyphs) {
+                    scanGlyphsRecursively(composedGlyph);
+                }
+            }
+        }
+
+        Set<Integer> getComposedGlyphs() {
+            return composedGlyphs;
+        }
+
+        Set<Integer> getCompositeGlyphs() {
+            return compositeGlyphs;
         }
 
         @Override
@@ -272,11 +319,66 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         }
     }
 
+    private void reorderGlyphs() throws IOException {
+        Map<Integer, Integer> remap = new HashMap<>();
+        Map<Integer, Glyph> glyphMap = new TreeMap<>();
+        int i = 0;
+        for (Glyph glyph : added.values()) {
+            if (!glyph.composed) {
+                glyphMap.put(i, glyph);
+                remap.put(glyph.origGlyphIndex, i);
+                i++;
+            }
+        }
+        for (Glyph glyph : added.values()) {
+            if (glyph.composed) {
+                glyphMap.put(i, glyph);
+                remap.put(glyph.origGlyphIndex, i);
+                i++;
+            }
+        }
+        for (Glyph glyph : glyphMap.values()) {
+            if (glyph.composite && glyph.data.length > 0) {
+                remapComposite(glyph.data, remap);
+            }
+        }
+        added = glyphMap;
+    }
+
+    private void remapComposite(byte[] data, Map<Integer, Integer> remap) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
+        byte[] header = new byte[10];
+        read(dis, header);
+        dos.write(header);
+        int flags;
+        do {
+            flags = dis.readShort();
+            dos.writeShort(flags);
+            int glyphIndex = dis.readShort();
+            int indexInSubset = remap.get(glyphIndex);
+            dos.writeShort(indexInSubset);
+            int skip = GlyfTable.GlyfFlags.getOffsetToNextComposedGlyf(flags);
+            byte[] rest = new byte[skip];
+            read(dis, rest);
+            dos.write(rest);
+        } while(GlyfTable.GlyfFlags.hasMoreComposites(flags));
+        System.arraycopy(bos.toByteArray(), 0, data, 0, bos.size());
+    }
+
+    private void read(DataInputStream dis, byte[] data) throws IOException {
+        int size = dis.read(data);
+        assert size == data.length;
+    }
+
     public byte[] getMergedFontSubset() throws IOException {
         int sgsize = added.size();
         if (sgsize == 1 && size == fontFile.getAllBytes().length) {
             return fontFile.getAllBytes();
         }
+        reorderGlyphs();
+
         output = new byte[size * 2];
         createDirectory();     // Create the TrueType header and directory
         if (!cid) {

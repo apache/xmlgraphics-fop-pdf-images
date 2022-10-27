@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,7 +45,9 @@ import static org.mockito.Mockito.when;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFParser;
+import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.TTFParser;
+import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.fontbox.type1.Type1Font;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -105,6 +108,8 @@ public class PDFBoxAdapterTestCase {
     protected static final String TTSubset5 = "ttsubset5.pdf";
     protected static final String TTSubset6 = "ttsubset6.pdf";
     protected static final String TTSubset7 = "ttsubset7.pdf";
+    protected static final String TTSubset8 = "ttsubset8.pdf";
+    protected static final String TTSubset9 = "ttsubset9.pdf";
     protected static final String CFFCID1 = "cffcid1.pdf";
     protected static final String CFFCID2 = "cffcid2.pdf";
     protected static final String Type1Subset1 = "t1subset.pdf";
@@ -612,7 +617,9 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testErrorMsgToPDF() throws IOException {
         String msg = "";
-        PDFRenderingContext context = new PDFRenderingContext(null, null, null, null);
+        PDFDocument pdfdoc = new PDFDocument("");
+        PDFContentGenerator contentGenerator = new PDFContentGenerator(pdfdoc, null, null);
+        PDFRenderingContext context = new PDFRenderingContext(null, contentGenerator, null, null);
         ImagePDF imagePDF = new ImagePDF(new ImageInfo(ERROR, null), null);
         try {
             new PDFBoxImageHandler().handleImage(context, imagePDF, null);
@@ -733,5 +740,26 @@ public class PDFBoxAdapterTestCase {
         writeText(fi, TTSubset6);
         String msg = writeText(fi, TTSubset7);
         Assert.assertTrue(msg, msg.contains("( )Tj"));
+    }
+
+    @Test
+    public void testReorderGlyphs() throws IOException {
+        FontInfo fontInfo = new FontInfo();
+        writeText(fontInfo, TTSubset8);
+        writeText(fontInfo, TTSubset9);
+        List<Integer> compositeList = new ArrayList<>();
+        for (Typeface font : fontInfo.getUsedFonts().values()) {
+            InputStream inputStream = ((CustomFont) font).getInputStream();
+            TTFParser parser = new TTFParser(true);
+            TrueTypeFont trueTypeFont = parser.parse(inputStream);
+            int i = 0;
+            for (GlyphData glyphData : trueTypeFont.getGlyph().getGlyphs()) {
+                if (glyphData != null && glyphData.getDescription().isComposite()) {
+                    compositeList.add(i);
+                }
+                i++;
+            }
+        }
+        Assert.assertEquals(compositeList, Arrays.asList(18, 19, 39, 42, 62, 63, 29));
     }
 }
