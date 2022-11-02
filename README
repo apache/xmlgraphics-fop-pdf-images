@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 2.0 or later
-- Apache XML Graphics Commons 2.4 or later (for the image converter)
-- Apache XML FOP 2.5 or later (for the FOP functionality)
-- Java 1.7 or later
+- Apache XML Graphics Commons 2.8 or later (for the image converter)
+- Apache XML FOP 2.8 or later (for the FOP functionality)
+- Java 1.8 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.4 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.8 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -155,6 +155,15 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.8
+=========================
+
+Changes:
+FOP-3051: Upgrade to Commons IO 2.11
+FOP-3073: Preserve bytes when cloning string
+FOP-3089: Switch cmap format to support iPhone
+FOP-3102: Move composite glyphs to the end
 
 Version 2.7
 =========================
