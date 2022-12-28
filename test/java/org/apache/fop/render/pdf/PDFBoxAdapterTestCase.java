@@ -131,6 +131,7 @@ public class PDFBoxAdapterTestCase {
     protected static final String TYPE0CFF = "type0cff.pdf";
     protected static final String ACCESSIBLERADIOBUTTONS = "accessibleradiobuttons.pdf";
     protected static final String PATTERN = "pattern.pdf";
+    protected static final String FORMROTATED = "formrotated.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -761,5 +762,14 @@ public class PDFBoxAdapterTestCase {
             }
         }
         Assert.assertEquals(compositeList, Arrays.asList(18, 19, 39, 42, 62, 63, 29));
+    }
+
+    @Test
+    public void testFormRotated() throws IOException {
+        PDFDocument pdfdoc = new PDFDocument("");
+        loadPage(pdfdoc, FORMROTATED);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        Assert.assertFalse(bos.toString("UTF-8").contains("/R 90"));
     }
 }

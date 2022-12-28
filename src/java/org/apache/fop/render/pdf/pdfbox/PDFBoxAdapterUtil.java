@@ -18,7 +18,9 @@
 /* $Id$ */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -36,6 +38,8 @@ import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream;
 
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
@@ -164,12 +168,12 @@ public final class PDFBoxAdapterUtil {
         }
     }
 
-    protected static void moveAnnotations(PDPage page, List pageAnnotations, AffineTransform at) {
+    protected static void moveAnnotations(PDPage page, List pageAnnotations, AffineTransform at, Rectangle pos) {
         PDRectangle mediaBox = page.getMediaBox();
         PDRectangle cropBox = page.getCropBox();
         PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
         for (Object obj : pageAnnotations) {
-            PDAnnotation annot = (PDAnnotation)obj;
+            PDAnnotation annot = (PDAnnotation) obj;
             PDRectangle rect = annot.getRectangle();
             float translateX = (float) (at.getTranslateX() - viewBox.getLowerLeftX());
             float translateY = (float) (at.getTranslateY() - viewBox.getLowerLeftY());
@@ -178,18 +182,43 @@ public final class PDFBoxAdapterUtil {
                 rect.setLowerLeftX(rect.getLowerLeftX() + translateX);
                 rect.setUpperRightY(rect.getUpperRightY() + translateY);
                 rect.setLowerLeftY(rect.getLowerLeftY() + translateY);
+                int rotation = PDFUtil.getNormalizedRotation(page);
+                if (rotation > 0) {
+                    AffineTransform transform = AffineTransform.getTranslateInstance(translateX, translateY);
+                    float height = (float)pos.getHeight() / 1000f;
+                    rotateStream(transform, rotation, height, annot);
+                    transform.translate(-translateX, -translateY);
+                    rect = applyTransform(rect, transform);
+                }
                 annot.setRectangle(rect);
             }
-//            COSArray vertices = (COSArray) annot.getCOSObject().getDictionaryObject("Vertices");
-//            if (vertices != null) {
-//                Iterator iter = vertices.iterator();
-//                while (iter.hasNext()) {
-//                    COSFloat x = (COSFloat) iter.next();
-//                    COSFloat y = (COSFloat) iter.next();
-//                    x.setValue(x.floatValue() + translateX);
-//                    y.setValue(y.floatValue() + translateY);
-//                }
-//            }
         }
+    }
+
+    private static void rotateStream(AffineTransform transform, int rotation, float height, PDAnnotation annot) {
+        transform.rotate(Math.toRadians(-rotation));
+        transform.translate(-height, 0);
+        COSDictionary mkDict = (COSDictionary) annot.getCOSObject().getDictionaryObject(COSName.MK);
+        if (mkDict != null) {
+            mkDict.removeItem(COSName.R);
+        }
+        PDAppearanceDictionary appearance = annot.getAppearance();
+        if (appearance != null) {
+            for (PDAppearanceStream stream : appearance.getNormalAppearance().getSubDictionary().values()) {
+                stream.setMatrix(new AffineTransform());
+            }
+            for (PDAppearanceStream stream : appearance.getDownAppearance().getSubDictionary().values()) {
+                stream.setMatrix(new AffineTransform());
+            }
+        }
+    }
+
+    private static PDRectangle applyTransform(PDRectangle rect, AffineTransform apAt) {
+        Rectangle2D.Float rectangle = new Rectangle2D.Float();
+        rectangle.setRect(rect.getLowerLeftX(), rect.getLowerLeftY(), rect.getWidth(), rect.getHeight());
+        Rectangle2D rectangleT = apAt.createTransformedShape(rectangle).getBounds2D();
+        rect = new PDRectangle((float)rectangleT.getX(), (float)rectangleT.getY(),
+                (float)rectangleT.getWidth(), (float)rectangleT.getHeight());
+        return rect;
     }
 }

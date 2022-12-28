@@ -182,7 +182,7 @@ public class PDFBoxAdapter {
         throws IOException {
         COSDictionary sourcePageResources = getResources(page);
         uniqueName = new UniqueName(key, sourcePageResources, pdfDoc.isFormXObjectEnabled());
-        handleAnnotations(sourceDoc, page, atdoc);
+        handleAnnotations(sourceDoc, page, atdoc, pos);
         if (pageNumbers.containsKey(targetPage.getPageIndex())) {
             pageNumbers.get(targetPage.getPageIndex()).set(0, targetPage.makeReference());
         }
@@ -458,7 +458,8 @@ public class PDFBoxAdapter {
          */
     }
 
-    private void handleAnnotations(PDDocument sourceDoc, PDPage page, AffineTransform at) throws IOException {
+    private void handleAnnotations(PDDocument sourceDoc, PDPage page, AffineTransform at, Rectangle pos)
+        throws IOException {
         PDDocumentCatalog srcCatalog = sourceDoc.getDocumentCatalog();
         PDAcroForm srcAcroForm = srcCatalog.getAcroForm();
         List pageAnnotations = page.getAnnotations();
@@ -466,7 +467,7 @@ public class PDFBoxAdapter {
             return;
         }
 
-        PDFBoxAdapterUtil.moveAnnotations(page, pageAnnotations, at);
+        PDFBoxAdapterUtil.moveAnnotations(page, pageAnnotations, at, pos);
 
         //Pseudo-cache the target page in place of the original source page.
         //This essentially replaces the original page reference with the target page.
