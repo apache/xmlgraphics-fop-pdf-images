@@ -19,8 +19,13 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.geom.Rectangle2D;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,6 +40,7 @@ import org.apache.pdfbox.cos.COSString;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
+import org.apache.fop.pdf.PDFStream;
 
 public class PDFClonerTestCase {
     @Test
@@ -63,5 +69,54 @@ public class PDFClonerTestCase {
         PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), null, new HashMap<>());
         String cloned = (String) new PDFCloner(adapter).cloneForNewDocument(string);
         Assert.assertArrayEquals(cloned.getBytes(PDFDocument.ENCODING), string.getBytes());
+    }
+
+    @Test
+    public void testStream() throws IOException {
+        PDFDocument doc = new PDFDocument("");
+        Rectangle2D rectangle = new Rectangle2D.Double();
+        PDFPage page = new PDFPage(new PDFResources(doc), 0, rectangle, rectangle, rectangle, rectangle);
+        page.setDocument(doc);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), null, new HashMap<>());
+        COSDictionary res = new COSDictionary();
+        COSDictionary child = new COSDictionary();
+        child.setBoolean("a", true);
+        res.setItem("a", child);
+        adapter.uniqueName = new UniqueName("a", res, false);
+        PDFStream cloneda = (PDFStream) new PDFCloner(adapter).cloneForNewDocument(getStream());
+        adapter.uniqueName = new UniqueName("b", res, false);
+        PDFStream clonedb = (PDFStream) new PDFCloner(adapter).cloneForNewDocument(getStream());
+        Assert.assertNotSame(cloneda, clonedb);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        cloneda.setDocument(doc);
+        clonedb.setDocument(doc);
+        setFilterMap(doc);
+        cloneda.output(bos);
+        clonedb.output(bos);
+        Assert.assertEquals(bos.toString(PDFDocument.ENCODING), "<< /Length 1 0 R /Subtype /Form >>\n"
+                + "stream\n"
+                + "/a97 tf\n\n"
+                + "endstream"
+                + "<< /Length 2 0 R /Subtype /Form >>\n"
+                + "stream\n"
+                + "/a98 tf\n\n"
+                + "endstream");
+    }
+
+    private void setFilterMap(PDFDocument doc) {
+        Map<String, List<String>> filterMap = new HashMap<>();
+        List<String> filterList = new ArrayList<>();
+        filterList.add("null");
+        filterMap.put("default", filterList);
+        doc.setFilterMap(filterMap);
+    }
+
+    private COSStream getStream() throws IOException {
+        COSStream stream = new COSStream();
+        stream.setItem(COSName.SUBTYPE, COSName.FORM);
+        try (OutputStream os = stream.createUnfilteredStream()) {
+            os.write("/a tf".getBytes(PDFDocument.ENCODING));
+        }
+        return stream;
     }
 }

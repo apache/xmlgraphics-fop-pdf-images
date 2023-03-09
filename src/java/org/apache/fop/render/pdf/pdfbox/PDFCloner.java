@@ -198,8 +198,12 @@ public class PDFCloner {
                 String newStream = writer.writeText(new PDStream(originalStream));
                 if (writer.keyUsed) {
                     filter = adapter.FILTER_FILTER;
-                    out.write(newStream.getBytes(PDFDocument.ENCODING));
+                    byte[] bytes = newStream.getBytes(PDFDocument.ENCODING);
+                    out.write(bytes);
                     out.close();
+                    try (OutputStream originalStreamOS = originalStream.createUnfilteredStream()) {
+                        originalStreamOS.write(bytes);
+                    }
                     in = null;
                 }
             } catch (IOException e) {
