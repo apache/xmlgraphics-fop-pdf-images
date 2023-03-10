@@ -4,9 +4,21 @@ github:
   labels:
     - fop
     - apache
+  enabled_merge_buttons:
+    merge:   false      # disable non-squashing merge
+    squash:  true
+    rebase:  true
+  protected_branches:
+    main:
+      strict: true
+      required_linear_history: true
+      required_signatures: true
+  dependabot_alerts:  true
+  dependabot_updates: false
 
 notifications:
-  commits:      commits@xmlgraphics.apache.org
-  issues:       fop-dev@xmlgraphics.apache.org
+  commits: commits@xmlgraphics.apache.org
+  issues: fop-dev@xmlgraphics.apache.org
   pullrequests: fop-dev@xmlgraphics.apache.org
+  jobs: fop-dev@xmlgraphics.apache.org
   jira_options: link label
