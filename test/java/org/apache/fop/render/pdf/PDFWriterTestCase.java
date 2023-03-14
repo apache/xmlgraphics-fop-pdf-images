@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Locale;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -42,7 +41,6 @@ public class PDFWriterTestCase {
         Locale.setDefault(l);
     }
 
-    @Ignore
     @Test
     public void testFloatCache() throws IOException {
         String text = "[1.1 1.1] a";
