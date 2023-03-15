@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: |
-        wget -O $RUNNER_TEMP/java_package.tar.gz -c --header "Cookie: oraclelicense=accept-securebackup-cookie" http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz
+        wget -O $RUNNER_TEMP/java_package.tar.gz --no-cookies --no-check-certificate --header Cookie: oraclelicense=accept-securebackup-cookie https://javadl.oracle.com/webapps/download/GetFile/1.8.0_361-b09/0ae14417abb444ebb02b9815e2103550/linux-i586/jdk-8u361-linux-x64.tar.gz
     - uses: actions/setup-java@v3
       with:
         distribution: 'jdkfile'
