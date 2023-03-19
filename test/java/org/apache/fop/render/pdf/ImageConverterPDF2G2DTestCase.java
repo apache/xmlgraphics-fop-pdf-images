@@ -29,7 +29,6 @@ import java.io.OutputStream;
 import java.net.URI;
 
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSName;
