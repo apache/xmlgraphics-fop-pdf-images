@@ -44,17 +44,19 @@ public class PDFWriterTestCase {
     @Test
     public void testFloatCache() throws IOException {
         String text = "[1.1 1.1] a";
-        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDDocument doc = new PDDocument();
+        PDStream pdStream = new PDStream(doc, new ByteArrayInputStream(text.getBytes("UTF-8")));
         MyPDFWriter pdfWriter = new MyPDFWriter();
         pdfWriter.writeText(pdStream);
-        Assert.assertEquals(pdfWriter.i, 1);
+        doc.close();
+        Assert.assertEquals(1, pdfWriter.i);
     }
 
     private static class MyPDFWriter extends PDFWriter {
         int i;
 
         public MyPDFWriter() {
-            super(null, 0);
+            super(new UniqueName("", null, true), 0);
         }
 
         protected void addCache(float f) {
@@ -67,7 +69,7 @@ public class PDFWriterTestCase {
     public void testBoolean() throws IOException {
         String text = "[true true ] a\n";
         PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
-        PDFWriter pdfWriter = new MyPDFWriter();
+        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, true), 0);
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }
@@ -76,7 +78,7 @@ public class PDFWriterTestCase {
     public void testNull() throws IOException {
         String text = "[null ] a\n";
         PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
-        PDFWriter pdfWriter = new MyPDFWriter();
+        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, true), 0);
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }

@@ -79,21 +79,24 @@ public class ImageConverterPDF2G2DTestCase {
 
     private String pdfToPS(PDDocument doc, String pdf, String font, LazyFont lazyFont)
             throws IOException, ImageException {
-        ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
-        ImageInfo imgi = new ImageInfo(pdf, "b");
-        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
-        GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
-        g.addFallbackFont(font, lazyFont);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        PSPDFGraphics2D g2d = (PSPDFGraphics2D)
-                g.getGraphics(true, new PDFBoxAdapterTestCase.FOPPSGeneratorImpl(stream));
-        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-        GraphicContext gc = new GraphicContext();
-        g2d.setGraphicContext(gc);
-        g.paint(g2d, rect);
-        doc.close();
-        return stream.toString("UTF-8");
+        try {
+            ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
+            ImageInfo imgi = new ImageInfo(pdf, "b");
+            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+            GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
+            g.addFallbackFont(font, lazyFont);
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            PSPDFGraphics2D g2d = (PSPDFGraphics2D)
+                    g.getGraphics(true, new PDFBoxAdapterTestCase.FOPPSGeneratorImpl(stream));
+            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+            GraphicContext gc = new GraphicContext();
+            g2d.setGraphicContext(gc);
+            g.paint(g2d, rect);
+            return stream.toString("UTF-8");
+        } finally {
+            doc.close();
+        }
     }
 
     static class MyLazyFont extends LazyFont {
