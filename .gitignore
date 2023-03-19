@@ -8,3 +8,10 @@ build/
 # miscellaneous
 *~
 *.bak
+
+# intellij artifacts
+.idea/
+*.iml
+
+# temporary ignores
+.sdkmanrc
