@@ -24,7 +24,6 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -81,21 +80,24 @@ public class ImageConverterPDF2G2DTestCase {
 
     private String pdfToPS(PDDocument doc, String pdf, String font, LazyFont lazyFont)
             throws IOException, ImageException {
-        ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
-        ImageInfo imgi = new ImageInfo(pdf, "b");
-        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
-        GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
-        g.addFallbackFont(font, lazyFont);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        PSPDFGraphics2D g2d = (PSPDFGraphics2D)
-                g.getGraphics(true, new PDFBoxAdapterTestCase.FOPPSGeneratorImpl(stream));
-        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-        GraphicContext gc = new GraphicContext();
-        g2d.setGraphicContext(gc);
-        g.paint(g2d, rect);
-        doc.close();
-        return stream.toString("UTF-8");
+        try {
+            ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
+            ImageInfo imgi = new ImageInfo(pdf, "b");
+            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+            GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
+            g.addFallbackFont(font, lazyFont);
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            PSPDFGraphics2D g2d = (PSPDFGraphics2D)
+                    g.getGraphics(true, new PDFBoxAdapterTestCase.FOPPSGeneratorImpl(stream));
+            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+            GraphicContext gc = new GraphicContext();
+            g2d.setGraphicContext(gc);
+            g.paint(g2d, rect);
+            return stream.toString("UTF-8");
+        } finally {
+            doc.close();
+        }
     }
 
     static class MyLazyFont extends LazyFont {
@@ -154,7 +156,6 @@ public class ImageConverterPDF2G2DTestCase {
     }
 
     @Test
-    @Ignore
     public void testPDFToPSFontError() throws Exception {
         String msg = "";
         InternalResourceResolver rr = ResourceResolverFactory.createDefaultInternalResourceResolver(new URI("."));
@@ -162,7 +163,7 @@ public class ImageConverterPDF2G2DTestCase {
                 new File("pom.xml").toURI(), null), false, false, null, "");
         try {
             pdfToPS(FONTSNOTEMBEDDEDCID, new LazyFont(embedFontInfo, rr, false));
-        } catch (EOFException e) {
+        } catch (Exception e) {
             msg = e.getMessage();
         }
         Assert.assertTrue(msg, msg.contains("Reached EOF"));
