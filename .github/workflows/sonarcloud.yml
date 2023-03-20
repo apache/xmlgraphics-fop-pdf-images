@@ -21,7 +21,5 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
         with:
           args:
-            -Dsonar.host.url="https://sonarcloud.io"
             -Dsonar.organization="apache"
             -Dsonar.projectKey="xmlgraphics-fop-pdf-images"
-            -Dsonar.projectName="XML Graphics FOP PDF Images"
