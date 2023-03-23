@@ -45,6 +45,7 @@ import static org.mockito.Mockito.when;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFParser;
+import org.apache.fontbox.cff.CFFType1Font;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.ttf.TrueTypeFont;
@@ -100,6 +101,8 @@ public class PDFBoxAdapterTestCase {
     protected static final String CFF1 = "2fonts.pdf";
     protected static final String CFF2 = "2fonts2.pdf";
     protected static final String CFF3 = "simpleh.pdf";
+    protected static final String CFFSUBRS = "cffsubrs.pdf";
+    protected static final String CFFSUBRS2 = "cffsubrs2.pdf";
     protected static final String TTCID1 = "ttcid1.pdf";
     protected static final String TTCID2 = "ttcid2.pdf";
     protected static final String TTSubset1 = "ttsubset.pdf";
@@ -771,5 +774,22 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         Assert.assertFalse(bos.toString("UTF-8").contains("/R 90"));
+    }
+
+    @Test
+    public void testCFFSubrs() throws Exception {
+        FontInfo fontInfo = new FontInfo();
+        writeText(fontInfo, CFFSUBRS);
+        writeText(fontInfo, CFFSUBRS2);
+        byte[] data = null;
+        for (Typeface font : fontInfo.getUsedFonts().values()) {
+            if ("AllianzNeo-Bold".equals(font.getEmbedFontName())) {
+                InputStream is = ((CustomFont) font).getInputStream();
+                data = IOUtils.toByteArray(is);
+            }
+        }
+        CFFType1Font font = (CFFType1Font) new CFFParser().parse(data).get(0);
+        byte[][] indexData = (byte[][]) font.getPrivateDict().get("Subrs");
+        Assert.assertEquals(indexData.length, 183);
     }
 }

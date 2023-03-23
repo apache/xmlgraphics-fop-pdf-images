@@ -276,15 +276,16 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         offsets.privateDict = currentPos;
         writePrivateDict();
 
-        //Char Strings Index
-        offsets.charString = currentPos;
-        writeIndex(subsetCharStringsIndex);
-
         //Local subroutine index
         offsets.localIndex = currentPos;
+        readSubrs();
         if (!subsetLocalIndexSubr.isEmpty()) {
             writeIndex(subsetLocalIndexSubr);
         }
+
+        //Char Strings Index
+        offsets.charString = currentPos;
+        writeIndex(subsetCharStringsIndex);
 
         if (hasFDSelect) {
             offsets.fdArray = currentPos;
@@ -311,6 +312,15 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         } else {
             //Update the offsets
             updateOffsets(offsets);
+        }
+    }
+
+    private void readSubrs() {
+        if (fileFont instanceof CFFType1Font) {
+            byte[][] subrsArray = (byte[][]) ((CFFType1Font) fileFont).getPrivateDict().get("Subrs");
+            if (subrsArray != null) {
+                subsetLocalIndexSubr.addAll(Arrays.asList(subrsArray));
+            }
         }
     }
 
