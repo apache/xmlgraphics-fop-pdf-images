@@ -71,12 +71,13 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         CFFParser p = new CFFParser();
         CFFFont ff = p.parse(fontFile.getAllBytes()).get(0);
 
-        if (used.containsAll(getStrings(ff).keySet())) {
+        Map<String, byte[]> stringsMap = getStrings(ff);
+        if (used.containsAll(stringsMap.keySet())) {
             return;
         }
         fontFileSize += fontFile.getFileSize();
         this.fontFile = fontFile;
-        used.addAll(getStrings(ff).keySet());
+        used.addAll(stringsMap.keySet());
         if (fileFont == null) {
             fileFont = ff;
         }
@@ -111,7 +112,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         }
         setupMapping(ff.getCharset(), sg);
 
-        for (Map.Entry<String, byte[]> s : getStrings(ff).entrySet()) {
+        for (Map.Entry<String, byte[]> s : stringsMap.entrySet()) {
             if (!added.contains(s.getKey())) {
                 subsetCharStringsIndex.add(s.getValue());
                 added.add(s.getKey());
@@ -340,8 +341,9 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         }
 
         //Write the String Index
+        boolean stdRange = range.containsKey(NUM_STANDARD_STRINGS);
         if (!stringIndexData.isEmpty()) {
-            if (!strings.isEmpty() && !new String(stringIndexData.get(0), "UTF-8").equals(strings.get(0))) {
+            if (!strings.isEmpty() && !new String(stringIndexData.get(0), "UTF-8").equals(strings.get(0)) && stdRange) {
                 //Keep strings in order as they are referenced from the TopDICT
                 for (int i = 0; i < stringIndexSize; i++) {
                     stringIndexData.add(stringIndexData.remove(0));
@@ -352,7 +354,11 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                     stringIndexData.add(notice.getBytes(PDFDocument.ENCODING));
                 }
             }
-            stringIndexData.add(embeddedName.getBytes("UTF-8"));
+            if (stdRange) {
+                stringIndexData.add(embeddedName.getBytes("UTF-8"));
+            } else {
+                stringIndexData.add(0, embeddedName.getBytes("UTF-8"));
+            }
             writeIndex(stringIndexData);
         } else {
             String notice = (String)fileFont.getTopDict().get("Notice");

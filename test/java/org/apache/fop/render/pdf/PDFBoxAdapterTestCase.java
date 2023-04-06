@@ -44,6 +44,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.fontbox.cff.CFFCharset;
 import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.cff.CFFType1Font;
 import org.apache.fontbox.ttf.GlyphData;
@@ -103,6 +104,8 @@ public class PDFBoxAdapterTestCase {
     protected static final String CFF3 = "simpleh.pdf";
     protected static final String CFFSUBRS = "cffsubrs.pdf";
     protected static final String CFFSUBRS2 = "cffsubrs2.pdf";
+    protected static final String CFFSUBRS3 = "cffsubrs3.pdf";
+    protected static final String CFFSUBRS4 = "cffsubrs4.pdf";
     protected static final String TTCID1 = "ttcid1.pdf";
     protected static final String TTCID2 = "ttcid2.pdf";
     protected static final String TTSubset1 = "ttsubset.pdf";
@@ -791,5 +794,22 @@ public class PDFBoxAdapterTestCase {
         CFFType1Font font = (CFFType1Font) new CFFParser().parse(data).get(0);
         byte[][] indexData = (byte[][]) font.getPrivateDict().get("Subrs");
         Assert.assertEquals(indexData.length, 183);
+    }
+
+    @Test
+    public void testCFFSubrsCharset() throws Exception {
+        FontInfo fontInfo = new FontInfo();
+        writeText(fontInfo, CFFSUBRS4);
+        writeText(fontInfo, CFFSUBRS3);
+        CustomFont typeface = (CustomFont) fontInfo.getUsedFonts().get("AllianzNeo-Light_Type1");
+        InputStream is = typeface.getInputStream();
+        byte[] data = IOUtils.toByteArray(is);
+        CFFType1Font font = (CFFType1Font) new CFFParser().parse(data).get(0);
+        CFFCharset charset = font.getCharset();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) {
+            sb.append(charset.getNameForGID(i)).append(" ");
+        }
+        Assert.assertEquals(sb.toString(), ".notdef uni00A0 trademark uni003B uniFB00 ");
     }
 }
