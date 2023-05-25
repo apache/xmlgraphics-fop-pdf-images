@@ -18,6 +18,7 @@
 /* $Id$ */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.Rectangle;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,38 +32,77 @@ import org.apache.pdfbox.cos.COSObject;
 
 import org.apache.fop.pdf.PDFDocument;
 
+/**
+ * This class provides collision-avoidance for names within a collection.
+ * That is, if a submitted name collides with a name in the collection, an alternative is provided.
+ * The alternative may or may not be in the collection.
+ */
 public class UniqueName {
+    // General key.
     private String key;
+    // A key to be used only for pattern names.
+    private String patternKey = "";
+    // General resource names.
     private List<COSName> resourceNames;
+    // Pattern resource names.
+    private List<COSName> patternResourceNames = new ArrayList<>();
 
-    public UniqueName(String key, COSDictionary sourcePageResources, boolean disable) {
+    public UniqueName(String key, COSDictionary sourcePageResources, Iterable<COSName> patternNames, boolean disable,
+                      Rectangle destRect) {
         if (disable) {
             resourceNames = Collections.emptyList();
         } else {
             key = key.split("#")[0];
             this.key = Integer.toString(key.hashCode());
-            resourceNames = getResourceNames(sourcePageResources);
+            if (patternNames != null) {
+                // Make pattern key unique to the destination rectangle.
+                this.patternKey = Integer.toString(
+                        (key + destRect.getX() + destRect.getY() + destRect.getWidth() + destRect.getHeight()
+                        ).hashCode());
+                for (COSName cosName : patternNames) {
+                    patternResourceNames.add(cosName);
+                }
+            }
+            resourceNames = getResourceNames(sourcePageResources, patternResourceNames);
         }
     }
 
+    /**
+     * Provides a de-collisioned name.
+     * @param cn Submitted name.
+     * @return The submitted name if it is not already in this object's collection or an alternative it is.
+     *         It is possible that the alternative is also in the collection.
+     */
     protected String getName(COSName cn) {
+        if (patternResourceNames.contains(cn)) {
+            return cn.getName() + patternKey;
+        }
         if (resourceNames.contains(cn)) {
             return cn.getName() + key;
         }
         return cn.getName();
     }
 
+    /**
+     * Writes a name into a StringBuilder, appending a suffix if the name exists in this object's collection.
+     * @param sb The StringBuilder.
+     * @param cn The COSName.
+     * @throws IOException On IO exception.
+     */
     protected void writeName(StringBuilder sb, COSName cn) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         cn.writePDF(bos);
         String name = bos.toString(PDFDocument.ENCODING);
         sb.append(name);
+        if (patternResourceNames.contains(cn)) {
+            sb.append(patternKey);
+        }
         if (resourceNames.contains(cn)) {
             sb.append(key);
         }
     }
 
-    private List<COSName> getResourceNames(COSDictionary sourcePageResources) {
+    private List<COSName> getResourceNames(COSDictionary sourcePageResources, List<COSName> patternResourceNames) {
         List<COSName> resourceNames = new ArrayList<COSName>();
         for (COSBase e : sourcePageResources.getValues()) {
             if (e instanceof COSObject) {
@@ -70,9 +110,17 @@ public class UniqueName {
             }
             if (e instanceof COSDictionary) {
                 COSDictionary d = (COSDictionary) e;
-                resourceNames.addAll(d.keySet());
+                for (COSName cosName : d.keySet()) {
+                    if (!patternResourceNames.contains(cosName)) {
+                        resourceNames.add(cosName);
+                    }
+                }
             }
         }
         return resourceNames;
+    }
+
+    public boolean hasPatterns() {
+        return !patternResourceNames.isEmpty();
     }
 }

@@ -36,10 +36,13 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.pattern.PDAbstractPattern;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream;
+import org.apache.pdfbox.util.Matrix;
 
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
@@ -195,6 +198,42 @@ public final class PDFBoxAdapterUtil {
         }
     }
 
+    /**
+     * Modify pattern matrix of source patterns according to the calculated adjustment.
+     * @param targetPageMediaBox The Media Box of the target page.
+     * @param destRect The rectangle the embedded page will be placed in.
+     * @param sourcePage The page to be embedded as an image.
+     * @param srcPgPatternNamesIt Names of patterns in the source page.
+     * @throws IOException On IO exception.
+     */
+    protected static void transformPatterns(PDFArray targetPageMediaBox,
+                                            Rectangle destRect,
+                                            PDPage sourcePage,
+                                            Iterable<COSName> srcPgPatternNamesIt) throws IOException {
+        // The pattern found in the source document.
+        PDAbstractPattern srcPattern;
+
+        if (srcPgPatternNamesIt != null) {
+            AffineTransform shadingAdjust = getShadingAffineTransform(targetPageMediaBox, destRect, sourcePage);
+            // No null checks - throw NPE if anything is null.
+            PDResources srcPgResources = sourcePage.getResources();
+
+            for (COSName srcPgPatternName : srcPgPatternNamesIt) {
+                // Get the original pattern.
+                srcPattern = srcPgResources.getPattern(srcPgPatternName);
+                // No null checks - throw NPE if srcPattern is null.
+                Matrix originalMatrix = srcPattern.getMatrix();
+                Matrix shadingMatrix = new Matrix(shadingAdjust);
+                // Create the required new matrix and apply it to the pattern.
+                Matrix newMatrix = originalMatrix.multiply(shadingMatrix);
+                srcPattern.setMatrix(newMatrix.createAffineTransform());
+
+                // Add the pattern to the page resources for now.
+                srcPgResources.put(srcPgPatternName, srcPattern);
+            }
+        }
+    }
+
     private static void rotateStream(AffineTransform transform, int rotation, float height, PDAnnotation annot) {
         transform.rotate(Math.toRadians(-rotation));
         transform.translate(-height, 0);
@@ -220,5 +259,45 @@ public final class PDFBoxAdapterUtil {
         rect = new PDRectangle((float)rectangleT.getX(), (float)rectangleT.getY(),
                 (float)rectangleT.getWidth(), (float)rectangleT.getHeight());
         return rect;
+    }
+
+    /**
+     * Get an affine transform that will translate and scale a source page to a rectangle on a target page.
+     * @param targetMediaBox The Media Box of the target page.
+     * @param destRect The rectangle the embedded page will be placed in.
+     * @param srcPage The page to be embedded as an image.
+     * @return The affine transform.
+     */
+    private static AffineTransform getShadingAffineTransform(PDFArray targetMediaBox,
+                                                             Rectangle destRect,
+                                                             PDPage srcPage) {
+
+        AffineTransform shadingAdjust;
+        // No null checks - throw NPE if anything is null.
+        PDRectangle srcMediaBox = srcPage.getMediaBox();
+
+        double targetMediaBoxHeight = (double) targetMediaBox.get(3);
+
+        // Convert destRect to use bottom/left frame as origin.
+        Rectangle cDestRect = new Rectangle(destRect);
+        cDestRect.y = (int) ((targetMediaBoxHeight * 1000 - (destRect.getY() + destRect.getHeight())));
+
+        // No divide-by-zero protection. Result will be Infinity.
+        double xScaleFactor = cDestRect.getWidth() / 1000f / srcMediaBox.getWidth();
+        double yScaleFactor = cDestRect.getHeight() / 1000f / srcMediaBox.getHeight();
+
+        // x translation: media box offset + scaled cDestRect x-offset
+        double xTranslation = cDestRect.getX() / 1000f - srcMediaBox.getLowerLeftX() * xScaleFactor;
+
+        // y translation: media box offset + scaled cDestRect
+        double yTranslation = cDestRect.getY() / 1000f - srcMediaBox.getLowerLeftY() * yScaleFactor;
+
+        shadingAdjust = new AffineTransform(xScaleFactor,
+                                            0,
+                                            0,
+                                            yScaleFactor,
+                                            xTranslation,
+                                            yTranslation);
+        return shadingAdjust;
     }
 }

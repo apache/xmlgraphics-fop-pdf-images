@@ -18,6 +18,7 @@
 /* $Id$ */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -82,9 +83,10 @@ public class PDFClonerTestCase {
         COSDictionary child = new COSDictionary();
         child.setBoolean("a", true);
         res.setItem("a", child);
-        adapter.uniqueName = new UniqueName("a", res, false);
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+        adapter.uniqueName = new UniqueName("a", res, null, false, rect);
         PDFStream cloneda = (PDFStream) new PDFCloner(adapter).cloneForNewDocument(getStream());
-        adapter.uniqueName = new UniqueName("b", res, false);
+        adapter.uniqueName = new UniqueName("b", res, null, false, rect);
         PDFStream clonedb = (PDFStream) new PDFCloner(adapter).cloneForNewDocument(getStream());
         Assert.assertNotSame(cloneda, clonedb);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();

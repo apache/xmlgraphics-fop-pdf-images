@@ -39,8 +39,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
@@ -55,7 +53,6 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
-
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 
 import org.apache.fop.fonts.FontInfo;
@@ -77,9 +74,6 @@ import org.apache.fop.pdf.PDFStream;
  */
 public class PDFBoxAdapter {
 
-    /** logging instance */
-    protected static final Log log = LogFactory.getLog(PDFBoxAdapter.class);
-
     protected static final Set<String> FILTER_FILTER = Collections.unmodifiableSet(
             new HashSet<String>(Arrays.asList("Filter", "DecodeParms")));
 
@@ -92,6 +86,7 @@ public class PDFBoxAdapter {
     private Map<Integer, PDFArray> pageNumbers;
     private Collection<String> parentFonts = new ArrayList<String>();
 
+    // Current Marked Content ID
     protected int currentMCID;
     protected UniqueName uniqueName;
 
@@ -168,32 +163,48 @@ public class PDFBoxAdapter {
 
     /**
      * Creates a stream (from FOP's PDF library) from a PDF page parsed with PDFBox.
-     * @param sourceDoc the source PDF the given page to be copied belongs to
-     * @param page the page to transform into a stream
+     * @param sourceDoc the source PDF the given sourcePage to be copied belongs to
+     * @param sourcePage the page to transform into a stream
      * @param key value to use as key for the stream
-     * @param atdoc adjustment for stream
+     * @param pageAdjust adjustment for annotations
+     * @param targetPageMediaBox The Media Box of the target page.
      * @param fontinfo fonts
-     * @param pos rectangle
+     * @param destRect rectangle
      * @return the stream
      * @throws IOException if an I/O error occurs
      */
-    public Object createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage page, String key,
-                                                     AffineTransform atdoc, FontInfo fontinfo, Rectangle pos)
-        throws IOException {
-        COSDictionary sourcePageResources = getResources(page);
-        uniqueName = new UniqueName(key, sourcePageResources, pdfDoc.isFormXObjectEnabled());
-        handleAnnotations(sourceDoc, page, atdoc, pos);
+    public Object createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage sourcePage, String key,
+                                             AffineTransform pageAdjust, PDFArray targetPageMediaBox,
+                                             FontInfo fontinfo, Rectangle destRect)
+                                                                                throws IOException {
+        COSDictionary srcPgResCosDict = getResources(sourcePage);
+        PDResources srcPgResources = sourcePage.getResources();
+        Iterable<COSName> patternNamesIt = null;
+        if (srcPgResources != null) {
+            patternNamesIt = srcPgResources.getPatternNames();
+        }
+        uniqueName = new UniqueName(key, srcPgResCosDict, patternNamesIt, pdfDoc.isFormXObjectEnabled(), destRect);
+        if (uniqueName.hasPatterns()) {
+            key += destRect.getX() + destRect.getY() + destRect.getWidth() + destRect.getHeight();
+        }
+        handleAnnotations(sourceDoc, sourcePage, pageAdjust, destRect);
+
+        PDFBoxAdapterUtil.transformPatterns(targetPageMediaBox,
+                destRect,
+                sourcePage,
+                patternNamesIt);
+
         if (pageNumbers.containsKey(targetPage.getPageIndex())) {
             pageNumbers.get(targetPage.getPageIndex()).set(0, targetPage.makeReference());
         }
-        PDStream pdStream = getContents(page);
+        PDStream pdStream = getContents(sourcePage);
 
-        COSDictionary fonts = (COSDictionary)sourcePageResources.getDictionaryObject(COSName.FONT);
+        COSDictionary srcPgFonts = (COSDictionary)srcPgResCosDict.getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
         String newStream = null;
-        if (fonts != null && pdfDoc.isMergeFontsEnabled()) {
-            fontsBackup = new COSDictionary(fonts);
-            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID);
+        if (srcPgFonts != null && pdfDoc.isMergeFontsEnabled()) {
+            fontsBackup = new COSDictionary(srcPgFonts);
+            MergeFontsPDFWriter m = new MergeFontsPDFWriter(srcPgFonts, fontinfo, uniqueName, parentFonts, currentMCID);
             newStream = m.writeText(pdStream);
         }
         if (!pdfDoc.isFormXObjectEnabled()) {
@@ -207,13 +218,16 @@ public class PDFBoxAdapter {
             }
             pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
         }
-        mergeXObj(sourcePageResources, fontinfo, uniqueName);
-        PDFDictionary pageResources = (PDFDictionary)cloneForNewDocument(sourcePageResources);
+        mergeXObj(srcPgResCosDict, fontinfo, uniqueName);
+
+        List<COSName> exclude = Arrays.asList(COSName.PATTERN);
+        PDFDictionary pageResources =
+                (PDFDictionary)cloneForNewDocument(srcPgResCosDict, srcPgResCosDict, exclude);
 
         updateMergeFontInfo(pageResources, fontinfo);
-        updateXObj(sourcePageResources, pageResources);
+        updateXObj(srcPgResCosDict, pageResources);
         if (fontsBackup != null) {
-            sourcePageResources.setItem(COSName.FONT, fontsBackup);
+            srcPgResCosDict.setItem(COSName.FONT, fontsBackup);
         }
 
         COSStream originalPageContents = pdStream.getCOSObject();
@@ -230,7 +244,7 @@ public class PDFBoxAdapter {
 //            IOUtils.copyLarge(in, out);
 //            filter = FILTER_FILTER;
 //        } else {
-            pageStream = (PDFStream)cloneForNewDocument(originalPageContents);
+            pageStream = (PDFStream)cloneForNewDocument(originalPageContents, originalPageContents, exclude);
             filter = Collections.EMPTY_SET;
 //        }
         if (pageStream == null) {
@@ -238,37 +252,39 @@ public class PDFBoxAdapter {
         }
 
         if (pdfDoc.isFormXObjectEnabled()) {
-            return getFormXObject(pageResources, pageStream, key, page);
+            return getFormXObject(pageResources, pageStream, key, sourcePage);
         }
 
         if (originalPageContents != null) {
             transferDict(originalPageContents, pageStream, filter);
         }
 
-        transferPageDict(fonts, uniqueName, sourcePageResources);
+        transferPageDict(srcPgFonts, uniqueName, srcPgResCosDict);
 
-        PDRectangle mediaBox = page.getMediaBox();
-        PDRectangle cropBox = page.getCropBox();
+        promotePatterns(targetPage.getPDFResources());
+
+        PDRectangle mediaBox = sourcePage.getMediaBox();
+        PDRectangle cropBox = sourcePage.getCropBox();
         PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
 
-        //Handle the /Rotation entry on the page dict
-        int rotation = PDFUtil.getNormalizedRotation(page);
+        //Handle the /Rotation entry on the sourcePage dict
+        int rotation = PDFUtil.getNormalizedRotation(sourcePage);
 
         //Transform to FOP's user space
-        float w = (float)pos.getWidth() / 1000f;
-        float h = (float)pos.getHeight() / 1000f;
+        float w = (float)destRect.getWidth() / 1000f;
+        float h = (float)destRect.getHeight() / 1000f;
         if (rotation == 90 || rotation == 270) {
             float tmp = w;
             w = h;
             h = tmp;
         }
-        atdoc.setTransform(AffineTransform.getScaleInstance(w / viewBox.getWidth(), h / viewBox.getHeight()));
-        atdoc.translate(0, viewBox.getHeight());
-        atdoc.rotate(-Math.PI);
-        atdoc.scale(-1, 1);
-        atdoc.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
+        pageAdjust.setTransform(AffineTransform.getScaleInstance(w / viewBox.getWidth(), h / viewBox.getHeight()));
+        pageAdjust.translate(0, viewBox.getHeight());
+        pageAdjust.rotate(-Math.PI);
+        pageAdjust.scale(-1, 1);
+        pageAdjust.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
 
-        PDFBoxAdapterUtil.rotate(rotation, viewBox, atdoc);
+        PDFBoxAdapterUtil.rotate(rotation, viewBox, pageAdjust);
 
         StringBuilder boxStr = new StringBuilder();
         boxStr.append(PDFNumber.doubleOut(mediaBox.getLowerLeftX())).append(' ')
@@ -276,6 +292,35 @@ public class PDFBoxAdapter {
                 .append(PDFNumber.doubleOut(mediaBox.getWidth())).append(' ')
                 .append(PDFNumber.doubleOut(mediaBox.getHeight())).append(" re W n\n");
         return boxStr.toString() + IOUtils.toString(pdStream.createInputStream(), "ISO-8859-1");
+    }
+
+    /**
+     * Move pattern definitions from being embedded in the page resources to being top-level indirect objects.
+     * @param pageResources The target page resources.
+     */
+    private void promotePatterns(PDFDictionary pageResources) {
+        if (pageResources != null) {
+            Object patterns = pageResources.get(COSName.PATTERN.getName());
+            if (patterns != null && patterns instanceof PDFDictionary) {
+                PDFDictionary patternsDict = (PDFDictionary) patterns;
+                Set<String> keys = patternsDict.keySet();
+                for (String key : keys) {
+                    PDFObject patternObj = null;
+                    Object pattern = patternsDict.get(key);
+                    if (pattern instanceof PDFStream) {
+                        // Tiling pattern
+                        patternObj = (PDFStream)pattern;
+                    } else if (pattern instanceof PDFDictionary) {
+                        // Shading pattern
+                        patternObj = (PDFDictionary)pattern;
+                    }
+                    if (patternObj != null) {
+                        patternObj.setObjectNumber(targetPage.getDocument());
+                        targetPage.getDocument().addObject(patternObj);
+                    }
+                }
+            }
+        }
     }
 
     private PDStream getContents(PDPage page) throws IOException {
@@ -415,10 +460,17 @@ public class PDFBoxAdapter {
         }
     }
 
-    private void transferPageDict(COSDictionary fonts, UniqueName uniqueName, COSDictionary sourcePageResources)
-        throws IOException {
-        if (fonts != null) {
-            for (Map.Entry<COSName, COSBase> f : fonts.entrySet()) {
+    /**
+     * Transfer source page resources to target page.
+     * @param srcPgFonts The source page's fonts.
+     * @param uniqueName Name de-collisioner.
+     * @param sourcePageResources The source page's resources.
+     * @throws IOException On IO exception.
+     */
+    private void transferPageDict(COSDictionary srcPgFonts, UniqueName uniqueName, COSDictionary sourcePageResources)
+            throws IOException {
+        if (srcPgFonts != null) {
+            for (Map.Entry<COSName, COSBase> f : srcPgFonts.entrySet()) {
                 String name = uniqueName.getName(f.getKey());
                 targetPage.getPDFResources().addFont(name, (PDFDictionary)cloneForNewDocument(f.getValue()));
             }
@@ -428,6 +480,12 @@ public class PDFBoxAdapter {
         }
     }
 
+    /**
+     * Transfer source page resource to target page.
+     * @param dict A source page resource.
+     * @param uniqueName Name de-collisioner.
+     * @throws IOException On IO exception.
+     */
     private void transferDict(Map.Entry<COSName, COSBase> dict, UniqueName uniqueName) throws IOException {
         COSBase src;
         if (dict.getValue() instanceof COSObject) {

@@ -16,6 +16,7 @@
  */
 package org.apache.fop.render.pdf;
 
+import java.awt.Rectangle;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Locale;
@@ -56,7 +57,7 @@ public class PDFWriterTestCase {
         int i;
 
         public MyPDFWriter() {
-            super(new UniqueName("", null, true), 0);
+            super(new UniqueName("", null, null, true, new Rectangle(0, 0, 100, 100)), 0);
         }
 
         protected void addCache(float f) {
@@ -69,7 +70,8 @@ public class PDFWriterTestCase {
     public void testBoolean() throws IOException {
         String text = "[true true ] a\n";
         PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
-        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, true), 0);
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, null, true, rect), 0);
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }
@@ -78,7 +80,8 @@ public class PDFWriterTestCase {
     public void testNull() throws IOException {
         String text = "[null ] a\n";
         PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
-        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, true), 0);
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, null, true, rect), 0);
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }
@@ -87,7 +90,8 @@ public class PDFWriterTestCase {
     public void testSpaceInName() throws IOException {
         String text = "/a#20a a\n";
         PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
-        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, true), 0);
+        Rectangle rect = new Rectangle(0, 0, 100, 100);
+        PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, null, true, rect), 0);
         String out = pdfWriter.writeText(pdStream);
         Assert.assertEquals(out, text);
     }

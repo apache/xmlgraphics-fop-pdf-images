@@ -30,6 +30,7 @@ import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageFlavor;
 
 import org.apache.fop.fonts.FontInfo;
+import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFXObject;
 import org.apache.fop.render.ImageHandler;
 import org.apache.fop.render.RenderingContext;
@@ -50,17 +51,20 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
         ImagePDF.PDFBOX_IMAGE
     };
 
-    public void handleImage(RenderingContext context, Image image, Rectangle pos) throws IOException {
+    public void handleImage(RenderingContext context, Image image, Rectangle destRect) throws IOException {
         assert context instanceof PDFRenderingContext;
         PDFRenderingContext pdfContext = (PDFRenderingContext)context;
         PDFContentGenerator generator = pdfContext.getGenerator();
+        PDFPage targetPage = pdfContext.getPage();
+
         assert image instanceof ImagePDF;
         ImagePDF pdfImage = (ImagePDF)image;
         try {
-            float x = (float)pos.getX() / 1000f;
-            float y = (float)pos.getY() / 1000f;
-            float w = (float)pos.getWidth() / 1000f;
-            float h = (float)pos.getHeight() / 1000f;
+            // destRect in points. Because destRect size is in millipoints.
+            float x = (float)destRect.getX() / 1000f;       // Offset from left of page (IPD origin).
+            float y = (float)destRect.getY() / 1000f;       // Offset from top of page (BPD origin).
+            float w = (float)destRect.getWidth() / 1000f;   // Width of image.
+            float h = (float)destRect.getHeight() / 1000f;  // Height of image.
 
             AffineTransform pageAdjust = new AffineTransform();
             AffineTransform at = generator.getAffineTransform();
@@ -70,8 +74,8 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
                     (float)(generator.getState().getTransform().getTranslateY() - h - y));
             }
             FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
-            Object stream = createStreamForPDF(pdfImage, pdfContext.getPage(), pdfContext.getUserAgent(),
-                    pageAdjust, fontinfo, pos, pdfContext.getPageNumbers(),
+            Object stream = createStreamForPDF(pdfImage, targetPage, pdfContext.getUserAgent(),
+                    pageAdjust, fontinfo, destRect, pdfContext.getPageNumbers(),
                     pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem());
 
             if (stream == null) {

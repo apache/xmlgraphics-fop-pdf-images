@@ -50,7 +50,7 @@ import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
 public abstract class AbstractPDFBoxHandler {
 
     protected Object createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
-                                        AffineTransform at, FontInfo fontinfo, Rectangle pos,
+                                        AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect,
                                         Map<Integer, PDFArray> pageNumbers,
                                         PDFLogicalStructureHandler handler,
                                         PDFStructElem curentSessionElem) throws IOException {
@@ -62,8 +62,8 @@ public abstract class AbstractPDFBoxHandler {
         String originalImageUri = image.getInfo().getOriginalURI();
         final int selectedPage = ImageUtil.needPageIndexFromURI(originalImageUri);
 
-        PDDocument pddoc = image.getPDDocument();
-        float pdfVersion = pddoc.getDocument().getVersion();
+        PDDocument srcDoc = image.getPDDocument();
+        float pdfVersion = srcDoc.getDocument().getVersion();
         Version inputDocVersion = Version.getValueOf(String.valueOf(pdfVersion));
         PDFDocument pdfDoc = targetPage.getDocument();
 
@@ -77,11 +77,10 @@ public abstract class AbstractPDFBoxHandler {
         }
 
         //Encryption test
-        if (pddoc.isEncrypted()) {
+        if (srcDoc.isEncrypted()) {
             getEventProducer(eventBroadcaster).encryptedPdf(this);
             return null;
         }
-
 
         //Warn about potential problems with PDF/A and PDF/X
         if (pdfDoc.getProfile().isPDFAActive()) {
@@ -93,7 +92,7 @@ public abstract class AbstractPDFBoxHandler {
 
         Map<Object, Object> objectCachePerFile = getObjectCache(getImagePath(originalImageUri), userAgent);
 
-        PDPage page = pddoc.getPage(selectedPage);
+        PDPage srcPage = srcDoc.getPage(selectedPage);
 
         if (targetPage.getPDFResources().getParentResources() == null) {
             PDFResources res = pdfDoc.getFactory().makeResources();
@@ -108,10 +107,12 @@ public abstract class AbstractPDFBoxHandler {
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }
-        Object stream = adapter.createStreamFromPDFBoxPage(pddoc, page, originalImageUri, at, fontinfo, pos);
+        Object stream = adapter.createStreamFromPDFBoxPage(srcDoc, srcPage, originalImageUri, pageAdjust,
+                                                           (PDFArray)targetPage.get("MediaBox"),
+                                                           fontinfo, destRect);
         if (userAgent.isAccessibilityEnabled() && curentSessionElem != null) {
-            TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, page, adapter);
-            conductor.handleLogicalStructure(pddoc);
+            TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, srcPage, adapter);
+            conductor.handleLogicalStructure(srcDoc);
         }
         return stream;
     }
