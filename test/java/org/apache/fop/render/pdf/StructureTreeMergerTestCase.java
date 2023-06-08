@@ -46,10 +46,9 @@ import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStructElem;
 
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
+import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapterTestCase;
 import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 import org.apache.fop.render.pdf.pdfbox.StructureTreeMerger;
-
-
 
 public class StructureTreeMergerTestCase {
     private static final String LINK = "linkTagged.pdf";

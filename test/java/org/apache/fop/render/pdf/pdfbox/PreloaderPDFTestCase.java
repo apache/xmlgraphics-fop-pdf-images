@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.image.DataBufferInt;
 import java.io.ByteArrayInputStream;
@@ -38,11 +38,6 @@ import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.ImageSource;
 import org.apache.xmlgraphics.image.loader.impl.DefaultImageContext;
 import org.apache.xmlgraphics.image.loader.impl.ImageRendered;
-
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
-import org.apache.fop.render.pdf.pdfbox.LastResortPreloaderPDF;
-import org.apache.fop.render.pdf.pdfbox.PreloaderImageRawData;
-import org.apache.fop.render.pdf.pdfbox.PreloaderPDF;
 
 public class PreloaderPDFTestCase {
 

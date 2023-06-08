@@ -16,7 +16,7 @@
  */
 
 /* $Id$ */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -32,7 +32,6 @@ import org.apache.pdfbox.pdmodel.common.function.PDFunction;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType0;
 
 import org.apache.fop.render.gradient.Function;
-import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 
 public class PSPDFGraphics2DTestCase {
 

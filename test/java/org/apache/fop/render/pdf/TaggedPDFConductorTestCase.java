@@ -38,9 +38,8 @@ import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStructElem;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
+import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapterTestCase;
 import org.apache.fop.render.pdf.pdfbox.TaggedPDFConductor;
-
-
 
 public class TaggedPDFConductorTestCase {
     private static final String LINK = "linkTagged.pdf";
@@ -75,7 +74,7 @@ public class TaggedPDFConductorTestCase {
         Assert.assertNull(elem.get("Alt"));
     }
 
-    private String print(PDFStructElem x) throws IOException {
+    private String print(PDFStructElem x) {
         StringBuilder sb = new StringBuilder(x.get("S").toString());
         if (x.getKids() != null) {
             for (PDFObject k : x.getKids()) {

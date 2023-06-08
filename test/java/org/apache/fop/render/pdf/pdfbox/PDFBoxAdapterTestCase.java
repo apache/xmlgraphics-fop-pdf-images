@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
@@ -89,12 +89,8 @@ import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStream;
 import org.apache.fop.render.pcl.PCLGenerator;
 import org.apache.fop.render.pcl.PCLGraphics2D;
-import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
-import org.apache.fop.render.pdf.pdfbox.MergeTTFonts;
-import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
-import org.apache.fop.render.pdf.pdfbox.PDFBoxImageHandler;
-import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
+import org.apache.fop.render.pdf.PDFContentGenerator;
+import org.apache.fop.render.pdf.PDFRenderingContext;
 import org.apache.fop.render.ps.PSDocumentHandler;
 import org.apache.fop.render.ps.PSImageFormResource;
 import org.apache.fop.render.ps.PSRenderingUtil;
@@ -156,7 +152,7 @@ public class PDFBoxAdapterTestCase {
         return new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
     }
 
-    protected static PDDocument load(String pdf) throws IOException {
+    public static PDDocument load(String pdf) throws IOException {
         return PDDocument.load(PDFBoxAdapterTestCase.class.getResourceAsStream(pdf));
     }
 

@@ -17,7 +17,7 @@
 
 /* $Id$ */
 
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
@@ -37,12 +37,6 @@ import org.apache.xmlgraphics.java2d.GraphicContext;
 import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
 
 import org.apache.fop.pdf.PDFArray;
-import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
-import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
-import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
-
-
 
 public class PDFRotateTestCase {
 

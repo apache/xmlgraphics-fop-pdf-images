@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -45,12 +45,8 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
-import org.apache.fop.render.pdf.pdfbox.FOPPDFMultiByteFont;
-import org.apache.fop.render.pdf.pdfbox.FOPPDFSingleByteFont;
-import org.apache.fop.render.pdf.pdfbox.FontContainer;
-
 public class FOPPDFSingleMultiByteFontTestCase {
-    private COSDictionary getFont(PDDocument doc, String internalname) throws IOException {
+    private COSDictionary getFont(PDDocument doc, String internalname) {
         PDPage page = doc.getPage(0);
         PDResources sourcePageResources = page.getResources();
         COSDictionary fonts = (COSDictionary)sourcePageResources.getCOSObject().getDictionaryObject(COSName.FONT);

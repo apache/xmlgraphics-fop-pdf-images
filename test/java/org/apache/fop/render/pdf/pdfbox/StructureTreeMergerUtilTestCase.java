@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.util.List;
 
@@ -25,8 +25,6 @@ import org.junit.Test;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNull;
-
-import org.apache.fop.render.pdf.pdfbox.StructureTreeMergerUtil;
 
 public class StructureTreeMergerUtilTestCase {
 

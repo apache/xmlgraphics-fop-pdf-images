@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 
@@ -33,8 +33,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDNumberTreeNode;
-
-import org.apache.fop.render.pdf.pdfbox.PageParentTreeFinder;
 
 public class PageParentTreeFinderTestCase {
     private static final String LINK = "linkTagged.pdf";

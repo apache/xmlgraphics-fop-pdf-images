@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
@@ -34,11 +34,6 @@ import org.apache.fop.pdf.PDFName;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStructTreeRoot;
-
-import org.apache.fop.render.pdf.pdfbox.DocumentRootModifier;
-import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
-
-
 
 public class DocumentRootModifierTestCase {
     private static final String CLASSMAP = "classMap.pdf";

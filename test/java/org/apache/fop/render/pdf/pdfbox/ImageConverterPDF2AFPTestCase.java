@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -26,9 +26,6 @@ import org.apache.pdfbox.pdmodel.PDPage;
 
 import org.apache.xmlgraphics.image.loader.ImageInfo;
 import org.apache.xmlgraphics.image.loader.impl.ImageRawStream;
-
-import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2AFP;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
 
 public class ImageConverterPDF2AFPTestCase {
     @Test

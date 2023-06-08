@@ -16,7 +16,7 @@
  */
 
 /* $Id: ImageConverterPDF2G2D.java 1808727 2017-09-18 15:02:56Z ssteiner $ */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -51,9 +51,6 @@ import org.apache.fop.fonts.FontUris;
 import org.apache.fop.fonts.LazyFont;
 import org.apache.fop.fonts.MultiByteFont;
 import org.apache.fop.fonts.Typeface;
-import org.apache.fop.render.pdf.pdfbox.ImageConverterPDF2G2D;
-import org.apache.fop.render.pdf.pdfbox.ImagePDF;
-import org.apache.fop.render.pdf.pdfbox.PSPDFGraphics2D;
 
 public class ImageConverterPDF2G2DTestCase {
     private static final String FONTSNOTEMBEDDED = "fontsnotembedded.pdf";

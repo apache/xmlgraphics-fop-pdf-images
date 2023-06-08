@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.fop.render.pdf;
+package org.apache.fop.render.pdf.pdfbox;
 
 import java.awt.Rectangle;
 import java.io.ByteArrayInputStream;
@@ -26,9 +26,6 @@ import org.junit.Test;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.common.PDStream;
-
-import org.apache.fop.render.pdf.pdfbox.PDFWriter;
-import org.apache.fop.render.pdf.pdfbox.UniqueName;
 
 public class PDFWriterTestCase {
     @Test
