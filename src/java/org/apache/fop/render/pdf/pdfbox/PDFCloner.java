@@ -52,10 +52,12 @@ import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFStream;
 
 public class PDFCloner {
+    private boolean trailer;
     private PDFBoxAdapter adapter;
 
-    PDFCloner(PDFBoxAdapter adapter) {
+    PDFCloner(PDFBoxAdapter adapter, boolean trailer) {
         this.adapter = adapter;
+        this.trailer = trailer;
     }
 
     protected Object cloneForNewDocument(Object base) throws IOException {
@@ -234,7 +236,11 @@ public class PDFCloner {
         }
         PDFObject pdfobj = (PDFObject) cloned;
         if (pdfobj != null && !pdfobj.hasObjectNumber() && !(base instanceof COSDictionary)) {
-            adapter.pdfDoc.registerObject(pdfobj);
+            if (trailer) {
+                adapter.pdfDoc.registerTrailerObject(pdfobj);
+            } else {
+                adapter.pdfDoc.registerObject(pdfobj);
+            }
         }
         adapter.clonedVersion.put(key, cloned);
         if (key instanceof Integer) {

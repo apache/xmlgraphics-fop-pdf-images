@@ -121,6 +121,8 @@ public class PDFBoxAdapterTestCase {
     protected static final String Type1Subset4 = "t1subset4.pdf";
     protected static final String ROTATE = "rotate.pdf";
     protected static final String ANNOT = "annot.pdf";
+    protected static final String ANNOT2 = "annot2.pdf";
+    protected static final String ANNOT3 = "annot3.pdf";
     protected static final String SHADING = "shading.pdf";
     protected static final String LINK = "link.pdf";
     protected static final String IMAGE = "image.pdf";
@@ -144,13 +146,19 @@ public class PDFBoxAdapterTestCase {
     }
 
     protected static PDFBoxAdapter getPDFBoxAdapter(boolean mergeFonts, boolean formXObject) {
-        PDFDocument doc = new PDFDocument("");
+        return getPDFBoxAdapter(new PDFDocument(""), mergeFonts, formXObject, false, new HashMap<String, Object>());
+    }
+
+    private static PDFBoxAdapter getPDFBoxAdapter(PDFDocument doc, boolean mergeFonts, boolean formXObject,
+                                                    boolean mergeFormFields, Map<String, Object> usedFields) {
         PDFPage pdfpage = getPDFPage(doc);
         doc.setMergeFontsEnabled(mergeFonts);
         doc.setFormXObjectEnabled(formXObject);
+        doc.setMergeFormFieldsEnabled(mergeFormFields);
         pdfpage.setDocument(doc);
         pdfpage.setObjectNumber(1);
-        return new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        return new PDFBoxAdapter(pdfpage, new HashMap<>(), usedFields, new HashMap<Integer, PDFArray>(),
+                new HashMap<>());
     }
 
     public static PDDocument load(String pdf) throws IOException {
@@ -702,7 +710,7 @@ public class PDFBoxAdapterTestCase {
             pdfdoc.assignObjectNumber(pdfpage);
             pdfpage.setDocument(pdfdoc);
             PDFBoxAdapter adapter = new PDFBoxAdapter(
-                    pdfpage, objectCachePerFile, new HashMap<Integer, PDFArray>(), pdfCache);
+                    pdfpage, objectCachePerFile, null, new HashMap<Integer, PDFArray>(), pdfCache);
             PDDocument doc = load(pdf);
             PDPage page = doc.getPage(0);
             PDFArray targetPageMediaBox = new PDFArray(0d, 0d, 100d, 100d);
@@ -933,5 +941,47 @@ public class PDFBoxAdapterTestCase {
             sb.append(charset.getNameForGID(i)).append(" ");
         }
         Assert.assertEquals(sb.toString(), ".notdef uni00A0 trademark uni003B uniFB00 ");
+    }
+
+    private String getAnnotationsID(PDFPage page) throws IOException {
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        page.getAnnotations().output(os);
+        return os.toString("UTF-8").split("\n")[1];
+    }
+
+    private PDFPage drawAnnot(PDFDocument pdfDoc, Map<String, Object> usedFields, String pdf) throws Exception {
+        PDFBoxAdapter adapter = getPDFBoxAdapter(pdfDoc, false, false, true, usedFields);
+        PDDocument input = load(pdf);
+        PDPage srcPage = input.getPage(0);
+        AffineTransform at = new AffineTransform();
+        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+        adapter.createStreamFromPDFBoxPage(input, srcPage, "key", at, new PDFArray(0d, 0d, 0d, 0d), null, r);
+        input.close();
+        return adapter.getTargetPage();
+    }
+
+    @Test
+    public void testMergeAnnotsTree() throws Exception {
+        PDFDocument pdfDoc = new PDFDocument("");
+        Map<String, Object> usedFields = new HashMap<>();
+        PDFPage page1 = drawAnnot(pdfDoc, usedFields, ANNOT2);
+        PDFPage page2 = drawAnnot(pdfDoc, usedFields, ANNOT3);
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        pdfDoc.outputHeader(os);
+        pdfDoc.output(os);
+        pdfDoc.outputTrailer(os);
+        PDDocument out = PDDocument.load(new ByteArrayInputStream(os.toByteArray()));
+        out.close();
+        String id1 = "29 0 R";
+        Assert.assertEquals(getAnnotationsID(page1), id1);
+        String id2 = "32 0 R";
+        Assert.assertEquals(getAnnotationsID(page2), id2);
+        String outStr = os.toString("UTF-8").replaceAll("\\s\\s/", "/");
+        Assert.assertTrue(outStr.contains("<< /Kids [31 0 R] /T ([Signer1) >>"));
+        Assert.assertTrue(outStr.contains("<<\n"
+                + "/Kids [" + id1 + " " + id2 + "]\n"
+                + "/Parent 33 0 R\n"
+                + "/T (Fullname1)\n"
+                + ">>"));
     }
 }

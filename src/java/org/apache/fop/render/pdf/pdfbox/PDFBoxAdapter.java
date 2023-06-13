@@ -43,7 +43,6 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
-
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentCatalog;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -96,17 +95,21 @@ public class PDFBoxAdapter {
      */
     public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile,
                          Map<Integer, PDFArray> pageNumbers) {
-        this(targetPage, objectCachePerFile, pageNumbers, new HashMap<Object, Object>());
+        this(targetPage, objectCachePerFile, null, pageNumbers, new HashMap<>());
     }
 
-    public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile,
+    public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile, Map<String, Object> usedFields,
                          Map<Integer, PDFArray> pageNumbers, Map<Object, Object> objectCache) {
         this.targetPage = targetPage;
         this.pdfDoc = this.targetPage.getDocument();
         this.clonedVersion = objectCachePerFile;
         this.pageNumbers = pageNumbers;
         this.objectCache = objectCache;
-        handleAnnotations = new CloneAnnotations(this);
+        if (pdfDoc.isMergeFormFieldsEnabled()) {
+            handleAnnotations = new MergeAnnotations(this, usedFields);
+        } else {
+            handleAnnotations = new CloneAnnotations(this);
+        }
     }
 
     public PDFPage getTargetPage() {
@@ -131,19 +134,19 @@ public class PDFBoxAdapter {
     }
 
     protected Object cloneForNewDocument(Object base) throws IOException {
-        return new PDFCloner(this).cloneForNewDocument(base);
+        return new PDFCloner(this, false).cloneForNewDocument(base);
     }
 
     protected Object cloneResourcesForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
-        return new PDFCloner(this).cloneResourcesForNewDocument(base, keyBase, exclude);
+        return new PDFCloner(this, false).cloneResourcesForNewDocument(base, keyBase, exclude);
     }
 
     protected Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
-        return new PDFCloner(this).cloneForNewDocument(base, keyBase, exclude);
+        return new PDFCloner(this, false).cloneForNewDocument(base, keyBase, exclude);
     }
 
     protected void cacheClonedObject(Object base, Object cloned) throws IOException {
-        new PDFCloner(this).cacheClonedObject(base, cloned);
+        new PDFCloner(this, false).cacheClonedObject(base, cloned);
     }
 
     protected void transferDict(COSDictionary orgDict, PDFStream targetDict, Set filter) throws IOException {
@@ -554,8 +557,7 @@ public class PDFBoxAdapter {
             throw new IOException("Illegal PDF. Page not part of parent page node.");
         }
 
-        Set<COSObject> fields = copyAnnotations(page, srcAcroForm);
-
+        Set<?> fields = copyAnnotations(page, srcAcroForm);
         boolean formAlreadyCopied = getCachedClone(srcAcroForm) != null;
         PDFRoot catalog = this.pdfDoc.getRoot();
         PDFDictionary destAcroForm = (PDFDictionary)catalog.get(COSName.ACRO_FORM.getName());
@@ -584,13 +586,17 @@ public class PDFBoxAdapter {
             clonedFields = new PDFArray();
             destAcroForm.put(COSName.FIELDS.getName(), clonedFields);
         }
-        for (COSObject field : fields) {
-            PDFDictionary clone = (PDFDictionary) cloneForNewDocument(field, field, Arrays.asList(COSName.KIDS));
-            clonedFields.add(clone);
+        for (Object field : fields) {
+            if (field instanceof COSBase) {
+                field = cloneForNewDocument(field, field, Arrays.asList(COSName.KIDS));
+            }
+            if (!clonedFields.contains(field)) {
+                clonedFields.add(field);
+            }
         }
     }
 
-    private Set<COSObject> copyAnnotations(PDPage page, PDAcroForm srcAcroForm) throws IOException {
+    private Set<?> copyAnnotations(PDPage page, PDAcroForm srcAcroForm) throws IOException {
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
         if (annots != null) {
             for (COSBase annotBase : annots) {
@@ -603,8 +609,8 @@ public class PDFBoxAdapter {
                         exclude.add(COSName.PARENT);
                     }
                 }
-
-                PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annotBase, annotBase, exclude);
+                PDFObject clonedAnnot = (PDFObject)new PDFCloner(this, pdfDoc.isMergeFormFieldsEnabled())
+                        .cloneForNewDocument(annotBase, annotBase, exclude);
                 if (clonedAnnot instanceof PDFDictionary) {
                     handleAnnotations.cloneAnnotParent(annotBase, (PDFDictionary) clonedAnnot, exclude);
                     clonedAnnot.setParent(targetPage);

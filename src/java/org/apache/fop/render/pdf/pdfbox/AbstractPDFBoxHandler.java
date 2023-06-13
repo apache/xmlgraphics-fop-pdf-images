@@ -51,7 +51,7 @@ public abstract class AbstractPDFBoxHandler {
 
     protected Object createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
                                         AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect,
-                                        Map<Integer, PDFArray> pageNumbers,
+                                        Map<String, Object> usedFieldNames, Map<Integer, PDFArray> pageNumbers,
                                         PDFLogicalStructureHandler handler,
                                         PDFStructElem curentSessionElem) throws IOException {
 
@@ -103,7 +103,7 @@ public abstract class AbstractPDFBoxHandler {
 
         Map<Object, Object> objectCache = getObjectCache(getClass().getName(), userAgent);
         PDFBoxAdapter adapter =
-                new PDFBoxAdapter(targetPage, objectCachePerFile, pageNumbers, objectCache);
+                new PDFBoxAdapter(targetPage, objectCachePerFile, usedFieldNames, pageNumbers, objectCache);
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }

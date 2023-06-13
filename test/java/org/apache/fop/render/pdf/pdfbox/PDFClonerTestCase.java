@@ -38,6 +38,7 @@ import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.cos.COSString;
 
+import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
@@ -67,8 +68,9 @@ public class PDFClonerTestCase {
         PDFDocument doc = new PDFDocument("");
         Rectangle2D r = new Rectangle2D.Double();
         PDFPage page = new PDFPage(new PDFResources(doc), 0, r, r, r, r);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), null, new HashMap<>());
-        String cloned = (String) new PDFCloner(adapter).cloneForNewDocument(string);
+        page.setDocument(doc);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        String cloned = (String) new PDFCloner(adapter, false).cloneForNewDocument(string);
         Assert.assertArrayEquals(cloned.getBytes(PDFDocument.ENCODING), string.getBytes());
     }
 
@@ -78,16 +80,16 @@ public class PDFClonerTestCase {
         Rectangle2D rectangle = new Rectangle2D.Double();
         PDFPage page = new PDFPage(new PDFResources(doc), 0, rectangle, rectangle, rectangle, rectangle);
         page.setDocument(doc);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), null, new HashMap<>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(page, new HashMap<>(), new HashMap<Integer, PDFArray>());
         COSDictionary res = new COSDictionary();
         COSDictionary child = new COSDictionary();
         child.setBoolean("a", true);
         res.setItem("a", child);
         Rectangle rect = new Rectangle(0, 0, 100, 100);
         adapter.uniqueName = new UniqueName("a", res, null, false, rect);
-        PDFStream cloneda = (PDFStream) new PDFCloner(adapter).cloneForNewDocument(getStream());
+        PDFStream cloneda = (PDFStream) new PDFCloner(adapter, false).cloneForNewDocument(getStream());
         adapter.uniqueName = new UniqueName("b", res, null, false, rect);
-        PDFStream clonedb = (PDFStream) new PDFCloner(adapter).cloneForNewDocument(getStream());
+        PDFStream clonedb = (PDFStream) new PDFCloner(adapter, false).cloneForNewDocument(getStream());
         Assert.assertNotSame(cloneda, clonedb);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         cloneda.setDocument(doc);
