@@ -136,6 +136,7 @@ public class PDFBoxAdapterTestCase {
     protected static final String PATTERN = "pattern.pdf";
     protected static final String PATTERN2 = "pattern2.pdf";
     protected static final String FORMROTATED = "formrotated.pdf";
+    protected static final String SOFTMASK = "softmask-min.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -596,9 +597,51 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(baseObjectStringDef.contains(
                 "COSName{Matrix}:"
                         + "COSArray{"
-                            + "COSFloat{53.885883};COSFloat{0.0};1;"
-                            + "COSFloat{-26.496819};COSFloat{72.74594};COSFloat{-20.860199};"
+                        + "COSFloat{53.885883};COSFloat{0.0};1;"
+                        + "COSFloat{-26.496819};COSFloat{72.74594};COSFloat{-20.860199};"
                         + "};"));
+    }
+
+    /**
+     * Only page resources names should be de-collisioned - this tests that deeper COSNames are preserved.
+     * @throws Exception On exception.
+     */
+    @Test
+    public void testPDFBoxImageHandlerPreserveNames() throws Exception {
+        ImageInfo imgi = new ImageInfo("a", "b");
+        PDDocument srcPDFDoc = load(SOFTMASK);
+        ImagePDF srcImagePDF = new ImagePDF(imgi, srcPDFDoc);
+        PDFDocument targetPDFDoc = new PDFDocument("");
+        PDFPage targetPDFPage = getPDFPage(targetPDFDoc);
+        targetPDFPage.setDocument(targetPDFDoc);
+        PDFGState g = new PDFGState();
+        targetPDFDoc.assignObjectNumber(g);
+        targetPDFPage.addGState(g);
+
+        PDFContentGenerator con = new PDFContentGenerator(targetPDFDoc, null, null);
+        FOUserAgent mockedAgent = mock(FOUserAgent.class);
+        when(mockedAgent.isAccessibilityEnabled()).thenReturn(false);
+        when(mockedAgent.getPDFObjectCache()).thenReturn(new SoftMapCache(true));
+        PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, targetPDFPage, null);
+        c.setPageNumbers(new HashMap<Integer, PDFArray>());
+        Rectangle destRect = new Rectangle(0, 0, 637920, 850320);
+        PDFBoxImageHandler pdfBoxImageHandler = new PDFBoxImageHandler();
+        pdfBoxImageHandler.handleImage(c, srcImagePDF, destRect);
+
+        // Drill down into doc and check that the soft mask dictionary has been preserved.
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        c.getGenerator().getDocument().output(bos);
+        String docString = bos.toString("UTF-8");
+
+        Assert.assertTrue(docString.contains("2 0 obj\n"
+                                    + "<<\n"
+                                    + "  /S /Transparency\n"
+                                    + "  /CS /DeviceCMYK\n"
+                                    + "  /Type /Group\n"
+                                    + "  /I false\n"
+                                    + "  /K false\n"
+                                    + ">>\n"
+                                    + "endobj"));
     }
 
     @Test

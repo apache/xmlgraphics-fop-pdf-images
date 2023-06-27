@@ -66,7 +66,16 @@ public class PDFCloner {
         return cloneForNewDocument(base, keyBase, Collections.EMPTY_LIST);
     }
 
+    protected Object cloneResourcesForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
+        return cloneForNewDocument(base, keyBase, exclude, true);
+    }
+
     protected Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
+        return cloneForNewDocument(base, keyBase, exclude, false);
+    }
+
+    private Object cloneForNewDocument(Object base, Object keyBase, Collection exclude, boolean rename)
+                                                                                                throws IOException {
         if (base == null) {
             return null;
         }
@@ -99,7 +108,7 @@ public class PDFCloner {
         } else if (base instanceof COSStream) {
             return readCOSStream((COSStream) base, keyBase);
         } else if (base instanceof COSDictionary) {
-            return readCOSDictionary((COSDictionary) base, keyBase, exclude);
+            return readCOSDictionary((COSDictionary) base, keyBase, exclude, rename);
         } else if (base instanceof COSName) {
             PDFName newName = new PDFName(((COSName)base).getName());
             return cacheClonedObject(keyBase, newName);
@@ -140,16 +149,17 @@ public class PDFCloner {
         return obj;
     }
 
-    private PDFDictionary readCOSDictionary(COSDictionary dic, Object keyBase, Collection exclude) throws IOException {
+    private PDFDictionary readCOSDictionary(COSDictionary dic, Object keyBase, Collection exclude, boolean rename)
+                                                                                                    throws IOException {
         PDFDictionary newDict = new PDFDictionary();
         cacheClonedObject(keyBase, newDict);
         for (Map.Entry<COSName, COSBase> e : dic.entrySet()) {
             if (!exclude.contains(e.getKey())) {
                 String name = e.getKey().getName();
-                if (adapter.uniqueName != null) {
+                if (rename && adapter.uniqueName != null) {
                     name = adapter.uniqueName.getName(e.getKey());
                 }
-                newDict.put(name, cloneForNewDocument(e.getValue(), e.getValue(), exclude));
+                newDict.put(name, cloneForNewDocument(e.getValue(), e.getValue(), exclude, true));
             }
         }
         return newDict;

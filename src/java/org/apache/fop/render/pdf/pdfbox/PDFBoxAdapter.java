@@ -135,6 +135,10 @@ public class PDFBoxAdapter {
         return new PDFCloner(this).cloneForNewDocument(base);
     }
 
+    protected Object cloneResourcesForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
+        return new PDFCloner(this).cloneResourcesForNewDocument(base, keyBase, exclude);
+    }
+
     protected Object cloneForNewDocument(Object base, Object keyBase, Collection exclude) throws IOException {
         return new PDFCloner(this).cloneForNewDocument(base, keyBase, exclude);
     }
@@ -222,7 +226,7 @@ public class PDFBoxAdapter {
 
         List<COSName> exclude = Arrays.asList(COSName.PATTERN);
         PDFDictionary pageResources =
-                (PDFDictionary)cloneForNewDocument(srcPgResCosDict, srcPgResCosDict, exclude);
+                (PDFDictionary)cloneResourcesForNewDocument(srcPgResCosDict, srcPgResCosDict, exclude);
 
         updateMergeFontInfo(pageResources, fontinfo);
         updateXObj(srcPgResCosDict, pageResources);
