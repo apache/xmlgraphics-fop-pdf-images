@@ -25,18 +25,15 @@ import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.commons.io.IOUtils;
 
@@ -89,6 +86,7 @@ public class PDFBoxAdapter {
     // Current Marked Content ID
     protected int currentMCID;
     protected UniqueName uniqueName;
+    private HandleAnnotations handleAnnotations;
 
     /**
      * Creates a new PDFBoxAdapter.
@@ -108,6 +106,7 @@ public class PDFBoxAdapter {
         this.clonedVersion = objectCachePerFile;
         this.pageNumbers = pageNumbers;
         this.objectCache = objectCache;
+        handleAnnotations = new CloneAnnotations(this);
     }
 
     public PDFPage getTargetPage() {
@@ -593,74 +592,27 @@ public class PDFBoxAdapter {
 
     private Set<COSObject> copyAnnotations(PDPage page, PDAcroForm srcAcroForm) throws IOException {
         COSArray annots = (COSArray) page.getCOSObject().getDictionaryObject(COSName.ANNOTS);
-        Set<COSObject> fields = Collections.emptySet();
         if (annots != null) {
-            fields = new TreeSet<COSObject>(new CompareFields());
-            for (Object annot1 : annots) {
+            for (COSBase annotBase : annots) {
                 Collection<COSName> exclude = new ArrayList<COSName>();
                 exclude.add(COSName.P);
-                if (annot1 instanceof COSObject) {
-                    COSObject annot = (COSObject) annot1;
-                    getField(annot, fields, srcAcroForm);
+                if (annotBase instanceof COSObject) {
+                    COSObject annot = (COSObject) annotBase;
+                    handleAnnotations.load(annot, srcAcroForm);
                     if (((COSDictionary) annot.getObject()).getItem(COSName.STRUCT_PARENT) != null) {
                         exclude.add(COSName.PARENT);
                     }
                 }
 
-                PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annot1, annot1, exclude);
+                PDFObject clonedAnnot = (PDFObject) cloneForNewDocument(annotBase, annotBase, exclude);
                 if (clonedAnnot instanceof PDFDictionary) {
-                    cloneAnnotParent(annot1, (PDFDictionary) clonedAnnot, exclude);
+                    handleAnnotations.cloneAnnotParent(annotBase, (PDFDictionary) clonedAnnot, exclude);
                     clonedAnnot.setParent(targetPage);
                     PDFBoxAdapterUtil.updateAnnotationLink((PDFDictionary) clonedAnnot);
                 }
                 targetPage.addAnnotation(clonedAnnot);
             }
         }
-        return fields;
-    }
-
-    private void cloneAnnotParent(Object annot1, PDFDictionary clonedAnnot, Collection<COSName> exclude)
-        throws IOException {
-        if (annot1 instanceof COSObject) {
-            COSDictionary dictionary = (COSDictionary) ((COSObject) annot1).getObject();
-            COSBase parent = dictionary.getItem(COSName.PARENT);
-            if (parent != null) {
-                clonedAnnot.put(COSName.PARENT.getName(), cloneForNewDocument(parent, parent, exclude));
-            }
-        }
-    }
-
-    private COSDictionary getField(COSObject fieldObject, Set<COSObject> fields, PDAcroForm srcAcroForm) {
-        COSDictionary field = (COSDictionary) fieldObject.getObject();
-        COSObject parent;
-        while ((parent = getParent(field)) != null) {
-            fieldObject = parent;
-            field = (COSDictionary) fieldObject.getObject();
-        }
-        if (srcAcroForm != null) {
-            COSArray srcFields = (COSArray) srcAcroForm.getCOSObject().getDictionaryObject(COSName.FIELDS);
-            if (srcFields.toList().contains(fieldObject)) {
-                fields.add(fieldObject);
-            }
-        } else {
-            fields.add(fieldObject);
-        }
-        return field;
-    }
-
-    private COSObject getParent(COSDictionary field) {
-        COSBase parent = field.getItem(COSName.PARENT);
-        if (parent instanceof COSObject) {
-            return (COSObject) parent;
-        }
-        return null;
-    }
-
-    static class CompareFields implements Comparator<COSObject>, Serializable {
-        private static final long serialVersionUID = -6081505461660440801L;
-
-        public int compare(COSObject o1, COSObject o2) {
-            return (int) (o1.getObjectNumber() - o2.getObjectNumber());
-        }
+        return handleAnnotations.getFields();
     }
 }
