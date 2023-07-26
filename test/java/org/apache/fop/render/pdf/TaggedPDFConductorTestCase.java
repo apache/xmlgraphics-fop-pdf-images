@@ -96,6 +96,7 @@ public class TaggedPDFConductorTestCase {
                 pdfPage, new HashMap<>(),  new HashMap<Integer, PDFArray>());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
+        doc.close();
     }
 
     private void setUp() {

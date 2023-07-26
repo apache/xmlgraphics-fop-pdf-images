@@ -88,6 +88,7 @@ public class DocumentRootModifierTestCase {
         structTreeRoot = pdfDoc.getRoot().getStructTreeRoot();
         PDFDictionary testDict = (PDFDictionary)structTreeRoot.get("ClassMap");
         Assert.assertNotNull(testDict.get("Normal2"));
+        doc.close();
     }
 
 }

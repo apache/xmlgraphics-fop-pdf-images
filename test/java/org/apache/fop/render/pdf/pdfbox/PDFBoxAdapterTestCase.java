@@ -480,18 +480,18 @@ public class PDFBoxAdapterTestCase {
     private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
-        PDDocument doc = load(pdf);
-        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
-        GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        PSPDFGraphics2D g2d = (PSPDFGraphics2D) g.getGraphics(true, new FOPPSGeneratorImpl(stream));
-        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-        GraphicContext gc = new GraphicContext();
-        g2d.setGraphicContext(gc);
-        ig.getGraphics2DImagePainter().paint(g2d, rect);
-        doc.close();
-        return stream;
+        try (PDDocument doc = load(pdf)) {
+            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+            GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            PSPDFGraphics2D g2d = (PSPDFGraphics2D) g.getGraphics(true, new FOPPSGeneratorImpl(stream));
+            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+            GraphicContext gc = new GraphicContext();
+            g2d.setGraphicContext(gc);
+            ig.getGraphics2DImagePainter().paint(g2d, rect);
+            return stream;
+        }
     }
 
     @Test
@@ -515,16 +515,16 @@ public class PDFBoxAdapterTestCase {
     private void pdfToPCL(String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
-        PDDocument doc = load(pdf);
-        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
-        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-        PCLGraphics2D g2d = new PCLGraphics2D(new PCLGenerator(stream));
-        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-        GraphicContext gc = new GraphicContext();
-        g2d.setGraphicContext(gc);
-        ig.getGraphics2DImagePainter().paint(g2d, rect);
-        doc.close();
+        try (PDDocument doc = load(pdf)) {
+            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            PCLGraphics2D g2d = new PCLGraphics2D(new PCLGenerator(stream));
+            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+            GraphicContext gc = new GraphicContext();
+            g2d.setGraphicContext(gc);
+            ig.getGraphics2DImagePainter().paint(g2d, rect);
+        }
     }
 
     static class FOPPSGeneratorImpl extends PSGenerator implements PSDocumentHandler.FOPPSGenerator {

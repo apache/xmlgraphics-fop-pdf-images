@@ -75,6 +75,7 @@ public class StructureTreeMergerTestCase {
         checkMarkedContentsParentsForLinkTest(array);
         PDFStructElem first = (PDFStructElem)array.get(0);
         checkParentForLinkTest(first, 0);
+        doc.close();
     }
 
     @Test
@@ -92,6 +93,7 @@ public class StructureTreeMergerTestCase {
         merger.copyStructure(markedContentParents);
         PDFArray array = handler.getPageParentTree();
         Assert.assertNull(array.get(0));
+        doc.close();
     }
 
     @Test
@@ -106,6 +108,7 @@ public class StructureTreeMergerTestCase {
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
+        doc.close();
 //        PDFArray array = handler.getPageParentTree();
 
 //        PDFStructElem kid = (PDFStructElem)array.get(0);
@@ -193,6 +196,7 @@ public class StructureTreeMergerTestCase {
         PDFStructElem parentElem = (PDFStructElem)array.get(1);
         PDFDictionary objrDict = (PDFDictionary) parentElem.getKids().get(1);
         Assert.assertNull(objrDict.get("Obj"));
+        doc.close();
     }
 
     @Test
