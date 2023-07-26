@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FindBugsFilter>
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP"/>
+  </Match>
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
+  <Match>
+    <Bug pattern="MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR"/>
+  </Match>
+  <Match>
+    <Bug pattern="JUA_DONT_ASSERT_INSTANCEOF_IN_TESTS"/>
+  </Match>  
+  <Match>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>  
+</FindBugsFilter>

@@ -471,7 +471,7 @@
   </path>
   <target name="findbugs">
     <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask" classpathref="libs-findbugs"/>
-    <findbugs home="${findbugs.home.dir}" output="text" reportLevel="low" effort="max" jvmargs="-Xmx1024m" warningsProperty="findbugs.warnings">
+    <findbugs home="${findbugs.home.dir}" output="text" reportLevel="low" effort="max" jvmargs="-Xmx1024m" warningsProperty="findbugs.warnings" excludeFilter="src/tools/resources/findbugs/exclusions.xml">
       <sourcePath path="${src.java.dir}"/>
       <sourcePath path="test/java"/>
       <class location="${build.classes.dir}"/>
