@@ -117,6 +117,7 @@ public class UniqueName {
                 }
             }
         }
+        resourceNames.remove(COSName.S);
         return resourceNames;
     }
 
