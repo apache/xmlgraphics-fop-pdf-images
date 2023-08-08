@@ -107,9 +107,8 @@ public abstract class AbstractPDFBoxHandler {
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }
-        Object stream = adapter.createStreamFromPDFBoxPage(srcDoc, srcPage, originalImageUri, pageAdjust,
-                                                           (PDFArray)targetPage.get("MediaBox"),
-                                                           fontinfo, destRect);
+        Object stream =
+                adapter.createStreamFromPDFBoxPage(srcDoc, srcPage, originalImageUri, pageAdjust, fontinfo, destRect);
         if (userAgent.isAccessibilityEnabled() && curentSessionElem != null) {
             TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, srcPage, adapter);
             conductor.handleLogicalStructure(srcDoc);

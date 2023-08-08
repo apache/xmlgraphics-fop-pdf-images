@@ -169,44 +169,31 @@ public class PDFBoxAdapter {
      * @param sourcePage the page to transform into a stream
      * @param key value to use as key for the stream
      * @param pageAdjust adjustment for annotations
-     * @param targetPageMediaBox The Media Box of the target page.
      * @param fontinfo fonts
      * @param destRect rectangle
      * @return the stream
      * @throws IOException if an I/O error occurs
      */
     public Object createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage sourcePage, String key,
-                                             AffineTransform pageAdjust, PDFArray targetPageMediaBox,
-                                             FontInfo fontinfo, Rectangle destRect)
-                                                                                throws IOException {
-        COSDictionary srcPgResCosDict = getResources(sourcePage);
-        PDResources srcPgResources = sourcePage.getResources();
-        Iterable<COSName> patternNamesIt = null;
-        if (srcPgResources != null) {
-            patternNamesIt = srcPgResources.getPatternNames();
-        }
-        uniqueName = new UniqueName(key, srcPgResCosDict, patternNamesIt, pdfDoc.isFormXObjectEnabled(), destRect);
-        if (uniqueName.hasPatterns()) {
-            key += destRect.getX() + destRect.getY() + destRect.getWidth() + destRect.getHeight();
-        }
+                                             AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect)
+        throws IOException {
+        COSDictionary sourcePageResources = getResources(sourcePage);
+        PatternUtil patternUtil = new PatternUtil(targetPage, destRect, sourcePage);
+        uniqueName = new UniqueName(
+                key, sourcePageResources, patternUtil.getPatternNames(), pdfDoc.isFormXObjectEnabled(), destRect);
+        key = patternUtil.getKey(key);
         handleAnnotations(sourceDoc, sourcePage, pageAdjust, destRect);
-
-        PDFBoxAdapterUtil.transformPatterns(targetPageMediaBox,
-                destRect,
-                sourcePage,
-                patternNamesIt);
-
         if (pageNumbers.containsKey(targetPage.getPageIndex())) {
             pageNumbers.get(targetPage.getPageIndex()).set(0, targetPage.makeReference());
         }
         PDStream pdStream = getContents(sourcePage);
 
-        COSDictionary srcPgFonts = (COSDictionary)srcPgResCosDict.getDictionaryObject(COSName.FONT);
+        COSDictionary fonts = (COSDictionary)sourcePageResources.getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
         String newStream = null;
-        if (srcPgFonts != null && pdfDoc.isMergeFontsEnabled()) {
-            fontsBackup = new COSDictionary(srcPgFonts);
-            MergeFontsPDFWriter m = new MergeFontsPDFWriter(srcPgFonts, fontinfo, uniqueName, parentFonts, currentMCID);
+        if (fonts != null && pdfDoc.isMergeFontsEnabled()) {
+            fontsBackup = new COSDictionary(fonts);
+            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID);
             newStream = m.writeText(pdStream);
         }
         if (!pdfDoc.isFormXObjectEnabled()) {
@@ -218,18 +205,18 @@ public class PDFBoxAdapter {
                     clonedVersion.put(key, newStream);
                 }
             }
-            pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes("ISO-8859-1")));
+            pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes(PDFDocument.ENCODING)));
         }
-        mergeXObj(srcPgResCosDict, fontinfo, uniqueName);
+        mergeXObj(sourcePageResources, fontinfo, uniqueName);
 
-        List<COSName> exclude = Arrays.asList(COSName.PATTERN);
+        List<COSName> exclude = Collections.singletonList(COSName.PATTERN);
         PDFDictionary pageResources =
-                (PDFDictionary)cloneForNewDocument(srcPgResCosDict, srcPgResCosDict, exclude);
+                (PDFDictionary)cloneForNewDocument(sourcePageResources, sourcePageResources, exclude);
 
         updateMergeFontInfo(pageResources, fontinfo);
-        updateXObj(srcPgResCosDict, pageResources);
+        updateXObj(sourcePageResources, pageResources);
         if (fontsBackup != null) {
-            srcPgResCosDict.setItem(COSName.FONT, fontsBackup);
+            sourcePageResources.setItem(COSName.FONT, fontsBackup);
         }
 
         COSStream originalPageContents = pdStream.getCOSObject();
@@ -261,9 +248,9 @@ public class PDFBoxAdapter {
             transferDict(originalPageContents, pageStream, filter);
         }
 
-        transferPageDict(srcPgFonts, uniqueName, srcPgResCosDict);
+        transferPageDict(fonts, uniqueName, sourcePageResources);
 
-        promotePatterns(targetPage.getPDFResources());
+        patternUtil.promotePatterns();
 
         PDRectangle mediaBox = sourcePage.getMediaBox();
         PDRectangle cropBox = sourcePage.getCropBox();
@@ -293,36 +280,7 @@ public class PDFBoxAdapter {
                 .append(PDFNumber.doubleOut(mediaBox.getLowerLeftY())).append(' ')
                 .append(PDFNumber.doubleOut(mediaBox.getWidth())).append(' ')
                 .append(PDFNumber.doubleOut(mediaBox.getHeight())).append(" re W n\n");
-        return boxStr.toString() + IOUtils.toString(pdStream.createInputStream(), "ISO-8859-1");
-    }
-
-    /**
-     * Move pattern definitions from being embedded in the page resources to being top-level indirect objects.
-     * @param pageResources The target page resources.
-     */
-    private void promotePatterns(PDFDictionary pageResources) {
-        if (pageResources != null) {
-            Object patterns = pageResources.get(COSName.PATTERN.getName());
-            if (patterns != null && patterns instanceof PDFDictionary) {
-                PDFDictionary patternsDict = (PDFDictionary) patterns;
-                Set<String> keys = patternsDict.keySet();
-                for (String key : keys) {
-                    PDFObject patternObj = null;
-                    Object pattern = patternsDict.get(key);
-                    if (pattern instanceof PDFStream) {
-                        // Tiling pattern
-                        patternObj = (PDFStream)pattern;
-                    } else if (pattern instanceof PDFDictionary) {
-                        // Shading pattern
-                        patternObj = (PDFDictionary)pattern;
-                    }
-                    if (patternObj != null) {
-                        patternObj.setObjectNumber(targetPage.getDocument());
-                        targetPage.getDocument().addObject(patternObj);
-                    }
-                }
-            }
-        }
+        return boxStr.toString() + IOUtils.toString(pdStream.createInputStream(), PDFDocument.ENCODING);
     }
 
     private PDStream getContents(PDPage page) throws IOException {

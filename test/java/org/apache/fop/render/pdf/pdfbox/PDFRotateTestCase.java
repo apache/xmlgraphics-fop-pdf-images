@@ -36,8 +36,6 @@ import org.apache.xmlgraphics.image.loader.impl.ImageGraphics2D;
 import org.apache.xmlgraphics.java2d.GraphicContext;
 import org.apache.xmlgraphics.java2d.ps.PSGraphics2D;
 
-import org.apache.fop.pdf.PDFArray;
-
 public class PDFRotateTestCase {
 
     @Test
@@ -74,10 +72,8 @@ public class PDFRotateTestCase {
         PDPage page = doc.getPage(0);
         page.setRotation(angle);
         AffineTransform pageAdjust = new AffineTransform();
-        PDFArray targetPageMediaBox = new PDFArray(0d, 0d, 100d, 100d);
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, targetPageMediaBox,
-                null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
         Assert.assertTrue(stream.contains("/GS0106079 gs"));
         Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
         doc.close();

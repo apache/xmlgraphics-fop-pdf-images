@@ -86,9 +86,10 @@ public class PDFClonerTestCase {
         child.setBoolean("a", true);
         res.setItem("a", child);
         Rectangle rect = new Rectangle(0, 0, 100, 100);
-        adapter.uniqueName = new UniqueName("a", res, null, false, rect);
+        List<COSName> patternNames = new ArrayList<>();
+        adapter.uniqueName = new UniqueName("a", res, patternNames, false, rect);
         PDFStream cloneda = (PDFStream) new PDFCloner(adapter, false).cloneForNewDocument(getStream());
-        adapter.uniqueName = new UniqueName("b", res, null, false, rect);
+        adapter.uniqueName = new UniqueName("b", res, patternNames, false, rect);
         PDFStream clonedb = (PDFStream) new PDFCloner(adapter, false).cloneForNewDocument(getStream());
         Assert.assertNotSame(cloneda, clonedb);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();

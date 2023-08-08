@@ -38,32 +38,23 @@ import org.apache.fop.pdf.PDFDocument;
  * The alternative may or may not be in the collection.
  */
 public class UniqueName {
-    // General key.
     private String key;
-    // A key to be used only for pattern names.
-    private String patternKey = "";
-    // General resource names.
-    private List<COSName> resourceNames;
-    // Pattern resource names.
-    private List<COSName> patternResourceNames = new ArrayList<>();
+    private String patternKey;
+    private List<COSName> resourceNames = Collections.emptyList();
+    private List<COSName> patternNames = Collections.emptyList();
 
-    public UniqueName(String key, COSDictionary sourcePageResources, Iterable<COSName> patternNames, boolean disable,
+    public UniqueName(String key, COSDictionary sourcePageResources, List<COSName> patternNames, boolean disable,
                       Rectangle destRect) {
-        if (disable) {
-            resourceNames = Collections.emptyList();
-        } else {
+        if (!disable) {
             key = key.split("#")[0];
             this.key = Integer.toString(key.hashCode());
-            if (patternNames != null) {
+            if (!patternNames.isEmpty()) {
                 // Make pattern key unique to the destination rectangle.
-                this.patternKey = Integer.toString(
-                        (key + destRect.getX() + destRect.getY() + destRect.getWidth() + destRect.getHeight()
-                        ).hashCode());
-                for (COSName cosName : patternNames) {
-                    patternResourceNames.add(cosName);
-                }
+                patternKey = Integer.toString((key
+                        + destRect.getX() + destRect.getY() + destRect.getWidth() + destRect.getHeight()).hashCode());
+                this.patternNames = patternNames;
             }
-            resourceNames = getResourceNames(sourcePageResources, patternResourceNames);
+            resourceNames = getResourceNames(sourcePageResources);
         }
     }
 
@@ -74,7 +65,7 @@ public class UniqueName {
      *         It is possible that the alternative is also in the collection.
      */
     protected String getName(COSName cn) {
-        if (patternResourceNames.contains(cn)) {
+        if (patternNames.contains(cn)) {
             return cn.getName() + patternKey;
         }
         if (resourceNames.contains(cn)) {
@@ -94,7 +85,7 @@ public class UniqueName {
         cn.writePDF(bos);
         String name = bos.toString(PDFDocument.ENCODING);
         sb.append(name);
-        if (patternResourceNames.contains(cn)) {
+        if (patternNames.contains(cn)) {
             sb.append(patternKey);
         }
         if (resourceNames.contains(cn)) {
@@ -102,8 +93,8 @@ public class UniqueName {
         }
     }
 
-    private List<COSName> getResourceNames(COSDictionary sourcePageResources, List<COSName> patternResourceNames) {
-        List<COSName> resourceNames = new ArrayList<COSName>();
+    private List<COSName> getResourceNames(COSDictionary sourcePageResources) {
+        List<COSName> resourceNames = new ArrayList<>();
         for (COSBase e : sourcePageResources.getValues()) {
             if (e instanceof COSObject) {
                 e = ((COSObject) e).getObject();
@@ -111,7 +102,7 @@ public class UniqueName {
             if (e instanceof COSDictionary) {
                 COSDictionary d = (COSDictionary) e;
                 for (COSName cosName : d.keySet()) {
-                    if (!patternResourceNames.contains(cosName)) {
+                    if (!patternNames.contains(cosName)) {
                         resourceNames.add(cosName);
                     }
                 }
@@ -119,9 +110,5 @@ public class UniqueName {
         }
         resourceNames.remove(COSName.S);
         return resourceNames;
-    }
-
-    public boolean hasPatterns() {
-        return !patternResourceNames.isEmpty();
     }
 }
