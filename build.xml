@@ -81,7 +81,12 @@
     <include name="src/**"/>
     <include name="test/**"/>
     <patternset>
-      <include name="lib/*"/>
+      <include name="lib/commons*"/>
+      <include name="lib/fontbox*"/>
+      <include name="lib/fop*"/>
+      <include name="lib/pdfbox*"/>
+      <include name="lib/xmlgraphics*"/>
+      <include name="lib/*.txt"/>
     </patternset>
     <include name="LICENSE"/>
     <include name="NOTICE"/>
