@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 2.0 or later
-- Apache XML Graphics Commons 2.8 or later (for the image converter)
-- Apache XML FOP 2.8 or later (for the FOP functionality)
+- Apache XML Graphics Commons 2.9 or later (for the image converter)
+- Apache XML FOP 2.9 or later (for the FOP functionality)
 - Java 1.8 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.8 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.9 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -140,12 +140,13 @@ Known Issues
 Contributors
 ---------------
 
-- Jeremias M�rki (original author)
+- Jeremias Maerki (original author)
 - Krister Wicksell
 - Vincent Hennebert
 - Simon Steiner
 - Luis Bernardo
 - Athanasios-Dimitrios Giannimaras
+- Dave Roxburgh
 
 Versions prior to 2.1 (i.e. prior to the move to the Apache XML Graphics
 project) can be downloaded from here:
@@ -155,6 +156,19 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.9
+=========================
+
+Changes:
+FOP-3107: Update to PDFBox 2.0.27
+FOP-3108: Gradient component not displayed correctly after scaling
+FOP-3112: Rotate annotations
+FOP-3123: Modified stream should be used in the cache key
+FOP-3124: Subrs data missing from font merging
+FOP-3136: Softmask dictionary preserved
+FOP-3138: NPE when no fields
+FOP-3140: Merge form fields
 
 Version 2.8
 =========================
