@@ -344,10 +344,14 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         return fontMap.get(fontData);
     }
 
-    protected static void setProperties(CustomFont cFont, PDFont font) {
+    protected static void setProperties(CustomFont cFont, PDFont font) throws IOException {
         if (font.getFontDescriptor() != null) {
             cFont.setCapHeight((int) font.getFontDescriptor().getCapHeight());
-            cFont.setAscender((int)font.getFontDescriptor().getAscent());
+            int ascent = (int)font.getFontDescriptor().getAscent();
+            if (cFont.getAscender() != 0 && ascent != cFont.getAscender()) {
+                throw new IOException("Ascender doesn't match");
+            }
+            cFont.setAscender(ascent);
             cFont.setDescender((int)font.getFontDescriptor().getDescent());
             cFont.setXHeight((int)font.getFontDescriptor().getXHeight());
             cFont.setStemV((int)font.getFontDescriptor().getStemV());

@@ -914,4 +914,12 @@ public class PDFBoxAdapterTestCase {
                 + "/Matrix [53.8858833313 0 0 -26.4968185425 72.7459411621 -20.8601989746]\n"
                 + ">>"));
     }
+
+    @Test
+    public void testAscenderDoesntMatch() throws IOException {
+        FontInfo fi = new FontInfo();
+        writeText(fi, TTSubset6);
+        String msg = writeText(fi, TTSubset7);
+        Assert.assertTrue(msg, msg.contains("/C2_0745125721 12 Tf"));
+    }
 }
