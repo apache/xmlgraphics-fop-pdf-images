@@ -489,14 +489,10 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testPCL() throws IOException, ImageException {
-        String ex = "";
-        try {
-            pdfToPCL(SHADING);
-        } catch (UnsupportedOperationException e) {
-            ex = e.getMessage();
-        }
-        Assert.assertTrue(ex.contains("Clipping is not supported."));
+    public void testPCL() {
+        UnsupportedOperationException ex = Assert.assertThrows(UnsupportedOperationException.class, () ->
+                pdfToPCL(SHADING));
+        Assert.assertTrue(ex.getMessage().contains("Clipping is not supported."));
     }
 
     private void pdfToPCL(String pdf) throws IOException, ImageException {
@@ -640,29 +636,20 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testErrorMsgToPS() throws IOException, ImageException {
-        String msg = "";
-        try {
-            pdfToPS(ERROR);
-        } catch (RuntimeException e) {
-            msg = e.getMessage();
-        }
-        Assert.assertTrue(msg.startsWith("Error while painting PDF page: " + ERROR));
+    public void testErrorMsgToPS() {
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> pdfToPCL(ERROR));
+        Assert.assertTrue(ex.getMessage().startsWith("Error while painting PDF page: " + ERROR));
     }
 
     @Test
-    public void testErrorMsgToPDF() throws IOException {
-        String msg = "";
+    public void testErrorMsgToPDF() {
         PDFDocument pdfdoc = new PDFDocument("");
         PDFContentGenerator contentGenerator = new PDFContentGenerator(pdfdoc, null, null);
         PDFRenderingContext context = new PDFRenderingContext(null, contentGenerator, null, null);
         ImagePDF imagePDF = new ImagePDF(new ImageInfo(ERROR, null), null);
-        try {
-            new PDFBoxImageHandler().handleImage(context, imagePDF, null);
-        } catch (RuntimeException e) {
-            msg = e.getMessage();
-        }
-        Assert.assertTrue(msg.startsWith("Error on PDF page: " + ERROR));
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
+                new PDFBoxImageHandler().handleImage(context, imagePDF, null));
+        Assert.assertTrue(ex.getMessage().startsWith("Error on PDF page: " + ERROR));
     }
 
     @Test
@@ -695,18 +682,14 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testMergeFontsAndFormXObject() throws IOException {
-        String msg = "";
         PDDocument doc = load(IMAGE);
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
-        try {
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
             getPDFBoxAdapter(true, true)
-                    .createStreamFromPDFBoxPage(doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle());
-        } catch (RuntimeException e) {
-            msg = e.getMessage();
-        }
+                    .createStreamFromPDFBoxPage(doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle()));
         doc.close();
-        Assert.assertEquals(msg, "merge-fonts and form-xobject can't both be enabled");
+        Assert.assertEquals(ex.getMessage(), "merge-fonts and form-xobject can't both be enabled");
     }
 
     @Test

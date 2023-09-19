@@ -153,15 +153,11 @@ public class ImageConverterPDF2G2DTestCase {
 
     @Test
     public void testPDFToPSFontError() throws Exception {
-        String msg = "";
         InternalResourceResolver rr = ResourceResolverFactory.createDefaultInternalResourceResolver(new URI("."));
         EmbedFontInfo embedFontInfo = new EmbedFontInfo(new FontUris(
                 new File("pom.xml").toURI(), null), false, false, null, "");
-        try {
-            pdfToPS(FONTSNOTEMBEDDEDCID, new LazyFont(embedFontInfo, rr, false));
-        } catch (Exception e) {
-            msg = e.getMessage();
-        }
-        Assert.assertTrue(msg, msg.contains("Reached EOF"));
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
+            pdfToPS(FONTSNOTEMBEDDEDCID, new LazyFont(embedFontInfo, rr, false)));
+        Assert.assertTrue(ex.getMessage().contains("Reached EOF"));
     }
 }

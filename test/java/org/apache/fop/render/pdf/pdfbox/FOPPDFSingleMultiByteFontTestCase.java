@@ -183,13 +183,8 @@ public class FOPPDFSingleMultiByteFontTestCase {
         PDType0Font font = (PDType0Font) multiByteFont.getFontContainer().getFont();
         GlyphTable glyphTable = ((PDCIDFontType2)font.getDescendantFont()).getTrueTypeFont().getGlyph();
         glyphTable.setGlyphs(new GlyphData[glyphTable.getGlyphs().length - 1]);
-        String ex = "";
-        try {
-            multiByteFont.addFont(fontDict);
-        } catch (IOException e) {
-            ex = e.getMessage();
-        }
-        Assert.assertEquals(ex, "Mapping not found in glyphData");
+        IOException ex = Assert.assertThrows(IOException.class, () -> multiByteFont.addFont(fontDict));
+        Assert.assertEquals(ex.getMessage(), "Mapping not found in glyphData");
         pdf.close();
     }
 

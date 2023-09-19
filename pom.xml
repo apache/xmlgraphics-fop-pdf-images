@@ -11,7 +11,7 @@
 
   <properties>
     <antrun.plugin.version>1.8</antrun.plugin.version>
-    <checkstyle.plugin.version>2.11</checkstyle.plugin.version>
+    <checkstyle.plugin.version>2.15</checkstyle.plugin.version>
     <jacoco.plugin.version>0.8.5</jacoco.plugin.version>
     <jacoco.coverage.line.min>0.8</jacoco.coverage.line.min>
     <junit.version>4.13.1</junit.version>
