@@ -453,34 +453,54 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         }
 
         for (Cmap cmap : cmaps) {
-            writeUShort(4); //subtableFormat
-            int segCount = cmap.glyphIdToCharacterCode.size() + 1;
-            writeUShort(16 + (segCount * 8)); //length
-            writeUShort(0); //lang
-            writeUShort(segCount * 2); //segCountX2
-            double searchRange = Math.pow(2, Math.floor(logBase2(segCount))) * 2;
-            writeUShort((int) searchRange); //searchRange
-            double entrySelector = Math.floor(logBase2(segCount));
-            writeUShort((int) entrySelector); //entrySelector
-            double rangeShift = (segCount * 2) - searchRange;
-            writeUShort((int) rangeShift); //rangeShift
-            for (int c : cmap.glyphIdToCharacterCode.keySet()) {
-                writeUShort(c); //endCode
+            if (cmap.platformId != 0) {
+                writeUShort(4); //subtableFormat
+                int segCount = cmap.glyphIdToCharacterCode.size() + 1;
+                writeUShort(16 + (segCount * 8)); //length
+                writeUShort(0); //lang
+                writeUShort(segCount * 2); //segCountX2
+                double searchRange = Math.pow(2, Math.floor(logBase2(segCount))) * 2;
+                writeUShort((int) searchRange); //searchRange
+                double entrySelector = Math.floor(logBase2(segCount));
+                writeUShort((int) entrySelector); //entrySelector
+                double rangeShift = (segCount * 2) - searchRange;
+                writeUShort((int) rangeShift); //rangeShift
+                for (int c : cmap.glyphIdToCharacterCode.keySet()) {
+                    writeUShort(c); //endCode
+                }
+                writeUShort(0xFFFF);
+                writeUShort(0); //reservedPad
+                for (int c : cmap.glyphIdToCharacterCode.keySet()) {
+                    writeUShort(c); //startCode
+                }
+                writeUShort(0);
+                for (Map.Entry<Integer, Integer> entry : cmap.glyphIdToCharacterCode.entrySet()) {
+                    writeUShort(entry.getValue() - entry.getKey()); //idDelta
+                }
+                writeUShort(0);
+                for (int g : cmap.glyphIdToCharacterCode.keySet()) {
+                    writeUShort(0); //idRangeOffsets
+                }
+                writeUShort(0);
+            } else {
+                writeUShort(12); //subtableFormat
+                writeUShort(0);
+                writeULong(currentPos, (cmap.glyphIdToCharacterCode.size() * 12) + 16);
+                currentPos += 4;
+                writeULong(currentPos, 0);
+                currentPos += 4;
+                writeULong(currentPos, cmap.glyphIdToCharacterCode.size());
+                currentPos += 4;
+
+                for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
+                    writeULong(currentPos, g.getKey());
+                    currentPos += 4;
+                    writeULong(currentPos, g.getKey());
+                    currentPos += 4;
+                    writeULong(currentPos, g.getValue());
+                    currentPos += 4;
+                }
             }
-            writeUShort(0xFFFF);
-            writeUShort(0); //reservedPad
-            for (int c : cmap.glyphIdToCharacterCode.keySet()) {
-                writeUShort(c); //startCode
-            }
-            writeUShort(0);
-            for (Map.Entry<Integer, Integer> entry : cmap.glyphIdToCharacterCode.entrySet()) {
-                writeUShort(entry.getValue() - entry.getKey()); //idDelta
-            }
-            writeUShort(0);
-            for (int g : cmap.glyphIdToCharacterCode.keySet()) {
-                writeUShort(0); //idRangeOffsets
-            }
-            writeUShort(0);
         }
 
         updateCheckSum(checksum, currentPos - cmapPos, OFTableName.CMAP);
@@ -509,8 +529,12 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         int result = 0;
         for (int i = 0; i < index; i++) {
             Cmap curCmap = cmaps.get(i);
-            int segCount = curCmap.glyphIdToCharacterCode.size() + 1;
-            result += 16 + (segCount * 8); //length
+            if (curCmap.platformId != 0) {
+                int segCount = curCmap.glyphIdToCharacterCode.size() + 1;
+                result += 16 + (segCount * 8); //length
+            } else {
+                result += (curCmap.glyphIdToCharacterCode.size() * 12) + 16;
+            }
         }
         return result;
     }

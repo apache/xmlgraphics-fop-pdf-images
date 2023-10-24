@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
+import org.apache.fontbox.ttf.CmapTable;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.GlyphTable;
 import org.apache.fontbox.ttf.TTFParser;
@@ -216,5 +217,27 @@ public class FOPPDFSingleMultiByteFontTestCase {
         public String addFont(COSDictionary fontData) {
             return null;
         }
+    }
+
+    @Test
+    public void testCmapFormat() throws Exception {
+        PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset10);
+        FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "test");
+        byte[] bytes = IOUtils.toByteArray(sbfont.getInputStream());
+        TrueTypeFont trueTypeFont = new TTFParser().parse(new ByteArrayInputStream(bytes));
+        CmapTable ttfTable = (CmapTable) trueTypeFont.getTableMap().get("cmap");
+        Assert.assertEquals(ttfTable.getCmaps()[0].getPlatformId(), 0);
+        Assert.assertEquals(ttfTable.getCmaps()[1].getPlatformId(), 1);
+        Assert.assertEquals(ttfTable.getCmaps()[2].getPlatformId(), 3);
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+        bis.skip(ttfTable.getOffset() + 29);
+        Assert.assertEquals(bis.read(), 12); //subtableFormat
+        bis = new ByteArrayInputStream(bytes);
+        bis.skip(ttfTable.getOffset() + 465);
+        Assert.assertEquals(bis.read(), 4); //subtableFormat
+        bis = new ByteArrayInputStream(bytes);
+        bis.skip(ttfTable.getOffset() + 809);
+        Assert.assertEquals(bis.read(), 4); //subtableFormat
+        doc.close();
     }
 }

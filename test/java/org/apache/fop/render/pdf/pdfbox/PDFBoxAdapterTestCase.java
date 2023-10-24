@@ -112,6 +112,7 @@ public class PDFBoxAdapterTestCase {
     protected static final String TTSubset7 = "ttsubset7.pdf";
     protected static final String TTSubset8 = "ttsubset8.pdf";
     protected static final String TTSubset9 = "ttsubset9.pdf";
+    protected static final String TTSubset10 = "ttsubset10.pdf";
     protected static final String CFFCID1 = "cffcid1.pdf";
     protected static final String CFFCID2 = "cffcid2.pdf";
     protected static final String Type1Subset1 = "t1subset.pdf";
