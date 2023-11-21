@@ -16,19 +16,22 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    name: Test with Java ${{ matrix.jdk }} ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: ['8']
+        os: [ubuntu-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up JDK 8
+    - uses: actions/checkout@v4
+    - name: Set up JDK ${{ matrix.jdk }}
       uses: actions/setup-java@v3
       with:
-        java-version: '8'
+        java-version: ${{ matrix.jdk }}
         distribution: 'temurin'
         cache: maven
-    - name: Show Maven Version
-      run: mvn --version
     - name: Build with Maven
       run: mvn -B package checkstyle:check findbugs:check --file pom.xml
 
