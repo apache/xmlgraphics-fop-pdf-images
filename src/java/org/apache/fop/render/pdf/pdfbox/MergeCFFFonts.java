@@ -498,7 +498,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
             if (oldEnc >= 32 && oldEnc <= 246) {
                 offsets.encoding += 139;
             } else {
-                offsets.encoding--;
+                offsets.encoding -= 1;
             }
             updateOffset(oldEncodingOffset, encodingEntry.getOperandLength(), offsets.encoding);
         }
