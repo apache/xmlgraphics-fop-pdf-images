@@ -900,6 +900,25 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
+    public void testPatternMatrixFormXObject() throws Exception {
+        PDDocument doc = load(SHADING);
+        PDFDocument pdfdoc = new PDFDocument("");
+        pdfdoc.setFormXObjectEnabled(true);
+        Rectangle destRect = new Rectangle(0, 1650, 274818, 174879);
+        loadPage(pdfdoc, doc, destRect);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        String outStr = bos.toString("UTF-8").replaceAll("\\s\\s/", "/");
+        Assert.assertTrue(outStr.contains("/Pattern << /Pa1 12 0 R /Pa2 13 0 R >>"));
+        Assert.assertTrue(outStr.contains("<<\n"
+                + "/Type /Pattern\n"
+                + "/PatternType 2\n"
+                + "/Shading 2 0 R\n"
+                + "/Matrix [120 0 0 -120 162 705]\n"
+                + ">>"));
+    }
+
+    @Test
     public void testAscenderDoesntMatch() throws IOException {
         FontInfo fi = new FontInfo();
         writeText(fi, TTSubset6);

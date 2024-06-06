@@ -178,7 +178,7 @@ public class PDFBoxAdapter {
                                              AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect)
         throws IOException {
         COSDictionary sourcePageResources = getResources(sourcePage);
-        PatternUtil patternUtil = new PatternUtil(targetPage, destRect, sourcePage);
+        PatternUtil patternUtil = new PatternUtil(targetPage, destRect, sourcePage, pdfDoc.isFormXObjectEnabled());
         uniqueName = new UniqueName(
                 key, sourcePageResources, patternUtil.getPatternNames(), pdfDoc.isFormXObjectEnabled(), destRect);
         key = patternUtil.getKey(key);
@@ -208,10 +208,8 @@ public class PDFBoxAdapter {
             pdStream = new PDStream(sourceDoc, new ByteArrayInputStream(newStream.getBytes(PDFDocument.ENCODING)));
         }
         mergeXObj(sourcePageResources, fontinfo, uniqueName);
-
-        List<COSName> exclude = Collections.singletonList(COSName.PATTERN);
         PDFDictionary pageResources =
-                (PDFDictionary)cloneForNewDocument(sourcePageResources, sourcePageResources, exclude);
+                (PDFDictionary)cloneForNewDocument(sourcePageResources, sourcePageResources, patternUtil.getExclude());
 
         updateMergeFontInfo(pageResources, fontinfo);
         updateXObj(sourcePageResources, pageResources);
@@ -233,7 +231,8 @@ public class PDFBoxAdapter {
 //            IOUtils.copyLarge(in, out);
 //            filter = FILTER_FILTER;
 //        } else {
-            pageStream = (PDFStream)cloneForNewDocument(originalPageContents, originalPageContents, exclude);
+            pageStream = (PDFStream)cloneForNewDocument(originalPageContents, originalPageContents,
+                    patternUtil.getExclude());
             filter = Collections.EMPTY_SET;
 //        }
         if (pageStream == null) {

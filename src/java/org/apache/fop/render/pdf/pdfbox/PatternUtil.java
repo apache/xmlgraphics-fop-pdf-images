@@ -22,6 +22,7 @@ import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.pdfbox.cos.COSName;
@@ -42,16 +43,18 @@ public class PatternUtil {
     private Rectangle pos;
     private PDPage sourcePage;
 
-    public PatternUtil(PDFPage targetPage, Rectangle pos, PDPage sourcePage) throws IOException {
-        this.targetPage = targetPage;
-        this.pos = pos;
-        this.sourcePage = sourcePage;
-        PDResources srcPgResources = sourcePage.getResources();
-        if (srcPgResources != null) {
-            for (COSName name : srcPgResources.getPatternNames()) {
-                patternNames.add(name);
+    public PatternUtil(PDFPage targetPage, Rectangle pos, PDPage sourcePage, boolean disabled) throws IOException {
+        if (!disabled) {
+            this.targetPage = targetPage;
+            this.pos = pos;
+            this.sourcePage = sourcePage;
+            PDResources srcPgResources = sourcePage.getResources();
+            if (srcPgResources != null) {
+                for (COSName name : srcPgResources.getPatternNames()) {
+                    patternNames.add(name);
+                }
+                transformPatterns();
             }
-            transformPatterns();
         }
     }
 
@@ -96,12 +99,14 @@ public class PatternUtil {
     }
 
     public void promotePatterns() {
-        PDFDictionary patternsDict = (PDFDictionary) targetPage.getPDFResources().get(COSName.PATTERN.getName());
-        if (patternsDict != null) {
-            for (String key : patternsDict.keySet()) {
-                PDFObject pattern = (PDFObject) patternsDict.get(key);
-                pattern.setObjectNumber(targetPage.getDocument());
-                targetPage.getDocument().addObject(pattern);
+        if (targetPage != null) {
+            PDFDictionary patternsDict = (PDFDictionary) targetPage.getPDFResources().get(COSName.PATTERN.getName());
+            if (patternsDict != null) {
+                for (String key : patternsDict.keySet()) {
+                    PDFObject pattern = (PDFObject) patternsDict.get(key);
+                    pattern.setObjectNumber(targetPage.getDocument());
+                    targetPage.getDocument().addObject(pattern);
+                }
             }
         }
     }
@@ -111,5 +116,12 @@ public class PatternUtil {
             return key;
         }
         return key + pos.getX() + pos.getY() + pos.getWidth() + pos.getHeight();
+    }
+
+    public List<COSName> getExclude() {
+        if (targetPage == null) {
+            return Collections.emptyList();
+        }
+        return Collections.singletonList(COSName.PATTERN);
     }
 }
