@@ -119,7 +119,7 @@ public class PDFClonerTestCase {
     private COSStream getStream() throws IOException {
         COSStream stream = new COSStream();
         stream.setItem(COSName.SUBTYPE, COSName.FORM);
-        try (OutputStream os = stream.createUnfilteredStream()) {
+        try (OutputStream os = stream.createOutputStream()) {
             os.write("/a tf".getBytes(PDFDocument.ENCODING));
         }
         return stream;

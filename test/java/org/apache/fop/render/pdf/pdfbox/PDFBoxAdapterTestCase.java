@@ -774,7 +774,8 @@ public class PDFBoxAdapterTestCase {
             TTFParser parser = new TTFParser(true);
             TrueTypeFont trueTypeFont = parser.parse(inputStream);
             int i = 0;
-            for (GlyphData glyphData : trueTypeFont.getGlyph().getGlyphs()) {
+            for (int gid = 0; gid < trueTypeFont.getNumberOfGlyphs(); gid++) {
+                GlyphData glyphData = trueTypeFont.getGlyph().getGlyph(gid);
                 if (glyphData != null && glyphData.getDescription().isComposite()) {
                     compositeList.add(i);
                 }
