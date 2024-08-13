@@ -473,7 +473,7 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                 for (int c : cmap.glyphIdToCharacterCode.keySet()) {
                     writeUShort(c); //startCode
                 }
-                writeUShort(0);
+                writeUShort(0xFFFF);
                 for (Map.Entry<Integer, Integer> entry : cmap.glyphIdToCharacterCode.entrySet()) {
                     writeUShort(entry.getValue() - entry.getKey()); //idDelta
                 }

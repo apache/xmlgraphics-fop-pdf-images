@@ -17,6 +17,7 @@
 package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
@@ -238,7 +239,14 @@ public class FOPPDFSingleMultiByteFontTestCase {
         Assert.assertEquals(bis.read(), 4); //subtableFormat
         bis = new ByteArrayInputStream(bytes);
         bis.skip(ttfTable.getOffset() + 809);
-        Assert.assertEquals(bis.read(), 4); //subtableFormat
+        DataInputStream dis = new DataInputStream(bis);
+        Assert.assertEquals(dis.read(), 4); //subtableFormat
+        dis.skip(2 * 6);
+        dis.skip(2 * 44); //endCode
+        Assert.assertEquals(dis.readShort(), (short)0xFFFF);
+        dis.skip(2); //reservedPad
+        dis.skip(2 * 44); //startCode
+        Assert.assertEquals(dis.readShort(), (short)0xFFFF);
         doc.close();
     }
 }
