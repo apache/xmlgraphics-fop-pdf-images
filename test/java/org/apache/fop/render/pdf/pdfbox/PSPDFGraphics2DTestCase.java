@@ -20,6 +20,7 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,7 +40,7 @@ public class PSPDFGraphics2DTestCase {
     public void testShading() throws IOException {
         COSStream stream = new COSStream();
         OutputStream streamData = stream.createOutputStream();
-        streamData.write("test".getBytes("UTF-8"));
+        streamData.write("test".getBytes(StandardCharsets.UTF_8));
         streamData.close();
         stream.setItem(COSName.BITS_PER_SAMPLE, COSInteger.get(8));
         stream.setItem(COSName.FUNCTION_TYPE, COSInteger.ZERO);

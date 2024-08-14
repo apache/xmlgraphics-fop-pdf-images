@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
@@ -234,7 +235,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         writeBytes(cffReader.getHeader());
 
         //Name Index
-        writeIndex(Arrays.asList(fileFont.getName().getBytes("UTF-8")));
+        writeIndex(Arrays.asList(fileFont.getName().getBytes(StandardCharsets.UTF_8)));
 
         Offsets offsets = new Offsets();
 
@@ -343,7 +344,8 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         //Write the String Index
         boolean stdRange = range.containsKey(NUM_STANDARD_STRINGS);
         if (!stringIndexData.isEmpty()) {
-            if (!strings.isEmpty() && !new String(stringIndexData.get(0), "UTF-8").equals(strings.get(0)) && stdRange) {
+            if (!strings.isEmpty()
+                    && !new String(stringIndexData.get(0), StandardCharsets.UTF_8).equals(strings.get(0)) && stdRange) {
                 //Keep strings in order as they are referenced from the TopDICT
                 for (int i = 0; i < stringIndexSize; i++) {
                     stringIndexData.add(stringIndexData.remove(0));
@@ -355,16 +357,16 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                 }
             }
             if (stdRange) {
-                stringIndexData.add(embeddedName.getBytes("UTF-8"));
+                stringIndexData.add(embeddedName.getBytes(StandardCharsets.UTF_8));
             } else {
-                stringIndexData.add(0, embeddedName.getBytes("UTF-8"));
+                stringIndexData.add(0, embeddedName.getBytes(StandardCharsets.UTF_8));
             }
             writeIndex(stringIndexData);
         } else {
             String notice = (String)fileFont.getTopDict().get("Notice");
             if (notice != null) {
                 writeIndex(Arrays.<byte[]>asList(notice.getBytes(PDFDocument.ENCODING),
-                        embeddedName.getBytes("UTF-8")));
+                        embeddedName.getBytes(StandardCharsets.UTF_8)));
             } else {
                 List<byte[]> sindex = new ArrayList<byte[]>();
                 sindex.add(cffReader.getStringIndex().getData());
@@ -372,7 +374,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                     fallbackIndex = true;
                     writeIndex(sindex);
                 } else if (sindex.size() == 1) {
-                    writeIndex(Arrays.asList(embeddedName.getBytes("UTF-8")));
+                    writeIndex(Arrays.asList(embeddedName.getBytes(StandardCharsets.UTF_8)));
                 } else {
                     writeCard16(0);
                 }

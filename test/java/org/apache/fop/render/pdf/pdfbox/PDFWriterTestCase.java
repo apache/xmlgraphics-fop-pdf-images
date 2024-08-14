@@ -19,6 +19,7 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.awt.Rectangle;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.junit.Assert;
@@ -34,7 +35,8 @@ public class PDFWriterTestCase {
         Locale.setDefault(Locale.FRENCH);
         PDFWriter pdfWriter = new PDFWriter(null, 0);
         String text = "[1.1 ] a";
-        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDStream pdStream = new PDStream(new PDDocument(),
+                new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
         Assert.assertEquals(pdfWriter.writeText(pdStream), text + "\n");
         Locale.setDefault(l);
     }
@@ -43,7 +45,7 @@ public class PDFWriterTestCase {
     public void testFloatCache() throws IOException {
         String text = "[1.1 1.1] a";
         PDDocument doc = new PDDocument();
-        PDStream pdStream = new PDStream(doc, new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDStream pdStream = new PDStream(doc, new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
         MyPDFWriter pdfWriter = new MyPDFWriter();
         pdfWriter.writeText(pdStream);
         doc.close();
@@ -66,7 +68,8 @@ public class PDFWriterTestCase {
     @Test
     public void testBoolean() throws IOException {
         String text = "[true true ] a\n";
-        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDStream pdStream = new PDStream(new PDDocument(),
+                new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
         Rectangle rect = new Rectangle(0, 0, 100, 100);
         PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, null, true, rect), 0);
         String out = pdfWriter.writeText(pdStream);
@@ -76,7 +79,8 @@ public class PDFWriterTestCase {
     @Test
     public void testNull() throws IOException {
         String text = "[null ] a\n";
-        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDStream pdStream = new PDStream(new PDDocument(),
+                new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
         Rectangle rect = new Rectangle(0, 0, 100, 100);
         PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, null, true, rect), 0);
         String out = pdfWriter.writeText(pdStream);
@@ -86,7 +90,8 @@ public class PDFWriterTestCase {
     @Test
     public void testSpaceInName() throws IOException {
         String text = "/a#20a a\n";
-        PDStream pdStream = new PDStream(new PDDocument(), new ByteArrayInputStream(text.getBytes("UTF-8")));
+        PDStream pdStream = new PDStream(new PDDocument(),
+                new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
         Rectangle rect = new Rectangle(0, 0, 100, 100);
         PDFWriter pdfWriter = new PDFWriter(new UniqueName("", null, null, true, rect), 0);
         String out = pdfWriter.writeText(pdStream);

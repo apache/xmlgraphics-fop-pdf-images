@@ -111,15 +111,15 @@ public class FOPPDFSingleMultiByteFontTestCase {
     @Test
     public void testTTCID() throws Exception {
         PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTCID1);
-        FOPPDFMultiByteFont mbfont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"),
-                "ArialMT_Type0");
+        final String font = "ArialMT_Type0";
+        FOPPDFMultiByteFont mbfont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"), font);
         mbfont.addFont(getFont(doc, "C2_0"));
         Assert.assertEquals(mbfont.mapChar('t'), 67);
 
         PDDocument doc2 = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTCID2);
         String name = mbfont.addFont(getFont(doc2, "C2_0"));
-        Assert.assertEquals(name, "ArialMT_Type0");
-        Assert.assertEquals(mbfont.getFontName(), "ArialMT_Type0");
+        Assert.assertEquals(name, font);
+        Assert.assertEquals(mbfont.getFontName(), font);
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
         Assert.assertEquals(is.length, 38640);
         doc.close();
@@ -128,16 +128,16 @@ public class FOPPDFSingleMultiByteFontTestCase {
 
     @Test
     public void testTTSubset() throws Exception {
+        final String font = "TimesNewRomanPSMT_TrueType";
         PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset1);
-        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "R9"),
-                "TimesNewRomanPSMT_TrueType");
+        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "R9"), font);
         mbfont.addFont(getFont(doc, "R9"));
 //        Assert.assertEquals(mbfont.mapChar('t'), 116);
 
         PDDocument doc2 = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset2);
         String name = mbfont.addFont(getFont(doc2, "R9"));
-        Assert.assertEquals(name, "TimesNewRomanPSMT_TrueType");
-        Assert.assertEquals(mbfont.getFontName(), "TimesNewRomanPSMT_TrueType");
+        Assert.assertEquals(name, font);
+        Assert.assertEquals(mbfont.getFontName(), font);
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
         Assert.assertEquals(is.length, 41104);
 

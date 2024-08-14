@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -90,7 +91,7 @@ public class ImageConverterPDF2G2DTestCase {
             GraphicContext gc = new GraphicContext();
             g2d.setGraphicContext(gc);
             g.paint(g2d, rect);
-            return stream.toString("UTF-8");
+            return stream.toString(StandardCharsets.UTF_8.name());
         } finally {
             doc.close();
         }
@@ -137,14 +138,14 @@ public class ImageConverterPDF2G2DTestCase {
         PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         COSStream cosStream = new COSStream();
         OutputStream outputStream = cosStream.createOutputStream();
-        outputStream.write("/Fm0 Do\n".getBytes("UTF-8"));
+        outputStream.write("/Fm0 Do\n".getBytes(StandardCharsets.UTF_8));
         outputStream.close();
         PDStream pdStream = new PDStream(cosStream);
         doc.getPage(0).setContents(pdStream);
 
         PDXObject form = doc.getPage(0).getResources().getXObject(COSName.getPDFName("Fm0"));
         OutputStream formStream = form.getCOSObject().createOutputStream();
-        formStream.write("1 g".getBytes("UTF-8"));
+        formStream.write("1 g".getBytes(StandardCharsets.UTF_8));
         formStream.close();
 
         String ps = pdfToPS(doc, pdf, null, null);

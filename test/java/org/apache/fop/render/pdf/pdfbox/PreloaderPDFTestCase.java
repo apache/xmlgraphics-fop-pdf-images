@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import javax.imageio.ImageIO;
 import javax.imageio.stream.ImageInputStream;
@@ -86,7 +87,7 @@ public class PreloaderPDFTestCase {
     @Test
     public void testLastResortPreloaderPDF() throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        bos.write("xx".getBytes("UTF-8"));
+        bos.write("xx".getBytes(StandardCharsets.UTF_8));
         IOUtils.copy(PreloaderPDFTestCase.class.getResourceAsStream(PDFBoxAdapterTestCase.ROTATE), bos);
         InputStream pdf = new ByteArrayInputStream(bos.toByteArray());
         ImageInputStream inputStream = ImageIO.createImageInputStream(pdf);

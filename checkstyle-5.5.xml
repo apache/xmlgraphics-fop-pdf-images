@@ -269,7 +269,11 @@
     <module name="CyclomaticComplexity">
         <property name="max" value="22"/>
     </module>
-    
+
+    <module name="MultipleStringLiterals">
+      <property name="allowedDuplicates" value="2"/>
+      <property name="ignoreStringsRegexp" value='^((".{1,4}")|""|"  *"|("\\u[0-9A-F]{4}"))$'/>
+    </module>
   </module>
   <!-- ===================================================================================================== -->
 

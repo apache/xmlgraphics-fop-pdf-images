@@ -70,7 +70,7 @@ public class MergeAnnotations implements HandleAnnotations<Object> {
                         pdfBoxAdapter.pdfDoc.registerTrailerObject(nextNode);
                         nextNode.put("Kids", new PDFArray());
                         nextNode.put("T", name);
-                        nextNode.put("Parent", node);
+                        nextNode.put(COSName.PARENT.getName(), node);
                         PDFArray kids = (PDFArray) node.get("Kids");
                         kids.add(nextNode);
                     }
@@ -88,7 +88,7 @@ public class MergeAnnotations implements HandleAnnotations<Object> {
             PDFArray kids = (PDFArray) parent.get("Kids");
             kids.add(clonedAnnot);
         } else {
-            PDFDictionary grandParent = (PDFDictionary) parent.get("Parent");
+            PDFDictionary grandParent = (PDFDictionary) parent.get(COSName.PARENT.getName());
             PDFDictionary child = parent;
             parent = new PDFDictionary();
             if (grandParent != null) {
@@ -103,14 +103,14 @@ public class MergeAnnotations implements HandleAnnotations<Object> {
                 }
             }
             child.remove("T");
-            child.put("Parent", parent);
+            child.put(COSName.PARENT.getName(), parent);
             parent.put("Kids", new PDFArray(clonedAnnot, child));
 
         }
         if (getT(clonedAnnot).equals(getT(parent))) {
             clonedAnnot.remove("T");
         }
-        clonedAnnot.put("Parent", parent);
+        clonedAnnot.put(COSName.PARENT.getName(), parent);
     }
 
     private PDFDictionary findKid(String name, PDFDictionary node) throws IOException {
@@ -127,7 +127,7 @@ public class MergeAnnotations implements HandleAnnotations<Object> {
     private void addToTree(PDFDictionary clonedAnnot, List<String> nameList) throws IOException {
         String tStr = getT(clonedAnnot);
         nameList.add(0, tStr);
-        Object parent = clonedAnnot.get("Parent");
+        Object parent = clonedAnnot.get(COSName.PARENT.getName());
         if (parent instanceof PDFDictionary) {
             addToTree((PDFDictionary) parent, nameList);
         } else if (!fields.containsKey(tStr)) {

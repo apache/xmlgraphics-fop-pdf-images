@@ -56,7 +56,7 @@ public class DocumentRootModifierTestCase {
         root.setItem(COSName.ROLE_MAP, mapRole);
         modifier.structTreeRootEntriesToCopy(root);
         structTreeRoot = pdfDoc.getRoot().getStructTreeRoot();
-        PDFDictionary baseRoot = (PDFDictionary) structTreeRoot.get("RoleMap");
+        PDFDictionary baseRoot = (PDFDictionary) structTreeRoot.get(COSName.ROLE_MAP.getName());
         String test = baseRoot.get("Icon").toString();
         String expected = "/Figure";
         Assert.assertEquals(test, expected);
@@ -66,7 +66,7 @@ public class DocumentRootModifierTestCase {
         structTreeRoot.put("RoleMap", rootBaseRoleMap);
         modifier.structTreeRootEntriesToCopy(root);
         structTreeRoot = pdfDoc.getRoot().getStructTreeRoot();
-        PDFDictionary baseRoot2 = (PDFDictionary) structTreeRoot.get("RoleMap");
+        PDFDictionary baseRoot2 = (PDFDictionary) structTreeRoot.get(COSName.ROLE_MAP.getName());
         PDFName nameIcon = (PDFName) baseRoot2.get("Icon");
         PDFName myPara = (PDFName)baseRoot2.get("MyPara");
         test = nameIcon.getName();

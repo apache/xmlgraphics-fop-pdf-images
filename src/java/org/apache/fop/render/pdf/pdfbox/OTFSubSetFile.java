@@ -21,6 +21,7 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -99,7 +100,7 @@ public abstract class OTFSubSetFile extends OTFSubSetWriter {
         int sidAStringIndex = stringIndexData.size() + 390;
         int sidB = dictEntry.getOperands().get(1).intValue();
         if (sidB > 390) {
-            stringIndexData.add("Identity".getBytes("UTF-8"));
+            stringIndexData.add("Identity".getBytes(StandardCharsets.UTF_8));
         }
         int sidBStringIndex = stringIndexData.size() + 390;
         byte[] cidEntryByteData = dictEntry.getByteData();
