@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 2.0 or later
-- Apache XML Graphics Commons 2.9 or later (for the image converter)
-- Apache XML FOP 2.9 or later (for the FOP functionality)
+- Apache XML Graphics Commons 2.10 or later (for the image converter)
+- Apache XML FOP 2.10 or later (for the FOP functionality)
 - Java 1.8 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.9 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.10 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -156,6 +156,16 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.10
+=========================
+
+Changes:
+FOP-3149: Don't merge fonts when ascent is different
+FOP-3155: Use format 12 for unicode cmap
+FOP-3158: Switch to spotbugs
+FOP-3183: Disable pattern modification using xobjforms
+FOP-3200: Correct end of start code for merging ttf cmap
 
 Version 2.9
 =========================
