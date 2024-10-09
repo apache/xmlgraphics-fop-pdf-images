@@ -95,19 +95,20 @@ public class PageParentTreeFinder {
             }
         } else if (kids instanceof COSObject) {
             COSObject kidCOSObj = (COSObject) kids;
-            if (kidCOSObj.getDictionaryObject(COSName.NUMS) == null) {
-                traverseKids(kidCOSObj.getDictionaryObject(COSName.KIDS), position, numList);
+            COSDictionary kid = (COSDictionary) kidCOSObj.getObject();
+            if (kid.getDictionaryObject(COSName.NUMS) == null) {
+                traverseKids(kid.getDictionaryObject(COSName.KIDS), position, numList);
             } else {
-                if (kidCOSObj.getDictionaryObject(COSName.LIMITS) != null) {
-                    COSArray kidCOSArray = (COSArray) kidCOSObj.getDictionaryObject(COSName.LIMITS);
+                if (kid.getDictionaryObject(COSName.LIMITS) != null) {
+                    COSArray kidCOSArray = (COSArray) kid.getDictionaryObject(COSName.LIMITS);
                     int lowerLimit = ((COSInteger) kidCOSArray.get(0)).intValue();
                     int upperLimit = ((COSInteger) kidCOSArray.get(1)).intValue();
                     if (lowerLimit <= position && position <= upperLimit) {
-                        COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
+                        COSArray nums = (COSArray) kid.getDictionaryObject(COSName.NUMS);
                         numList.add(extractMarkedContentParents(nums, position));
                     }
                 } else {
-                    COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
+                    COSArray nums = (COSArray) kid.getDictionaryObject(COSName.NUMS);
                     numList.add(extractMarkedContentParents(nums, position));
                 }
             }

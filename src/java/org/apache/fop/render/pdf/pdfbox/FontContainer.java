@@ -31,7 +31,7 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSStream;
-import org.apache.pdfbox.pdmodel.common.COSArrayList;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.font.PDCIDFont;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDFontFactory;
@@ -76,7 +76,7 @@ public class FontContainer {
             try {
                 input = ((COSStream)base).createInputStream();
                 CMapParser parser = new CMapParser();
-                return parser.parse(input);
+                return parser.parse(new RandomAccessReadBuffer(input));
             } finally {
                 IOUtils.closeQuietly(input);
             }
@@ -94,7 +94,7 @@ public class FontContainer {
         if (widths == null) {
             COSArray array = (COSArray) dict.getDictionaryObject(COSName.WIDTHS);
             if (array != null) {
-                widths = COSArrayList.convertIntegerCOSArrayToList(array);
+                widths = array.toCOSNumberIntegerList();
             } else {
                 widths = Collections.emptyList();
             }

@@ -207,7 +207,7 @@
 
   <target name="resourcegen" depends="compile-java">
     <taskdef name="generateEventResources" 
-      classname="org.apache.fop.tools.EventProducerCollectorTask">
+      classname="org.apache.fop.eventtools.EventProducerCollectorTask">
       <classpath refid="libs-build-tools-classpath"/>
     </taskdef>
     <generateEventResources destdir="${build.classes.dir}">

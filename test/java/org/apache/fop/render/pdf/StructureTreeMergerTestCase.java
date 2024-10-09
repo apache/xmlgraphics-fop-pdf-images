@@ -180,12 +180,13 @@ public class StructureTreeMergerTestCase {
         PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
         COSObject nullObj = new COSObject(null);
-        nullObj.setObjectNumber(100);
-        nullObj.setGenerationNumber(0);
+//        nullObj.setObjectNumber(100);
+//        nullObj.setGenerationNumber(0);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
         COSObject parent = (COSObject)markedContentParents.get(1);
-        COSArray kids = (COSArray) parent.getDictionaryObject(COSName.K);
+        COSDictionary dict = (COSDictionary) parent.getObject();
+        COSArray kids = (COSArray) dict.getDictionaryObject(COSName.K);
         COSDictionary kid = (COSDictionary) kids.get(1);
         kid.setItem(COSName.OBJ, nullObj);
         adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
@@ -211,8 +212,8 @@ public class StructureTreeMergerTestCase {
         COSDictionary dict = new COSDictionary();
         dict.setItem(COSName.S, COSName.P);
         COSObject obj = new COSObject(dict);
-        obj.setObjectNumber(200);
-        obj.setGenerationNumber(0);
+//        obj.setObjectNumber(200);
+//        obj.setGenerationNumber(0);
         array.add(0, obj);
         merger.createDirectDescendants(array, elem);
         List<PDFObject> list = elem.getKids();
@@ -228,8 +229,8 @@ public class StructureTreeMergerTestCase {
         StructureTreeMerger structureTreeMerger = new StructureTreeMerger(null, null, adapter, null);
         COSArray cosArray = new COSArray();
         COSObject o = new COSObject(new COSDictionary());
-        o.setObjectNumber(1);
-        o.setGenerationNumber(1);
+//        o.setObjectNumber(1);
+//        o.setGenerationNumber(1);
         cosArray.add(o);
         structureTreeMerger.copyStructure(cosArray);
         structureTreeMerger.addToPageParentTreeArray();

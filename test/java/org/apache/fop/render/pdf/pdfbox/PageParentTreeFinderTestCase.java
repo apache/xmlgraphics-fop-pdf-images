@@ -46,7 +46,8 @@ public class PageParentTreeFinderTestCase {
         Assert.assertEquals(markedContentParents.size(), 3);
         COSObject firstObj = (COSObject)markedContentParents.get(0);
         COSObject secObj = (COSObject)markedContentParents.get(1);
-        COSArray firstKids = (COSArray)firstObj.getDictionaryObject(COSName.K);
+        COSDictionary firstObjDict = (COSDictionary) firstObj.getObject();
+        COSArray firstKids = (COSArray)firstObjDict.getDictionaryObject(COSName.K);
         COSDictionary firstKid = (COSDictionary) firstKids.get(0);
         int test = firstKid.getInt("MCID");
         int expected = 0;
@@ -55,7 +56,8 @@ public class PageParentTreeFinderTestCase {
         test = firstKidBrother.getInt("MCID");
         expected = 2;
         Assert.assertEquals(test, expected);
-        COSArray secKidsArray = (COSArray)secObj.getDictionaryObject(COSName.K);
+        COSDictionary secObjDict = (COSDictionary) secObj.getObject();
+        COSArray secKidsArray = (COSArray)secObjDict.getDictionaryObject(COSName.K);
         COSDictionary secondKid = (COSDictionary)secKidsArray.get(0);
         test = secondKid.getInt("MCID");
         expected = 1;
@@ -81,7 +83,8 @@ public class PageParentTreeFinderTestCase {
         PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
         COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
         COSObject kidCOSObj = (COSObject) parentTree.get(0);
-        COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
+        COSDictionary dict = (COSDictionary) kidCOSObj.getObject();
+        COSArray nums = (COSArray) dict.getDictionaryObject(COSName.NUMS);
         nums.add(0, COSInteger.get(9));
         nums.add(1, new COSDictionary());
         COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
@@ -95,7 +98,8 @@ public class PageParentTreeFinderTestCase {
         PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
         COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
         COSObject kidCOSObj = (COSObject) parentTree.get(0);
-        COSArray nums = (COSArray) kidCOSObj.getDictionaryObject(COSName.NUMS);
+        COSDictionary dict = (COSDictionary) kidCOSObj.getObject();
+        COSArray nums = (COSArray) dict.getDictionaryObject(COSName.NUMS);
         nums.add(0, COSInteger.ZERO);
         nums.add(1, new COSObject(COSNull.NULL));
         COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
