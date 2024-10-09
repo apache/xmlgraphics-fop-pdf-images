@@ -46,6 +46,7 @@ import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
@@ -275,8 +276,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
     }
 
     static final class CheckImageMask extends PDFStreamEngine {
-        private static final String DRAWOBJECT = new DrawObject().getName();
-        private static final String SETNONSTROKINGDEVICEGRAYCOLOR = new SetNonStrokingDeviceGrayColor().getName();
+        private static final String DRAWOBJECT = new DrawObject(null).getName();
+        private static final String SETNONSTROKINGDEVICEGRAYCOLOR = new SetNonStrokingDeviceGrayColor(null).getName();
         private boolean foundWhite;
         private boolean checkColor;
         private Map<String, PDXObject> xobjects;
@@ -350,8 +351,8 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 try {
                     CustomFont font = getFont(postScriptName);
                     if (font instanceof MultiByteFont && !((MultiByteFont)font).isOTFFile()) {
-                        TTFParser ttfParser = new TTFParser(false, true);
-                        TrueTypeFont ttf = ttfParser.parse(font.getInputStream());
+                        TTFParser ttfParser = new TTFParser(false);
+                        TrueTypeFont ttf = ttfParser.parse(new RandomAccessReadBuffer(font.getInputStream()));
                         ttFonts.put(postScriptName, ttf);
                     }
                 } catch (IOException e) {

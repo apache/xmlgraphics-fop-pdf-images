@@ -114,7 +114,8 @@ public class StructureTreeMerger {
             copyElemEntries(obj, elem);
             parent.addKid(elem);
             elem.setParent(parent);
-            COSBase objKid = obj.getItem(COSName.K);
+            COSDictionary dict = (COSDictionary) obj.getObject();
+            COSBase objKid = dict.getItem(COSName.K);
             if (objKid != null) {
                 createDirectDescendants(objKid, elem);
             }
@@ -131,7 +132,8 @@ public class StructureTreeMerger {
     private void createParents(COSArray markedContentParents) throws IOException {
         for (COSBase entry : markedContentParents) {
             COSObject elemCos = (COSObject)entry;
-            COSObject elemParent = (COSObject)elemCos.getItem(COSName.P);
+            COSDictionary dict = (COSDictionary) elemCos.getObject();
+            COSObject elemParent = (COSObject)dict.getItem(COSName.P);
             if (elemParent != null) {
                 PDFStructElem elem = structElemCache.get((int)elemCos.getObjectNumber());
                 createParents(elemCos, elemParent, elem);

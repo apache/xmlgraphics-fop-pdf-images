@@ -42,6 +42,7 @@ import org.apache.fontbox.cff.CFFParser;
 import org.apache.fontbox.cff.CFFStandardEncoding;
 import org.apache.fontbox.cff.CFFStandardString;
 import org.apache.fontbox.cff.CFFType1Font;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 
 import org.apache.fop.fonts.cff.CFFDataReader;
 import org.apache.fop.fonts.truetype.FontFileReader;
@@ -70,7 +71,7 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
         this.embeddedName = name;
         FontFileReader fontFile = new FontFileReader(is);
         CFFParser p = new CFFParser();
-        CFFFont ff = p.parse(fontFile.getAllBytes()).get(0);
+        CFFFont ff = p.parse(new RandomAccessReadBuffer(fontFile.getAllBytes())).get(0);
 
         Map<String, byte[]> stringsMap = getStrings(ff);
         if (used.containsAll(stringsMap.keySet())) {

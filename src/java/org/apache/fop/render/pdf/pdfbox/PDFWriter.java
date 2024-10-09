@@ -55,9 +55,8 @@ public class PDFWriter {
     }
 
     public String writeText(PDStream pdStream) throws IOException {
-        PDFStreamParser pdfStreamParser = new PDFStreamParser(pdStream);
-        pdfStreamParser.parse();
-        List<Object> it = pdfStreamParser.getTokens();
+        PDFStreamParser pdfStreamParser = new PDFStreamParser(pdStream.toByteArray());
+        List<Object> it = pdfStreamParser.parse();
         List<COSBase> arguments = new ArrayList<COSBase>();
         for (Object o : it) {
             if (o instanceof Operator) {

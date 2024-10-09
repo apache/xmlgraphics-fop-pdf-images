@@ -27,6 +27,8 @@ import java.net.URISyntaxException;
 import javax.imageio.stream.ImageInputStream;
 import javax.xml.transform.Source;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
@@ -38,7 +40,6 @@ import org.apache.xmlgraphics.image.loader.ImageSize;
 import org.apache.xmlgraphics.image.loader.impl.AbstractImagePreloader;
 import org.apache.xmlgraphics.image.loader.util.ImageUtil;
 import org.apache.xmlgraphics.io.XmlSourceUtil;
-import org.apache.xmlgraphics.util.io.SubInputStream;
 
 import org.apache.fop.datatypes.URISpecification;
 import org.apache.fop.render.pdf.pdfbox.Cache.ValueMaker;
@@ -98,7 +99,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
 
         //Disable the warning about a missing close since we rely on the GC to decide when
         //the cached PDF shall be disposed off.
-        pddoc.getDocument().setWarnMissingClose(false);
+//        pddoc.getDocument().setWarnMissingClose(false);
 
         int pageCount = pddoc.getNumberOfPages();
         if (selectedPage < 0 || selectedPage >= pageCount) {
@@ -175,7 +176,7 @@ public class PreloaderPDF extends AbstractImagePreloader {
             public PDDocument make() throws Exception {
                 final InputStream in = XmlSourceUtil.needInputStream(src);
                 try {
-                    PDDocument pddoc = PDDocument.load(new SubInputStream(in, Integer.MAX_VALUE));
+                    PDDocument pddoc = Loader.loadPDF(new RandomAccessReadBuffer(in));
                     return Interceptors.getInstance().interceptOnLoad(pddoc, docURI);
                 } finally {
                     XmlSourceUtil.closeQuietly(src);

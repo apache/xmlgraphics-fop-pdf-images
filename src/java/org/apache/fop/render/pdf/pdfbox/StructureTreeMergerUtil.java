@@ -30,8 +30,10 @@ public final class StructureTreeMergerUtil {
 
     private StructureTreeMergerUtil() { }
 
-    public static int findObjectPositionInKidsArray(COSObject kid) {
-        COSObject parent = (COSObject) kid.getItem(COSName.P);
+    public static int findObjectPositionInKidsArray(COSObject kidObj) {
+        COSDictionary kid = (COSDictionary) kidObj.getObject();
+        COSObject parentObj = (COSObject) kid.getItem(COSName.P);
+        COSDictionary parent = (COSDictionary) parentObj.getObject();
         COSBase kids = parent.getItem(COSName.K);
         if (kids instanceof COSArray) {
             COSArray kidsArray = (COSArray)kids;

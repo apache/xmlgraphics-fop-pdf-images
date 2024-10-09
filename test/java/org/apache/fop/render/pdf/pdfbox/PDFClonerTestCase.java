@@ -54,7 +54,7 @@ public class PDFClonerTestCase {
     private COSDictionary makeTree(long objNumber) throws IOException {
         COSStream stream = new COSStream();
         COSObject obj = new COSObject(stream);
-        obj.setObjectNumber(objNumber);
+//        obj.setObjectNumber(objNumber);
         COSArray array = new COSArray();
         array.add(obj);
         COSDictionary root = new COSDictionary();

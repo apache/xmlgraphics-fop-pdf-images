@@ -99,7 +99,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         }
         GlyphData[] glyphData = new GlyphData[0];
         if (ttf != null) {
-            glyphData = ttf.getGlyph().getGlyphs();
+            glyphData = getGlyphs(ttf);
         }
         Map<Integer, Integer> oldToNewGIMap = new HashMap<Integer, Integer>();
         if (charMapGlobal.isEmpty()) {
@@ -115,8 +115,10 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             CmapSubtable cmap = ttf.getCmap().getCmaps()[0];
             gidToGlyph.clear();
             for (int i = 1; i < glyphData.length; i++) {
-                String mappedChar = mapping.get(cmap.getCharacterCode(i));
-                gidToGlyph.put(i, mappedChar);
+                for (int charCode : cmap.getCharCodes(i)) {
+                    String mappedChar = mapping.get(charCode);
+                    gidToGlyph.put(i, mappedChar);
+                }
             }
         }
         readCharMap(font, gidToGlyph, glyphData, mainFont, oldToNewGIMap);
@@ -135,6 +137,18 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             mergeFonts.readFont(ffr, getEmbedFontName(), null, null, true);
         }
         return getFontName();
+    }
+
+    private GlyphData[] getGlyphs(TrueTypeFont ttf) throws IOException {
+        GlyphData[] glyphs = new GlyphData[ttf.getNumberOfGlyphs()];
+        try {
+            for (int i = 0; i < glyphs.length; i++) {
+                glyphs[i] = ttf.getGlyph().getGlyph(i);
+            }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            throw new IOException("Mapping not found in glyphData", e);
+        }
+        return glyphs;
     }
 
     private void readCharMap(FontContainer font, Map<Integer, String> gidToGlyph, GlyphData[] glyphData,
