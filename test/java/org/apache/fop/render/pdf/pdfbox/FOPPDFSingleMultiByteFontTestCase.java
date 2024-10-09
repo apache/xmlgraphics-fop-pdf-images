@@ -41,6 +41,7 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
 import org.apache.pdfbox.cos.COSObject;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
@@ -101,7 +102,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         byte[] is = IOUtils.toByteArray(sbfont.getInputStream());
 
         CFFParser p = new CFFParser();
-        CFFFont ff = p.parse(is).get(0);
+        CFFFont ff = p.parse(new RandomAccessReadBuffer(is)).get(0);
         Assert.assertEquals(ff.getName(), "MNEACN+Myriad_Pro");
 //        Assert.assertEquals(ff.getCharset().getEntries().get(0).getSID(), 391);
 
@@ -114,14 +115,14 @@ public class FOPPDFSingleMultiByteFontTestCase {
         final String font = "ArialMT_Type0";
         FOPPDFMultiByteFont mbfont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"), font);
         mbfont.addFont(getFont(doc, "C2_0"));
-        Assert.assertEquals(mbfont.mapChar('t'), 67);
+        Assert.assertEquals(mbfont.mapChar('t'), 85);
 
         PDDocument doc2 = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTCID2);
         String name = mbfont.addFont(getFont(doc2, "C2_0"));
         Assert.assertEquals(name, font);
         Assert.assertEquals(mbfont.getFontName(), font);
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
-        Assert.assertEquals(is.length, 38640);
+        Assert.assertEquals(is.length, 59168);
         doc.close();
         doc2.close();
     }
@@ -141,7 +142,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         byte[] is = IOUtils.toByteArray(mbfont.getInputStream());
         Assert.assertEquals(is.length, 41104);
 
-        TrueTypeFont trueTypeFont = new TTFParser().parse(new ByteArrayInputStream(is));
+        TrueTypeFont trueTypeFont = new TTFParser().parse(new RandomAccessReadBuffer(is));
         TTFTable ttfTable = trueTypeFont.getTableMap().get("cmap");
         ByteArrayInputStream bis = new ByteArrayInputStream(is);
         bis.skip(ttfTable.getOffset() + 21);
@@ -226,7 +227,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset10);
         FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "test");
         byte[] bytes = IOUtils.toByteArray(sbfont.getInputStream());
-        TrueTypeFont trueTypeFont = new TTFParser().parse(new ByteArrayInputStream(bytes));
+        TrueTypeFont trueTypeFont = new TTFParser().parse(new RandomAccessReadBuffer(bytes));
         CmapTable ttfTable = (CmapTable) trueTypeFont.getTableMap().get("cmap");
         Assert.assertEquals(ttfTable.getCmaps()[0].getPlatformId(), 0);
         Assert.assertEquals(ttfTable.getCmaps()[1].getPlatformId(), 1);

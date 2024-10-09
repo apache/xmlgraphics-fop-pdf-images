@@ -203,7 +203,7 @@ public class PDFCloner {
                     byte[] bytes = newStream.getBytes(PDFDocument.ENCODING);
                     out.write(bytes);
                     out.close();
-                    try (OutputStream originalStreamOS = originalStream.createUnfilteredStream()) {
+                    try (OutputStream originalStreamOS = originalStream.createOutputStream()) {
                         originalStreamOS.write(bytes);
                     }
                     in = null;

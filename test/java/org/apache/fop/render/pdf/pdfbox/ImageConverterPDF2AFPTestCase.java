@@ -21,6 +21,8 @@ import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
@@ -37,7 +39,7 @@ public class ImageConverterPDF2AFPTestCase {
         ImagePDF imagePDF = new ImagePDF(info, orgdoc);
         ImageConverterPDF2AFP converter = new ImageConverterPDF2AFP();
         ImageRawStream stream = (ImageRawStream) converter.convert(imagePDF, null);
-        PDDocument doc = PDDocument.load(stream.createInputStream());
+        PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(stream.createInputStream()));
         PDPage page = doc.getPage(0);
         Assert.assertEquals(orgPage, IOUtils.toString(page.getContents(), "utf8"));
         Assert.assertEquals(doc.getNumberOfPages(), 1);

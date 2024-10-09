@@ -52,13 +52,16 @@ import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.ttf.TrueTypeFont;
 import org.apache.fontbox.type1.Type1Font;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
@@ -162,7 +165,7 @@ public class PDFBoxAdapterTestCase {
     }
 
     public static PDDocument load(String pdf) throws IOException {
-        return PDDocument.load(PDFBoxAdapterTestCase.class.getResourceAsStream(pdf));
+        return Loader.loadPDF(new RandomAccessReadBuffer(PDFBoxAdapterTestCase.class.getResourceAsStream(pdf)));
     }
 
     @Test
@@ -180,9 +183,9 @@ public class PDFBoxAdapterTestCase {
         msg = writeText(fi, TTSubset5);
         Assert.assertTrue(msg, msg.contains("[(\u0001)2 (\u0002)-7 (\u0003)] TJ"));
         msg = writeText(fi, TTCID1);
-        Assert.assertTrue(msg, msg.contains("<0028003B0034003000420034>"));
+        Assert.assertTrue(msg, msg.contains("<0031001100110011001800120012001300140034>"));
         msg = writeText(fi, TTCID2);
-        Assert.assertTrue(msg, msg.contains("<000F00100001002A0034003F00430034003C00310034004100010010000E000F0011>"));
+        Assert.assertTrue(msg, msg.contains("<0031001100110011001800120012001300120034>"));
         msg = writeText(fi, CFFCID1);
         Assert.assertTrue(msg, msg.contains("/Fm0-1998009062 Do"));
         msg = writeText(fi, CFFCID2);
@@ -229,13 +232,13 @@ public class PDFBoxAdapterTestCase {
             if (font.getFontType() == FontType.TYPE1C || font.getFontType() == FontType.CIDTYPE0) {
                 byte[] data = IOUtils.toByteArray(is);
                 CFFParser p = new CFFParser();
-                p.parse(data);
+                p.parse(new RandomAccessReadBuffer(data));
             } else if (font.getFontType() == FontType.TRUETYPE) {
                 TTFParser parser = new TTFParser();
-                parser.parse(is);
+                parser.parse(new RandomAccessReadBuffer(is));
             } else if (font.getFontType() == FontType.TYPE0) {
                 TTFParser parser = new TTFParser(true);
-                parser.parse(is);
+                parser.parse(new RandomAccessReadBuffer(is));
             } else if (font.getFontType() == FontType.TYPE1) {
                 Type1Font.createWithPFB(is);
             }
@@ -498,18 +501,22 @@ public class PDFBoxAdapterTestCase {
     }
 
     private void pdfToPCL(String pdf) throws IOException, ImageException {
+        try (PDDocument doc = load(pdf)) {
+            pdfToPCL(doc, pdf);
+        }
+    }
+
+    private void pdfToPCL(PDDocument doc, String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
-        try (PDDocument doc = load(pdf)) {
-            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            PCLGraphics2D g2d = new PCLGraphics2D(new PCLGenerator(stream));
-            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-            GraphicContext gc = new GraphicContext();
-            g2d.setGraphicContext(gc);
-            ig.getGraphics2DImagePainter().paint(g2d, rect);
-        }
+        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+        ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        PCLGraphics2D g2d = new PCLGraphics2D(new PCLGenerator(stream));
+        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+        GraphicContext gc = new GraphicContext();
+        g2d.setGraphicContext(gc);
+        ig.getGraphics2DImagePainter().paint(g2d, rect);
     }
 
     static class FOPPSGeneratorImpl extends PSGenerator implements PSDocumentHandler.FOPPSGenerator {
@@ -638,8 +645,12 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testErrorMsgToPS() {
-        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> pdfToPCL(ERROR));
+    public void testErrorMsgToPS() throws IOException {
+        PDDocument doc = new PDDocument();
+        PDPage page = new PDPage();
+        page.setContents(new PDStream(doc, new ByteArrayInputStream("<".getBytes(StandardCharsets.UTF_8))));
+        doc.addPage(page);
+        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> pdfToPCL(doc, ERROR));
         Assert.assertTrue(ex.getMessage().startsWith("Error while painting PDF page: " + ERROR));
     }
 
@@ -773,7 +784,7 @@ public class PDFBoxAdapterTestCase {
         for (Typeface font : fontInfo.getUsedFonts().values()) {
             InputStream inputStream = ((CustomFont) font).getInputStream();
             TTFParser parser = new TTFParser(true);
-            TrueTypeFont trueTypeFont = parser.parse(inputStream);
+            TrueTypeFont trueTypeFont = parser.parse(new RandomAccessReadBuffer(inputStream));
             int i = 0;
             for (int gid = 0; gid < trueTypeFont.getNumberOfGlyphs(); gid++) {
                 GlyphData glyphData = trueTypeFont.getGlyph().getGlyph(gid);
@@ -807,7 +818,7 @@ public class PDFBoxAdapterTestCase {
                 data = IOUtils.toByteArray(is);
             }
         }
-        CFFType1Font font = (CFFType1Font) new CFFParser().parse(data).get(0);
+        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(data)).get(0);
         byte[][] indexData = (byte[][]) font.getPrivateDict().get("Subrs");
         Assert.assertEquals(indexData.length, 183);
     }
@@ -820,7 +831,7 @@ public class PDFBoxAdapterTestCase {
         CustomFont typeface = (CustomFont) fontInfo.getUsedFonts().get("AllianzNeo-Light_Type1");
         InputStream is = typeface.getInputStream();
         byte[] data = IOUtils.toByteArray(is);
-        CFFType1Font font = (CFFType1Font) new CFFParser().parse(data).get(0);
+        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(data)).get(0);
         CFFCharset charset = font.getCharset();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 5; i++) {
@@ -856,17 +867,17 @@ public class PDFBoxAdapterTestCase {
         pdfDoc.outputHeader(os);
         pdfDoc.output(os);
         pdfDoc.outputTrailer(os);
-        PDDocument out = PDDocument.load(new ByteArrayInputStream(os.toByteArray()));
+        PDDocument out = Loader.loadPDF(os.toByteArray());
         out.close();
-        String id1 = "29 0 R";
+        String id1 = "30 0 R";
         Assert.assertEquals(getAnnotationsID(page1), id1);
-        String id2 = "32 0 R";
+        String id2 = "33 0 R";
         Assert.assertEquals(getAnnotationsID(page2), id2);
         String outStr = os.toString(StandardCharsets.UTF_8.name()).replaceAll("\\s\\s/", "/");
-        Assert.assertTrue(outStr.contains("<< /Kids [31 0 R] /T ([Signer1) >>"));
+        Assert.assertTrue(outStr.contains("<< /Kids [32 0 R] /T ([Signer1) >>"));
         Assert.assertTrue(outStr.contains("<<\n"
                 + "/Kids [" + id1 + " " + id2 + "]\n"
-                + "/Parent 33 0 R\n"
+                + "/Parent 34 0 R\n"
                 + "/T (Fullname1)\n"
                 + ">>"));
     }
