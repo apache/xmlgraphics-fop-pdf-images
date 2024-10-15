@@ -33,6 +33,7 @@ import org.junit.Test;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
@@ -49,6 +50,17 @@ public class PDFClonerTestCase {
     public void testCompareTree() throws IOException {
         Assert.assertEquals(PDFBoxAdapterUtil.getBaseKey(makeTree(2)),
                 PDFBoxAdapterUtil.getBaseKey(makeTree(1)));
+    }
+
+    @Test
+    public void testCompareDict() throws IOException {
+        COSDictionary a = new COSDictionary();
+        a.setItem(COSName.C, COSInteger.ONE);
+        a.setItem(COSName.D, COSInteger.ONE);
+        COSDictionary b = new COSDictionary();
+        b.setItem(COSName.D, COSInteger.ONE);
+        b.setItem(COSName.C, COSInteger.ONE);
+        Assert.assertEquals(PDFBoxAdapterUtil.getBaseKey(a), PDFBoxAdapterUtil.getBaseKey(b));
     }
 
     private COSDictionary makeTree(long objNumber) throws IOException {

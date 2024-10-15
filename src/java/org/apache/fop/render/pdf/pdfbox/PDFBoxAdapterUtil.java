@@ -23,10 +23,11 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.pdfbox.cos.COSArray;
@@ -53,24 +54,28 @@ public final class PDFBoxAdapterUtil {
     }
 
     private static String getDictionaryHash(COSBase base) throws IOException {
-        return getDictionaryHash(base, new ArrayList<COSBase>());
+        return getDictionaryHash(base, new HashMap<COSBase, String>());
     }
 
-    private static String getDictionaryHash(COSBase base, List<COSBase> objs) throws IOException {
+    private static String getDictionaryHash(COSBase base, Map<COSBase, String> objs) throws IOException {
         if (base == null) {
             return "null";
         }
-        if (objs.contains(base)) {
-            return String.valueOf(base.hashCode());
+        if (objs.containsKey(base)) {
+            return objs.get(base);
         }
-        objs.add(base);
+        objs.put(base, String.valueOf(base.hashCode()));
+        String value;
         if (base instanceof COSDictionary) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("COSDictionary{");
-            for (Map.Entry<COSName, COSBase> x : ((COSDictionary) base).entrySet()) {
-                sb.append(x.getKey());
+            StringBuilder sb = new StringBuilder("COSDictionary{");
+            Map<COSName, String> map = new HashMap<>();
+            for (Map.Entry<COSName, COSBase> entry : ((COSDictionary) base).entrySet()) {
+                map.put(entry.getKey(), getDictionaryHash(entry.getValue(), objs));
+            }
+            for (Map.Entry<COSName, String> entry : new TreeMap<>(map).entrySet()) {
+                sb.append(entry.getKey());
                 sb.append(":");
-                sb.append(getDictionaryHash(x.getValue(), objs));
+                sb.append(entry.getValue());
                 sb.append(";");
             }
             sb.append("}");
@@ -79,10 +84,10 @@ public final class PDFBoxAdapterUtil {
                 byte[] b = IOUtils.toByteArray(stream);
                 sb.append("COSStream{").append(Arrays.hashCode(b)).append("}");
             }
-            return sb.toString();
+            value = sb.toString();
         } else if (base instanceof COSObject) {
             COSObject obj = (COSObject) base;
-            return "COSObject{" + getDictionaryHash(obj.getObject(), objs) + "}";
+            value = "COSObject{" + getDictionaryHash(obj.getObject(), objs) + "}";
         } else if (base instanceof COSArray) {
             COSArray array = (COSArray) base;
             StringBuilder sb = new StringBuilder("COSArray[");
@@ -100,10 +105,12 @@ public final class PDFBoxAdapterUtil {
                 sb.append(",");
             }
             sb.append("]");
-            return sb.toString();
+            value = sb.toString();
         } else {
-            return base.toString();
+            value = base.toString();
         }
+        objs.put(base, value);
+        return value;
     }
 
     protected static Object getBaseKey(Object base) throws IOException {
