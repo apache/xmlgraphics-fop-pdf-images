@@ -214,6 +214,7 @@ public class PSPDFGraphics2D extends PSGraphics2D {
 
     public void fill(Shape shape) {
         if ("org.apache.pdfbox.rendering.SoftMask".equals(getPaint().getClass().getName())) {
+            assert shape instanceof Rectangle2D;
             Rectangle2D rect = (Rectangle2D) shape;
             BufferedImage img = new BufferedImage((int)rect.getWidth() * 2, (int)rect.getHeight() * 2,
                     BufferedImage.TYPE_INT_ARGB);
