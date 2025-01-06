@@ -243,6 +243,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 //                        }
                         }
                     }
+                    int count = 0;
                     for (COSName pdxObjectName : res.getXObjectNames()) {
                         PDXObject pdxObject = res.getXObject(pdxObjectName);
                         visitedXOjects.put(pdxObjectName.getName(), pdxObject);
@@ -250,7 +251,10 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                             PDFormXObject form = (PDFormXObject) pdxObject;
                             if (form.getGroup() != null && COSName.TRANSPARENCY.equals(
                                     form.getGroup().getCOSObject().getDictionaryObject(COSName.S))) {
-                                return true;
+                                if (form.getGroup().getCOSObject().getItem(COSName.TYPE) != COSName.GROUP) {
+                                    return true;
+                                }
+                                count++;
                             }
                             PDResources formRes = form.getResources();
                             if (formRes != null && !visited.contains(formRes.getCOSObject())
@@ -258,6 +262,9 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                                 return true;
                             }
                         }
+                    }
+                    if (count > 1) {
+                        return true;
                     }
                 }
                 CheckImageMask checkImageMask = new CheckImageMask(visitedXOjects, page);

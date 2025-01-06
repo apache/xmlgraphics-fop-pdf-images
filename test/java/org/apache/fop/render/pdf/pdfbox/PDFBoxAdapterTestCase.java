@@ -142,6 +142,7 @@ public class PDFBoxAdapterTestCase {
     protected static final String PATTERN = "pattern.pdf";
     protected static final String PATTERN2 = "pattern2.pdf";
     protected static final String FORMROTATED = "formrotated.pdf";
+    protected static final String SOFTMASK = "softmask.pdf";
 
     private static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -941,5 +942,14 @@ public class PDFBoxAdapterTestCase {
         writeText(fi, TTSubset6);
         String msg = writeText(fi, TTSubset7);
         Assert.assertTrue(msg, msg.contains("/C2_0745125721 12 Tf"));
+    }
+
+    @Test
+    public void testSoftMask() throws Exception {
+        ByteArrayOutputStream bos = pdfToPS(SOFTMASK);
+        String output = bos.toString(StandardCharsets.UTF_8.name());
+        Assert.assertEquals(output.split("BeginBitmap").length, 3);
+        Assert.assertTrue(output.contains("/ImageMatrix [148 0 0 78 0 0]"));
+        Assert.assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
     }
 }

@@ -27,8 +27,10 @@ import java.awt.Image;
 import java.awt.Paint;
 import java.awt.PaintContext;
 import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.TexturePaint;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.NoninvertibleTransformException;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -207,6 +209,26 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             at.transform(coords, 3, coords, 3, 1);
             coords[2] *= ctm.getScalingFactorX();
             coords[5] *= ctm.getScalingFactorX();
+        }
+    }
+
+    public void fill(Shape shape) {
+        if ("org.apache.pdfbox.rendering.SoftMask".equals(getPaint().getClass().getName())) {
+            Rectangle2D rect = (Rectangle2D) shape;
+            BufferedImage img = new BufferedImage((int)rect.getWidth() * 2, (int)rect.getHeight() * 2,
+                    BufferedImage.TYPE_INT_ARGB);
+            Graphics2D graphics = img.createGraphics();
+            graphics.setTransform(getTransform());
+            graphics.setPaint(getPaint());
+            graphics.fill(shape);
+            graphics.dispose();
+            try {
+                drawImage(img, getTransform().createInverse(), null);
+            } catch (NoninvertibleTransformException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            super.fill(shape);
         }
     }
 
