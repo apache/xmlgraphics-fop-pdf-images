@@ -182,15 +182,19 @@ public class MergeFontsPDFWriter extends PDFWriter {
             } else if (font instanceof PDTrueTypeFont && isSubsetFont(font.getName())) {
                 TrueTypeFont tt = ((PDTrueTypeFont) font).getTrueTypeFont();
                 CmapSubtable[] cmaps = tt.getCmap().getCmaps();
+                String mac = "";
                 for (CmapSubtable c : cmaps) {
                     if (c.getGlyphId(1) > 0) {
                         extra = "cid";
+                    }
+                    if (c.getPlatformId() == 1) {
+                        mac = "mac";
                     }
                 }
                 if (cmaps.length != 2) {
                     extra += "cmap" + cmaps.length;
                 }
-                return name + extra;
+                return name + extra + mac;
             } else if (font instanceof PDType1CFont) {
                 return getNamePDType1Font(name, (PDType1CFont) font);
             } else if (font instanceof PDType1Font) {

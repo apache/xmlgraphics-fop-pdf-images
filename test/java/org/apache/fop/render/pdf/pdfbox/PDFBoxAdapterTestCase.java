@@ -952,4 +952,10 @@ public class PDFBoxAdapterTestCase {
         Assert.assertTrue(output.contains("/ImageMatrix [148 0 0 78 0 0]"));
         Assert.assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
     }
+
+    @Test
+    public void testMergeMacFont() throws IOException {
+        String msg = writeText(new FontInfo(), TTSubset6);
+        Assert.assertTrue(msg, msg.contains("/Calibri_TrueTypemac"));
+    }
 }
