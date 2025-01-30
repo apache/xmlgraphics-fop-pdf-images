@@ -55,7 +55,7 @@ public class StructureTreeMerger {
     PDFDocument pdfDoc;
     private PDPage srcPage;
     private COSDictionary roleMap;
-    protected PDFStructElem currentSessionElem;
+    private PDFStructElem currentSessionElem;
     private PDFLogicalStructureHandler logicalStructHandler;
     private Map<Integer, PDFStructElem> structElemCache = new HashMap<Integer, PDFStructElem>();
     private Map<Integer, PDFStructElem> markedContentMap = new TreeMap<Integer, PDFStructElem>();
@@ -122,11 +122,26 @@ public class StructureTreeMerger {
         }
     }
 
+    public PDFStructElem getCurrentSessionElem() {
+        return currentSessionElem;
+    }
+
     public void setCurrentSessionElem() {
-        if (currentSessionElem == null) {
-            currentSessionElem = pdfDoc.getStructureTreeElements()
-                    .get(pdfDoc.getStructureTreeElements().size() - 1);
+        if (isCurrentSessionElemEmpty(currentSessionElem)) {
+            List<PDFStructElem> structureTreeElements = pdfDoc.getStructureTreeElements();
+            for (int i = structureTreeElements.size() - 1; i >= 0; i--) {
+                PDFStructElem elem = structureTreeElements.get(i);
+                // We need to make sure it's not an empty element (like an empty block)
+                if (!isCurrentSessionElemEmpty(elem)) {
+                    currentSessionElem = elem;
+                    break;
+                }
+            }
         }
+    }
+
+    private boolean isCurrentSessionElemEmpty(PDFStructElem elem) {
+        return elem == null || elem.get("P") == null;
     }
 
     private void createParents(COSArray markedContentParents) throws IOException {
@@ -193,7 +208,8 @@ public class StructureTreeMerger {
                 int position = StructureTreeMergerUtil.findObjectPositionInKidsArray(cosElem);
                 elemParent.addKidInSpecificOrder(position, elem);
             }
-        } else if (!checkIfStructureTypeIsPresent(parentElemDictionary, StandardStructureTypes.DOCUMENT)) {
+        } else if (!(checkIfStructureTypeIsPresent(parentElemDictionary, StandardStructureTypes.DOCUMENT)
+                || checkIfStructureTypeIsPresent(parentElemDictionary, StandardStructureTypes.PART))) {
             elemParent = createAndRegisterStructElem(cosParentElem);
             copyElemEntries(cosParentElem, elemParent);
             elem.setParent(elemParent);

@@ -65,12 +65,12 @@ public class TaggedPDFConductorTestCase {
 
         elem = new PDFStructElem();
         runConductor(TABLE, elem);
-        Assert.assertEquals(print(elem), "/Div/Part/Sect/Table/TBody/TR/TD/P/TD/P/TR/TD/TD");
+        Assert.assertEquals(print(elem), "/Div/Sect/Table/TBody/TR/TD/P/TD/P/TR/TD/TD");
 
         elem = new PDFStructElem();
         elem.put("Alt", "alt-text");
         runConductor(OTF, elem);
-        Assert.assertEquals(print(elem), "/Div/Part/Art/P/Span");
+        Assert.assertEquals(print(elem), "/Div/Art/P/Span");
         Assert.assertNull(elem.get("Alt"));
     }
 
@@ -116,9 +116,9 @@ public class TaggedPDFConductorTestCase {
     }
 
     private void checkStructure(PDFStructElem elem, int index) {
-        String [] types = {"Part", "Sect", "P"};
+        String [] types = {"Sect", "P"};
         List<PDFObject> list = elem.getKids();
-        if (index != 3) {
+        if (index != types.length) {
             PDFStructElem kid = (PDFStructElem)list.get(0);
             String test = ((PDFName)kid.get("S")).getName();
             String expected = types[index];
@@ -149,7 +149,7 @@ public class TaggedPDFConductorTestCase {
     public void testTaggedImagePDF() throws IOException {
         PDFStructElem elem = new PDFStructElem();
         runConductor(IMAGE, elem);
-        Assert.assertEquals(print(elem), "/Div/Part/Sect/P/Image");
+        Assert.assertEquals("/Div/Sect/P/Image", print(elem));
     }
 
     @Test

@@ -57,7 +57,7 @@ public class TaggedPDFConductor {
                 .getCOSObject();
             rootMod.structTreeRootEntriesToCopy(strucRootDict);
             if (!isParentTreeIsPresent(strucRootDict)) {
-                merger.createDirectDescendants(strucRootDict, merger.currentSessionElem);
+                merger.createDirectDescendants(strucRootDict, merger.getCurrentSessionElem());
             } else {
                 PageParentTreeFinder markedContentsParentFinder = new PageParentTreeFinder(srcPage);
                 COSArray markedContentsParents = markedContentsParentFinder.getPageParentTreeArray(srcDoc);
@@ -74,10 +74,10 @@ public class TaggedPDFConductor {
     private void configureCurrentSessionElem(PDDocument srcDoc) {
         if (!(isInputPDFTagged(srcDoc) && isStructureTreeRootNull(srcDoc))) {
             merger.setCurrentSessionElemKid();
-            merger.currentSessionElem.put(COSName.PG.getName(), targetPage.makeReference());
+            merger.getCurrentSessionElem().put(COSName.PG.getName(), targetPage.makeReference());
         } else {
-            merger.currentSessionElem.put("S", new PDFName("Div"));
-            merger.currentSessionElem.remove("Alt");
+            merger.getCurrentSessionElem().put("S", new PDFName("Div"));
+            merger.getCurrentSessionElem().remove("Alt");
         }
     }
     private boolean isInputPDFTagged(PDDocument srcDoc) {

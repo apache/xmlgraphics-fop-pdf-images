@@ -17,14 +17,20 @@
 
 package org.apache.fop.render.pdf;
 
+import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -44,6 +50,8 @@ import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFReference;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStructElem;
+import org.apache.fop.pdf.StandardStructureTypes;
+import org.apache.fop.pdf.StructureType;
 
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapterTestCase;
@@ -54,6 +62,8 @@ public class StructureTreeMergerTestCase {
     private static final String LINK = "linkTagged.pdf";
     private static final String BrokenLink = "brokenLink.pdf";
     private static final String MissingOBJR = "missingOBJR.pdf";
+    private static final String CONTENT = "content";
+
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
     private PDFBoxAdapter adapter;
@@ -131,26 +141,26 @@ public class StructureTreeMergerTestCase {
         PDFDictionary firstKid = (PDFDictionary) firstKids.get(0);
         int test = ((PDFNumber)firstKid.get("MCID")).getNumber().intValue();
         int expected = 1;
-        Assert.assertEquals(test, expected);
+        assertEquals(test, expected);
         PDFDictionary firstKidSibling = (PDFDictionary) firstKids.get(2);
         test = ((PDFNumber)firstKidSibling.get("MCID")).getNumber().intValue();
         expected = 3;
-        Assert.assertEquals(test, expected);
+        assertEquals(test, expected);
         PDFStructElem second = (PDFStructElem)array.get(1);
         List<PDFObject> secondKids = second.getKids();
         PDFDictionary secKid = (PDFDictionary) secondKids.get(0);
         test = ((PDFNumber)secKid.get("MCID")).getNumber().intValue();
         expected = 2;
-        Assert.assertEquals(test, expected);
+        assertEquals(test, expected);
     }
 
     private void checkParentForLinkTest(PDFStructElem elem, int index) {
-        String [] types = {"Sect", "Part"};
+        String [] types = {"Sect"};
         PDFStructElem parent = (PDFStructElem)((PDFReference)elem.get("P")).getObject();
-        if (index != 2) {
+        if (index < types.length) {
             String test = ((PDFName)parent.get("S")).getName();
             String expected = types[index];
-            Assert.assertEquals(test, expected);
+            assertEquals(test, expected);
             index++;
             checkParentForLinkTest(parent, index);
         }
@@ -220,7 +230,7 @@ public class StructureTreeMergerTestCase {
         PDFStructElem kid = (PDFStructElem)list.get(0);
         PDFName name = (PDFName)kid.get("S");
         String test = name.getName();
-        Assert.assertEquals(test, "P");
+        assertEquals(test, "P");
     }
 
     @Test
@@ -234,5 +244,79 @@ public class StructureTreeMergerTestCase {
         cosArray.add(o);
         structureTreeMerger.copyStructure(cosArray);
         structureTreeMerger.addToPageParentTreeArray();
+    }
+
+    @Test
+    public void testNonEmptyElement() {
+        PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
+        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        defaultTestSetCurrentSessionElem(Arrays.asList(sectElem, partElem), null, partElem,
+                "If element is not empty, it must be chosen");
+    }
+
+    @Test
+    public void testEmptyElement() {
+        PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
+        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, null);
+        defaultTestSetCurrentSessionElem(Arrays.asList(sectElem, partElem), null, sectElem,
+                "If element is empty, it must not be chosen");
+    }
+
+    @Test
+    public void testSectElement() {
+        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
+        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), null, sectElem,
+                "Must pick the first non empty element, back to front, it finds.");
+    }
+
+    @Test
+    public void testEmptySectElement() {
+        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, null);
+        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), null, partElem,
+                "Elements can't be empty");
+    }
+
+    @Test
+    public void testSetterReplacesPreviousValueIfEmpty() {
+        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, null);
+        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), Arrays.asList(sectElem, partElem),
+                partElem, "If the current session elem is empty, it must be replaced");
+    }
+
+    @Test
+    public void testSetterDoesntReplacePreviousValueIfNotEmpty() {
+        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
+        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), Arrays.asList(sectElem, partElem),
+                sectElem, "Elements can't be empty");
+    }
+
+    private void defaultTestSetCurrentSessionElem(List<PDFStructElem> elems, List<PDFStructElem> secondElems,
+                                                  PDFStructElem expected, String assertionMessage) {
+        PDFDocument mockPdfDoc = mock(PDFDocument.class);
+        when(mockPdfDoc.getStructureTreeElements()).thenReturn(elems);
+        PDFPage page = new PDFPage(new PDFResources(mockPdfDoc), 0, new Rectangle(), new Rectangle(),
+                new Rectangle(), new Rectangle());
+        page.setDocument(mockPdfDoc);
+        PDFBoxAdapter mockAdapter = mock(PDFBoxAdapter.class);
+        when(mockAdapter.getTargetPage()).thenReturn(page);
+        StructureTreeMerger structureTreeMerger = new StructureTreeMerger(null, null,
+                mockAdapter, null);
+        structureTreeMerger.setCurrentSessionElem();
+        assertEquals(assertionMessage, expected, structureTreeMerger.getCurrentSessionElem());
+        if (secondElems != null) {
+            when(mockPdfDoc.getStructureTreeElements()).thenReturn(elems);
+            structureTreeMerger.setCurrentSessionElem();
+            assertEquals(assertionMessage, expected, structureTreeMerger.getCurrentSessionElem());
+        }
+    }
+
+    private PDFStructElem createPDFStructElem(StructureType type, String entry) {
+        PDFStructElem elem = new PDFStructElem(null, type);
+        elem.put("P", entry);
+        return elem;
     }
 }
