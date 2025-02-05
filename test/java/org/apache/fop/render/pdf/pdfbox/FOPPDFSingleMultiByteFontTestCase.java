@@ -48,6 +48,8 @@ import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
+import org.apache.fop.fonts.FontInfo;
+
 public class FOPPDFSingleMultiByteFontTestCase {
     private COSDictionary getFont(PDDocument doc, String internalname) {
         PDPage page = doc.getPage(0);
@@ -249,5 +251,15 @@ public class FOPPDFSingleMultiByteFontTestCase {
         dis.skip(2 * 44); //startCode
         Assert.assertEquals(dis.readShort(), (short)0xFFFF);
         doc.close();
+    }
+
+    @Test
+    public void testTTSubsetUniqueGlyphIndex() throws Exception {
+        FontInfo fontInfo = new FontInfo();
+        PDFBoxAdapterTestCase.writeText(fontInfo, "ttsubset11.pdf");
+        PDFBoxAdapterTestCase.writeText(fontInfo, "ttsubset12.pdf");
+        PDFBoxAdapterTestCase.writeText(fontInfo, "ttsubset13.pdf");
+        FOPPDFMultiByteFont font = (FOPPDFMultiByteFont) fontInfo.getFonts().get("CIDFont+F3_Type0f3");
+        Assert.assertEquals(font.getUsedGlyphs().size(), 34);
     }
 }

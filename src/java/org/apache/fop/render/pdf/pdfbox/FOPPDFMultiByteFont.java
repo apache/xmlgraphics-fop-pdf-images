@@ -172,8 +172,12 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
                 }
                 boolean addToEnd = charMapGlobal.containsValue(key);
                 if (addToEnd) {
-                    addPrivateUseMapping(c, charMapGlobal.size() + 1);
-                    charMapGlobal.put(mappedChar, charMapGlobal.size() + 1);
+                    int glyphIndex = charMapGlobal.size() + 1;
+                    while (charMapGlobal.values().contains(glyphIndex)) {
+                        glyphIndex++;
+                    }
+                    addPrivateUseMapping(c, glyphIndex);
+                    charMapGlobal.put(mappedChar, glyphIndex);
                 } else {
                     addPrivateUseMapping(c, key);
                     charMapGlobal.put(mappedChar, key);

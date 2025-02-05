@@ -252,7 +252,7 @@ public class PDFBoxAdapterTestCase {
         }
     }
 
-    private String writeText(FontInfo fi, String pdf) throws IOException {
+    protected static String writeText(FontInfo fi, String pdf) throws IOException {
         PDDocument doc = load(pdf);
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
