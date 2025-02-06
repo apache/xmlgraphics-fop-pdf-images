@@ -316,7 +316,7 @@ public class PDFBoxAdapter {
             pdfDoc.registerObject(pageResources);
         }
         PDFFormXObject form = pdfDoc.addFormXObject(null, pageStream, pageResources.makeReference(), key);
-        final Set<String> page2Form = new HashSet<String>(Arrays.asList("Group", "LastModified", "Metadata"));
+        final Set<String> page2Form = new HashSet<>(Arrays.asList("Group", "LastModified", "Metadata"));
         transferDict(page.getCOSObject(), pageStream, page2Form, true);
 
         AffineTransform at = form.getMatrix();
@@ -350,6 +350,8 @@ public class PDFBoxAdapter {
                 //no additional transformations necessary
                 break;
         }
+        at.translate(-viewBox.getLowerLeftX(), -viewBox.getLowerLeftY());
+
         form.setMatrix(at);
 
         form.setBBox(new Rectangle2D.Float(
