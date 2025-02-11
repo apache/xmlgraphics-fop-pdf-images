@@ -60,10 +60,14 @@ import org.apache.pdfbox.pdmodel.common.function.PDFunction;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType0;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType2;
 import org.apache.pdfbox.pdmodel.common.function.PDFunctionType3;
+import org.apache.pdfbox.pdmodel.graphics.color.PDColorSpace;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceCMYK;
+import org.apache.pdfbox.pdmodel.graphics.color.PDDeviceGray;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.AxialShadingPaint;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.RadialShadingPaint;
+import org.apache.pdfbox.pdmodel.graphics.shading.ShadingContext;
 import org.apache.pdfbox.pdmodel.graphics.shading.ShadingPaint;
 import org.apache.pdfbox.util.Matrix;
 
@@ -119,6 +123,14 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             PaintContext paintContext = paint.createContext(null, new Rectangle(), null, new AffineTransform(),
                     getRenderingHints());
             int deviceColorSpace = PDFDeviceColorSpace.DEVICE_RGB;
+            if (paintContext instanceof ShadingContext) {
+                PDColorSpace pdcs = getShadingColorSpace((ShadingContext) paintContext);
+                if (pdcs instanceof PDDeviceCMYK) {
+                    deviceColorSpace = PDFDeviceColorSpace.DEVICE_CMYK;
+                } else if (pdcs instanceof PDDeviceGray) {
+                    deviceColorSpace = PDFDeviceColorSpace.DEVICE_GRAY;
+                }
+            }
             if (paint instanceof AxialShadingPaint) {
                 try {
                     AxialShadingContext asc = (AxialShadingContext) paintContext;
@@ -162,6 +174,16 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             Rectangle2D rect = getTransformedRect(matrix, texturePaint.getAnchorRect());
             texturePaint = new TexturePaint(texturePaint.getImage(), rect);
             super.applyPaint(texturePaint, fill);
+        }
+    }
+
+    private PDColorSpace getShadingColorSpace(ShadingContext shadingContext) {
+        try {
+            Field field = ShadingContext.class.getDeclaredField("shadingColorSpace");
+            field.setAccessible(true);
+            return (PDColorSpace) field.get(shadingContext);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -242,7 +264,8 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             for (int j = 0; j < sourceFunctions.size(); j++) {
                 targetFunctions.add(getFunction(PDFunction.create(sourceFunctions.get(j))));
             }
-            return new Function(null, null, targetFunctions, toList(bounds), null);
+            float[] encode = sourceFT3.getEncode().toFloatArray();
+            return new Function(null, null, targetFunctions, toList(bounds), floatArrayToDoubleList(encode));
         } else if (f instanceof PDFunctionType2) {
             PDFunctionType2 sourceFT2 = (PDFunctionType2) f;
             double interpolation = (double)sourceFT2.getN();
@@ -318,7 +341,8 @@ public class PSPDFGraphics2D extends PSGraphics2D {
         Color mask = null;
         ColorModel cm = ((BufferedImage)img).getColorModel();
         if (cm.hasAlpha()) {
-            mask = Color.WHITE;
+            mask = getMask((BufferedImage) img);
+            img = convertToRGB(img, mask);
         }
         if (gen instanceof PSDocumentHandler.FOPPSGenerator) {
             PSDocumentHandler.FOPPSGenerator fopGen = (PSDocumentHandler.FOPPSGenerator)gen;
@@ -372,6 +396,40 @@ public class PSPDFGraphics2D extends PSGraphics2D {
             }
         }
         return super.drawImage(img, x1, y1, observer, mask);
+    }
+
+    private Image convertToRGB(Image img, Color mask) {
+        //convert when we use custom background color
+        if (mask != Color.white) {
+            BufferedImage rgbImg =
+                    new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = rgbImg.createGraphics();
+            g.setColor(mask);
+            g.fillRect(0, 0, rgbImg.getWidth(), rgbImg.getHeight());
+            g.drawImage(img, 0, 0, null);
+            g.dispose();
+            return rgbImg;
+        }
+        return img;
+    }
+
+    private Color getMask(BufferedImage img) {
+        boolean black = false;
+        boolean white = false;
+        for (int i = 0; i < img.getWidth(); i++) {
+            for (int j = 0; j < img.getHeight(); j++) {
+                int rgb = img.getRGB(i, j);
+                if (rgb == Color.white.getRGB()) {
+                    white = true;
+                } else if (rgb == Color.black.getRGB()) {
+                    black = true;
+                }
+            }
+        }
+        if (white && !black) {
+            return Color.black;
+        }
+        return Color.white;
     }
 
     private BufferedImage getImage(int width, int height, Image img, ImageObserver observer) {

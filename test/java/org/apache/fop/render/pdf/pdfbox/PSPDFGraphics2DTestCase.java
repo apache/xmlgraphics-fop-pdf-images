@@ -18,6 +18,7 @@
 /* $Id$ */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -69,5 +70,12 @@ public class PSPDFGraphics2DTestCase {
         Function getAFunction(PDFunction function) throws IOException {
             return getFunction(function);
         }
+    }
+
+    @Test
+    public void testGradientWithMask() throws Exception {
+        ByteArrayOutputStream bos = PDFBoxAdapterTestCase.pdfToPS("gradientmask.pdf");
+        Assert.assertTrue(bos.toString().contains("/Encode [ 0 1 0 1 1 0 ]"));
+        Assert.assertTrue(bos.toString().contains("/MaskColor [ 0 0 0 ]"));
     }
 }

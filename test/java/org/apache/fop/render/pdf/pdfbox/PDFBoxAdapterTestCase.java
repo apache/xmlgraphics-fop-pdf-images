@@ -470,7 +470,7 @@ public class PDFBoxAdapterTestCase {
         writeText(fi, LOOP);
     }
 
-    private ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
+    protected static ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
         try (PDDocument doc = load(pdf)) {
