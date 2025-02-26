@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -160,5 +162,16 @@ public class ImageConverterPDF2G2DTestCase {
         RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
             pdfToPS(FONTSNOTEMBEDDEDCID, new LazyFont(embedFontInfo, rr, false)));
         Assert.assertTrue(ex.getMessage().contains("Reached EOF"));
+    }
+
+    @Test
+    public void testSoftMaskHighDPI() throws Exception {
+        Map<String, Object> hints = new HashMap<>();
+        hints.put("SOURCE_RESOLUTION", 96f);
+        ByteArrayOutputStream bos = PDFBoxAdapterTestCase.pdfToPS(PDFBoxAdapterTestCase.SOFTMASK, hints);
+        String output = bos.toString(StandardCharsets.UTF_8.name());
+        Assert.assertEquals(output.split("BeginBitmap").length, 3);
+        Assert.assertTrue(output.contains("/ImageMatrix [196 0 0 104 0 0]"));
+        Assert.assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
     }
 }

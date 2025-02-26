@@ -167,12 +167,14 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                 if (rotation == 90 || rotation == 270) {
                     at.scale(area.getWidth() / area.getHeight(), area.getHeight() / area.getWidth());
                 }
-                if (g2d instanceof PSGraphics2D && new PageUtil().pageHasTransparency(page.getResources(), page)) {
+                PageUtil pageUtil = new PageUtil();
+                if (g2d instanceof PSGraphics2D && pageUtil.pageHasTransparency(page.getResources(), page)) {
                     drawPageAsImage(at, g2d);
                 } else {
                     at.translate(area.getX(), area.getY());
                     at.scale(area.getWidth() / mediaBox.getWidth(),
                             area.getHeight() / mediaBox.getHeight());
+                    scaleToDPI(g2d, at, pageUtil);
                     g2d.transform(at);
                     normaliseScale(g2d);
                     PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
@@ -196,6 +198,16 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
             return r;
         }
 
+        private void scaleToDPI(Graphics2D g2d, AffineTransform at, PageUtil pageUtil) throws IOException {
+            if (g2d instanceof PSGraphics2D && pageUtil.hasTransparencyGroup) {
+                PSGraphics2D psGraphics2D = (PSGraphics2D) g2d;
+                double scaleDown = 72 / dpi;
+                psGraphics2D.getPSGenerator().concatMatrix(AffineTransform.getScaleInstance(scaleDown, scaleDown));
+                double scaleUp = dpi / 72d;
+                at.scale(scaleUp, scaleUp);
+            }
+        }
+
         private void normaliseScale(Graphics2D g2d) {
             if (!(g2d instanceof AbstractGraphics2D)) {
                 AffineTransform old = g2d.getTransform();
@@ -217,6 +229,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
         static class PageUtil {
             private List<COSDictionary> visited = new ArrayList<COSDictionary>();
             private Map<String, PDXObject> visitedXOjects = new HashMap<String, PDXObject>();
+            private boolean hasTransparencyGroup;
 
             private boolean pageHasTransparency(PDResources res, final PDPage page) throws IOException {
                 if (res != null) {
@@ -263,6 +276,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                             }
                         }
                     }
+                    hasTransparencyGroup = count > 0;
                     if (count > 1) {
                         return true;
                     }

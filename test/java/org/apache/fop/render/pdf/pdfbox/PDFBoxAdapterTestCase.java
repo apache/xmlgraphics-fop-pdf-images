@@ -473,11 +473,16 @@ public class PDFBoxAdapterTestCase {
     }
 
     protected static ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
+        return pdfToPS(pdf, null);
+    }
+
+    protected static ByteArrayOutputStream pdfToPS(String pdf, Map<String, Object> hints)
+        throws IOException, ImageException {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo(pdf, "b");
         try (PDDocument doc = load(pdf)) {
             org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, hints);
             GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             PSPDFGraphics2D g2d = (PSPDFGraphics2D) g.getGraphics(true, new FOPPSGeneratorImpl(stream));
