@@ -32,6 +32,7 @@ import org.apache.fontbox.cff.CFFType1Font;
 import org.apache.fontbox.cmap.CMap;
 
 import org.apache.fontbox.ttf.CmapSubtable;
+import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.TrueTypeFont;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -188,8 +189,11 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
                 for (int i = 0; i < 256 * 256; i++) {
                     int gid = c.getGlyphId(i);
-                    if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(i)) {
+                    GlyphData glyphData = ttfont.getGlyph().getGlyph(gid);
+                    if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(i) && (glyphData != null || i == 32)) {
                         tempCmap.glyphIdToCharacterCode.put(i, gid);
+                    } else if (gid != 0 && !tempCmap.glyphIdToCharacterCodeBase.containsKey(i)) {
+                        tempCmap.glyphIdToCharacterCodeBase.put(i, gid);
                     }
                 }
             }

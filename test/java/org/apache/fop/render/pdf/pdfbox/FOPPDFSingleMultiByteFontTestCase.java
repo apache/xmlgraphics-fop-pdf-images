@@ -19,7 +19,9 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -261,5 +263,22 @@ public class FOPPDFSingleMultiByteFontTestCase {
         PDFBoxAdapterTestCase.writeText(fontInfo, "ttsubset13.pdf");
         FOPPDFMultiByteFont font = (FOPPDFMultiByteFont) fontInfo.getFonts().get("CIDFont+F3_Type0f3");
         Assert.assertEquals(font.getUsedGlyphs().size(), 34);
+    }
+
+    @Test
+    public void testTTMergeGlyphs() throws IOException {
+        PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset3);
+        FOPPDFSingleByteFont sbFont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "ArialMT_TrueTypecidcmap1");
+        PDDocument doc2 = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset5);
+        sbFont.addFont(getFont(doc2, "F1"));
+        doc.close();
+        doc2.close();
+        TrueTypeFont trueTypeFont = new TTFParser().parse(new RandomAccessReadBuffer(sbFont.getInputStream()));
+        List<Integer> contours = new ArrayList<>();
+        for (int i = 0; i < trueTypeFont.getNumberOfGlyphs(); i++) {
+            GlyphData glyphData = trueTypeFont.getGlyph().getGlyph(i);
+            contours.add((int)glyphData.getNumberOfContours());
+        }
+        Assert.assertEquals(contours, Arrays.asList(2, 4, 2, 3, 1, 3));
     }
 }

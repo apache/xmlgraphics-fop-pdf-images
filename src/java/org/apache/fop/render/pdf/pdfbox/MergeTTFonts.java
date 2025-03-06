@@ -96,7 +96,14 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                         composedGlyphs.contains(origGlyphIndex),
                         compositeGlyphs.contains(origGlyphIndex), origGlyphIndex);
                 if (!cid && (origIndexesLen == 0 || (glyphLength > 0 && i > 0))) {
-                    added.put(i, g);
+                    if (added.containsKey(i)) {
+                        Glyph existing = added.get(i);
+                        if (existing.data.length == 0) {
+                            added.put(i, g);
+                        }
+                    } else {
+                        added.put(i, g);
+                    }
                 } else if (cid) {
                     added.put(i + origIndexesLen, g);
                 }
@@ -455,7 +462,7 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         for (Cmap cmap : cmaps) {
             if (cmap.platformId != 0) {
                 writeUShort(4); //subtableFormat
-                int segCount = cmap.glyphIdToCharacterCode.size() + 1;
+                int segCount = cmap.getGlyphIdToCharacterCode().size() + 1;
                 writeUShort(16 + (segCount * 8)); //length
                 writeUShort(0); //lang
                 writeUShort(segCount * 2); //segCountX2
@@ -465,34 +472,34 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                 writeUShort((int) entrySelector); //entrySelector
                 double rangeShift = (segCount * 2) - searchRange;
                 writeUShort((int) rangeShift); //rangeShift
-                for (int c : cmap.glyphIdToCharacterCode.keySet()) {
+                for (int c : cmap.getGlyphIdToCharacterCode().keySet()) {
                     writeUShort(c); //endCode
                 }
                 writeUShort(0xFFFF);
                 writeUShort(0); //reservedPad
-                for (int c : cmap.glyphIdToCharacterCode.keySet()) {
+                for (int c : cmap.getGlyphIdToCharacterCode().keySet()) {
                     writeUShort(c); //startCode
                 }
                 writeUShort(0xFFFF);
-                for (Map.Entry<Integer, Integer> entry : cmap.glyphIdToCharacterCode.entrySet()) {
+                for (Map.Entry<Integer, Integer> entry : cmap.getGlyphIdToCharacterCode().entrySet()) {
                     writeUShort(entry.getValue() - entry.getKey()); //idDelta
                 }
                 writeUShort(0);
-                for (int g : cmap.glyphIdToCharacterCode.keySet()) {
+                for (int g : cmap.getGlyphIdToCharacterCode().keySet()) {
                     writeUShort(0); //idRangeOffsets
                 }
                 writeUShort(0);
             } else {
                 writeUShort(12); //subtableFormat
                 writeUShort(0);
-                writeULong(currentPos, (cmap.glyphIdToCharacterCode.size() * 12) + 16);
+                writeULong(currentPos, (cmap.getGlyphIdToCharacterCode().size() * 12) + 16);
                 currentPos += 4;
                 writeULong(currentPos, 0);
                 currentPos += 4;
-                writeULong(currentPos, cmap.glyphIdToCharacterCode.size());
+                writeULong(currentPos, cmap.getGlyphIdToCharacterCode().size());
                 currentPos += 4;
 
-                for (Map.Entry<Integer, Integer> g : cmap.glyphIdToCharacterCode.entrySet()) {
+                for (Map.Entry<Integer, Integer> g : cmap.getGlyphIdToCharacterCode().entrySet()) {
                     writeULong(currentPos, g.getKey());
                     currentPos += 4;
                     writeULong(currentPos, g.getKey());
@@ -530,10 +537,10 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         for (int i = 0; i < index; i++) {
             Cmap curCmap = cmaps.get(i);
             if (curCmap.platformId != 0) {
-                int segCount = curCmap.glyphIdToCharacterCode.size() + 1;
+                int segCount = curCmap.getGlyphIdToCharacterCode().size() + 1;
                 result += 16 + (segCount * 8); //length
             } else {
-                result += (curCmap.glyphIdToCharacterCode.size() * 12) + 16;
+                result += (curCmap.getGlyphIdToCharacterCode().size() * 12) + 16;
             }
         }
         return result;
@@ -563,11 +570,22 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
     public static class Cmap {
         int platformId;
         int platformEncodingId;
-        Map<Integer, Integer> glyphIdToCharacterCode = new TreeMap<Integer, Integer>();
+        Map<Integer, Integer> glyphIdToCharacterCode = new TreeMap<>();
+        Map<Integer, Integer> glyphIdToCharacterCodeBase = new HashMap<>();
 
         public Cmap(int platformID, int platformEncodingID) {
             this.platformId = platformID;
             this.platformEncodingId = platformEncodingID;
+        }
+
+        public Map<Integer, Integer> getGlyphIdToCharacterCode() {
+            if (glyphIdToCharacterCodeBase != null) {
+                //Values put in base map for entries with no glyph data so values can be overritten by another font
+                glyphIdToCharacterCodeBase.putAll(glyphIdToCharacterCode);
+                glyphIdToCharacterCode.putAll(glyphIdToCharacterCodeBase);
+                glyphIdToCharacterCodeBase = null;
+            }
+            return glyphIdToCharacterCode;
         }
     }
 }
