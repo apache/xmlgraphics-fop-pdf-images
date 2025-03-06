@@ -233,9 +233,8 @@ public class PDFBoxAdapterTestCase {
         for (Typeface font : fi.getUsedFonts().values()) {
             InputStream is = ((CustomFont) font).getInputStream();
             if (font.getFontType() == FontType.TYPE1C || font.getFontType() == FontType.CIDTYPE0) {
-                byte[] data = IOUtils.toByteArray(is);
                 CFFParser p = new CFFParser();
-                p.parse(new RandomAccessReadBuffer(data));
+                p.parse(new RandomAccessReadBuffer(is));
             } else if (font.getFontType() == FontType.TRUETYPE) {
                 TTFParser parser = new TTFParser();
                 parser.parse(new RandomAccessReadBuffer(is));
@@ -827,14 +826,13 @@ public class PDFBoxAdapterTestCase {
         FontInfo fontInfo = new FontInfo();
         writeText(fontInfo, CFFSUBRS);
         writeText(fontInfo, CFFSUBRS2);
-        byte[] data = null;
+        InputStream is = null;
         for (Typeface font : fontInfo.getUsedFonts().values()) {
             if ("AllianzNeo-Bold".equals(font.getEmbedFontName())) {
-                InputStream is = ((CustomFont) font).getInputStream();
-                data = IOUtils.toByteArray(is);
+                is = ((CustomFont) font).getInputStream();
             }
         }
-        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(data)).get(0);
+        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(is)).get(0);
         byte[][] indexData = (byte[][]) font.getPrivateDict().get("Subrs");
         assertEquals(indexData.length, 183);
     }
@@ -846,8 +844,7 @@ public class PDFBoxAdapterTestCase {
         writeText(fontInfo, CFFSUBRS3);
         CustomFont typeface = (CustomFont) fontInfo.getUsedFonts().get("AllianzNeo-Light_Type1");
         InputStream is = typeface.getInputStream();
-        byte[] data = IOUtils.toByteArray(is);
-        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(data)).get(0);
+        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(is)).get(0);
         CFFCharset charset = font.getCharset();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 5; i++) {
