@@ -29,6 +29,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
 import org.apache.fop.events.DefaultEventBroadcaster;
+import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFName;
@@ -37,6 +38,9 @@ import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStructElem;
+import org.apache.fop.pdf.StandardStructureTypes.Grouping;
+import org.apache.fop.pdf.StandardStructureTypes.Illustration;
+import org.apache.fop.pdf.StandardStructureTypes.Paragraphlike;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapter;
 import org.apache.fop.render.pdf.pdfbox.PDFBoxAdapterTestCase;
 import org.apache.fop.render.pdf.pdfbox.TaggedPDFConductor;
@@ -48,6 +52,8 @@ public class TaggedPDFConductorTestCase {
     private static final String OTF = "otf.pdf";
     private static final String IMAGE = "hello2.pdf";
     private static final String NOPARENTTREE = "NoParentTree.pdf";
+    private static final String logicalStructImageSingleChild = "to_include_pdfua.pdf";
+
     private PDFPage pdfPage;
     private PDFDocument pdfDoc;
 
@@ -158,4 +164,95 @@ public class TaggedPDFConductorTestCase {
         runConductor(NOPARENTTREE, elem);
         Assert.assertEquals(print(elem), "/Div/Document");
     }
+
+    private String printTree(PDFStructElem elem) {
+        Object selfName = elem.get("S");
+        if (null == selfName) {
+            return "*";
+        }
+        StringBuilder sb = new StringBuilder(selfName.toString());
+        if ((elem.getKids() != null) && !elem.getKids().isEmpty()) {
+            int realSize = 0;
+            for (PDFObject kid : elem.getKids()) {
+                if (kid instanceof PDFStructElem) {
+                    realSize++;
+                }
+            }
+            if (realSize > 0) {
+                sb.append("[[(" + realSize + ")");
+                for (PDFObject kid : elem.getKids()) {
+                    if (kid instanceof PDFStructElem) {
+                        sb.append(printTree((PDFStructElem) kid));
+                    }
+                }
+                sb.append("]]");
+            }
+        }
+        return sb.toString();
+    }
+
+    private PDFLogicalStructureHandler runConductorForHandler(String pdf, PDFStructElem elem,
+            PDFStructElem[] textElements) throws IOException {
+        setUp();
+        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
+        PDPage srcPage = doc.getPage(0);
+        elem.setObjectNumber(2);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new HashMap<>(), new DefaultEventBroadcaster());
+        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+        for (PDFStructElem textElement : textElements) {
+            handler.addTextContentItem(textElement);
+        }
+        new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
+        doc.close();
+        return handler;
+    }
+
+    private static String getParentTreeContentsAsString(PDFLogicalStructureHandler logicalStructureHandler) {
+        StringBuilder result = new StringBuilder();
+        PDFArray pageParentTree = logicalStructureHandler.getPageParentTree();
+        final int maxIndex = pageParentTree.length();
+        for (int index = 0; index < maxIndex; index++) {
+            Object item = pageParentTree.get(index);
+            if (item instanceof PDFStructElem) {
+                PDFStructElem elem = (PDFStructElem) item;
+                result.append(elem.get("S").toString());
+            } else {
+                result.append("|");
+            }
+        }
+        return result.toString();
+    }
+
+    @Test
+    public void testImageChild() throws IOException {
+        PDFStructElem rootElement = new PDFStructElem(null, Grouping.PART);
+        PDFStructElem pElementHeader = new PDFStructElem(rootElement, Paragraphlike.H1);
+        PDFStructElem pElementSibling = new PDFStructElem(rootElement, Paragraphlike.P);
+        PDFStructElem pElement = new PDFStructElem(rootElement, Paragraphlike.P);
+        PDFStructElem placeHolderElement = new PDFStructElem.Placeholder(rootElement);
+        rootElement.addKid(pElementHeader);
+        rootElement.addKid(pElementSibling);
+        rootElement.addKid(pElement);
+        rootElement.addKid(placeHolderElement);
+        PDFStructElem figureElement = new PDFStructElem(pElement, Illustration.FIGURE);
+        pElement.addKid(figureElement);
+        PDFStructElem[] texts = { pElementHeader, pElementSibling };
+        PDFLogicalStructureHandler logicalStructureHandler = runConductorForHandler(logicalStructImageSingleChild,
+                figureElement, texts);
+
+        // check structure
+        Assert.assertEquals("/Part[[(4)/H1/P/Div[[(5)/Text#20body/Text#20body/Text#20body/Text#20body/Figure]]*]]",
+                printTree(rootElement));
+        Assert.assertEquals("/H1", printTree(pElementHeader));
+        Assert.assertEquals("/P", printTree(pElementSibling));
+        Assert.assertEquals("/Div[[(5)/Text#20body/Text#20body/Text#20body/Text#20body/Figure]]", printTree(pElement));
+        Assert.assertEquals("/Figure", printTree(figureElement));
+
+        // check parent tree
+        Assert.assertEquals("/H1/P/Text#20body/Text#20body/Text#20body/Text#20body",
+                getParentTreeContentsAsString(logicalStructureHandler));
+
+    }
+
 }

@@ -36,7 +36,6 @@ import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.documentinterchange.taggedpdf.StandardStructureTypes;
 
-
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFNumber;
@@ -44,7 +43,10 @@ import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFReference;
 import org.apache.fop.pdf.PDFStructElem;
-
+import org.apache.fop.pdf.StandardStructureTypes.Grouping;
+import org.apache.fop.pdf.StandardStructureTypes.Illustration;
+import org.apache.fop.pdf.StandardStructureTypes.Paragraphlike;
+import org.apache.fop.pdf.StructureType;
 
 import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
 
@@ -126,13 +128,13 @@ public class StructureTreeMerger {
         return currentSessionElem;
     }
 
-    public void setCurrentSessionElem() {
-        if (isCurrentSessionElemEmpty(currentSessionElem)) {
+    private void searchAndsetCurrentSessionElem() {
+        if (isCurrentSessionElemInvalid(currentSessionElem)) {
             List<PDFStructElem> structureTreeElements = pdfDoc.getStructureTreeElements();
             for (int i = structureTreeElements.size() - 1; i >= 0; i--) {
                 PDFStructElem elem = structureTreeElements.get(i);
                 // We need to make sure it's not an empty element (like an empty block)
-                if (!isCurrentSessionElemEmpty(elem)) {
+                if (!isCurrentSessionElemInvalid(elem)) {
                     currentSessionElem = elem;
                     break;
                 }
@@ -140,8 +142,35 @@ public class StructureTreeMerger {
         }
     }
 
-    private boolean isCurrentSessionElemEmpty(PDFStructElem elem) {
-        return elem == null || elem.get("P") == null;
+    public void setCurrentSessionElem() {
+        if (isElementFigureChildOfBlockLike(currentSessionElem)) {
+            // this will become a Div at the end of the merging
+            currentSessionElem = currentSessionElem.getParentStructElem();
+        } else {
+            searchAndsetCurrentSessionElem();
+        }
+    }
+
+    private static boolean isElementFigureChildOfBlockLike(PDFStructElem elem) {
+        if (elem.getStructureType() == Illustration.FIGURE) {
+            PDFStructElem parent = elem.getParentStructElem();
+            if (null != parent) {
+                final StructureType parentType = parent.getStructureType();
+                if ((parentType == Paragraphlike.P) || (parentType == Grouping.DIV)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isCurrentSessionElemInvalid(PDFStructElem elem) {
+        return elem == null || elem.get("P") == null || isStructureTypeParagraph(elem.getStructureType());
+    }
+
+    private boolean isStructureTypeParagraph(StructureType type) {
+        return Arrays.asList(Paragraphlike.H, Paragraphlike.H1, Paragraphlike.H2, Paragraphlike.H3, Paragraphlike.H4,
+                Paragraphlike.H5, Paragraphlike.H6, Paragraphlike.P).contains(type);
     }
 
     private void createParents(COSArray markedContentParents) throws IOException {
