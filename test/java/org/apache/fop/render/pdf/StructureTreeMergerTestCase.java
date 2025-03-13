@@ -20,7 +20,9 @@ package org.apache.fop.render.pdf;
 import java.awt.Rectangle;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -258,12 +260,12 @@ public class StructureTreeMergerTestCase {
     public void testNonEmptyElement() {
         PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
         PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
-        defaultTestSetCurrentSessionElem(Arrays.asList(sectElem, partElem), null, partElem,
-                "If element is not empty, it must be chosen");
+        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), null, sectElem,
+                "If element is not empty and not of type Paragraph, it must be chosen");
     }
 
     @Test
-    public void testEmptyElement() {
+    public void testEmptyParagraphElement() {
         PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
         PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, null);
         defaultTestSetCurrentSessionElem(Arrays.asList(sectElem, partElem), null, sectElem,
@@ -280,26 +282,46 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testEmptySectElement() {
-        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem divElem = createPDFStructElem(StandardStructureTypes.Grouping.DIV, CONTENT);
         PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, null);
-        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), null, partElem,
+        defaultTestSetCurrentSessionElem(Arrays.asList(divElem, sectElem), null, divElem,
                 "Elements can't be empty");
     }
 
     @Test
     public void testSetterReplacesPreviousValueIfEmpty() {
-        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem divElem = createPDFStructElem(StandardStructureTypes.Grouping.DIV, CONTENT);
         PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, null);
-        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), Arrays.asList(sectElem, partElem),
-                partElem, "If the current session elem is empty, it must be replaced");
+        defaultTestSetCurrentSessionElem(Arrays.asList(sectElem, divElem), null,
+                divElem, "Must replace current session elem if empty");
     }
 
     @Test
     public void testSetterDoesntReplacePreviousValueIfNotEmpty() {
-        PDFStructElem partElem = createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT);
+        PDFStructElem divElem = createPDFStructElem(StandardStructureTypes.Grouping.DIV, CONTENT);
+        PDFStructElem emptySectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, null);
         PDFStructElem sectElem = createPDFStructElem(StandardStructureTypes.Grouping.SECT, CONTENT);
-        defaultTestSetCurrentSessionElem(Arrays.asList(partElem, sectElem), Arrays.asList(sectElem, partElem),
-                sectElem, "Elements can't be empty");
+        defaultTestSetCurrentSessionElem(Arrays.asList(divElem, emptySectElem), Collections.singletonList(sectElem),
+                divElem, "Should not replace if current element is valid");
+    }
+
+    @Test
+    public void testIgnoredParagraphTypeElements() {
+        PDFStructElem divElem = createPDFStructElem(StandardStructureTypes.Grouping.DIV, CONTENT);
+
+        List<PDFStructElem> elems = new ArrayList<>();
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H, CONTENT));
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H1, CONTENT));
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H2, CONTENT));
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H3, CONTENT));
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H4, CONTENT));
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H5, CONTENT));
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.H6, CONTENT));
+        elems.add(divElem);
+        elems.add(createPDFStructElem(StandardStructureTypes.Paragraphlike.P, CONTENT));
+
+        defaultTestSetCurrentSessionElem(elems, null, divElem,
+                "Paragraph type elements must be ignored and replaced");
     }
 
     private void defaultTestSetCurrentSessionElem(List<PDFStructElem> elems, List<PDFStructElem> secondElems,
@@ -311,12 +333,16 @@ public class StructureTreeMergerTestCase {
         page.setDocument(mockPdfDoc);
         PDFBoxAdapter mockAdapter = mock(PDFBoxAdapter.class);
         when(mockAdapter.getTargetPage()).thenReturn(page);
-        StructureTreeMerger structureTreeMerger = new StructureTreeMerger(null, null,
+
+        StructureTreeMerger structureTreeMerger = new StructureTreeMerger(elems.get(0), null,
                 mockAdapter, null);
+        assertEquals("Constructor sets the current session element without restrictions",
+                elems.get(0), structureTreeMerger.getCurrentSessionElem());
+
         structureTreeMerger.setCurrentSessionElem();
         assertEquals(assertionMessage, expected, structureTreeMerger.getCurrentSessionElem());
         if (secondElems != null) {
-            when(mockPdfDoc.getStructureTreeElements()).thenReturn(elems);
+            when(mockPdfDoc.getStructureTreeElements()).thenReturn(secondElems);
             structureTreeMerger.setCurrentSessionElem();
             assertEquals(assertionMessage, expected, structureTreeMerger.getCurrentSessionElem());
         }
