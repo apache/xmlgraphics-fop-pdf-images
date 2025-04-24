@@ -4,7 +4,7 @@
 
   <groupId>org.apache.fop.render.pdf.pdfbox</groupId>
   <artifactId>fop-pdf-images</artifactId>
-  <version>2.11.0-SNAPSHOT</version>
+  <version>2.11</version>
   <name>${project.groupId}:${project.artifactId}</name>
   <description>PDF image support for Apache FOP</description>
   <url>https://xmlgraphics.apache.org/fop/fop-pdf-images.html</url>
@@ -46,7 +46,7 @@
     <dependency>
       <groupId>org.apache.xmlgraphics</groupId>
       <artifactId>fop</artifactId>
-      <version>2.10.0-SNAPSHOT</version>
+      <version>2.11</version>
     </dependency>
     <dependency>
       <groupId>org.apache.pdfbox</groupId>
