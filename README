@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 3.0 or later
-- Apache XML Graphics Commons 2.10 or later (for the image converter)
-- Apache XML FOP 2.10 or later (for the FOP functionality)
+- Apache XML Graphics Commons 2.11 or later (for the image converter)
+- Apache XML FOP 2.11 or later (for the FOP functionality)
 - Java 1.8 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.10 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.11 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -156,6 +156,21 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.11
+=========================
+
+Changes:
+FOP-3203: Upgrade to PDFBox 3
+FOP-3210: Correct position when merging pdfs
+FOP-3213: Sort dict hash to find more duplicates
+FOP-3227: Draw softmask without rasterizing page
+FOP-3230: Fix PDF/UA compliance issues when attaching a PDF/UA file
+FOP-3233: Avoid merging fonts without mac cmap
+FOP-3234: Use unique value for glyph index for font merging
+FOP-3235: Correct PS transform for gradients and mask for images
+FOP-3237: Use DPI to set resolution of PDFBox images
+FOP-3240: Use glyph from fonts where is exists for font merge
 
 Version 2.10
 =========================
