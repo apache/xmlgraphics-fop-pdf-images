@@ -19,6 +19,7 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -187,17 +188,33 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             CmapSubtable[] cmapList = ttfont.getCmap().getCmaps();
             for (CmapSubtable c : cmapList) {
                 MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
-                for (int i = 0; i < 256 * 256; i++) {
-                    int gid = c.getGlyphId(i);
-                    GlyphData glyphData = ttfont.getGlyph().getGlyph(gid);
-                    if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(i) && (glyphData != null || i == 32)) {
-                        tempCmap.glyphIdToCharacterCode.put(i, gid);
-                    } else if (gid != 0 && !tempCmap.glyphIdToCharacterCodeBase.containsKey(i)) {
-                        tempCmap.glyphIdToCharacterCodeBase.put(i, gid);
-                    }
+                for (Map.Entry<Integer, Integer> entry : getCharacterCodeToGlyphId(c).entrySet()) {
+                    readCmapEntry(entry, ttfont, tempCmap);
                 }
             }
             FOPPDFMultiByteFont.mergeMaxp(ttfont, ((MergeTTFonts)mergeFonts).maxp);
+        }
+    }
+
+    private Map<Integer, Integer> getCharacterCodeToGlyphId(CmapSubtable cmapSubtable) {
+        try {
+            Field field = CmapSubtable.class.getDeclaredField("characterCodeToGlyphId");
+            field.setAccessible(true);
+            return (Map<Integer, Integer>) field.get(cmapSubtable);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected void readCmapEntry(Map.Entry<Integer, Integer> entry, TrueTypeFont ttfont, MergeTTFonts.Cmap tempCmap)
+        throws IOException {
+        int i = entry.getKey();
+        int gid = entry.getValue();
+        GlyphData glyphData = ttfont.getGlyph().getGlyph(gid);
+        if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(i) && (glyphData != null || i == 32)) {
+            tempCmap.glyphIdToCharacterCode.put(i, gid);
+        } else if (gid != 0 && !tempCmap.glyphIdToCharacterCodeBase.containsKey(i)) {
+            tempCmap.glyphIdToCharacterCodeBase.put(i, gid);
         }
     }
 

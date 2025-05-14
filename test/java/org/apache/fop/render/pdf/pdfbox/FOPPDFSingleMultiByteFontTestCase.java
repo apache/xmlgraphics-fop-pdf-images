@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -280,5 +281,24 @@ public class FOPPDFSingleMultiByteFontTestCase {
             contours.add((int)glyphData.getNumberOfContours());
         }
         Assert.assertEquals(contours, Arrays.asList(2, 4, 2, 3, 1, 3));
+    }
+
+    @Test
+    public void testPerformance() throws IOException {
+        PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset3);
+        final int[] calls = {0};
+        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "F1"),
+                "ArialMT_TrueTypecidcmap2") {
+            protected void readCmapEntry(Map.Entry<Integer, Integer> entry, TrueTypeFont ttfont,
+                                         MergeTTFonts.Cmap tempCmap) throws IOException {
+                super.readCmapEntry(entry, ttfont, tempCmap);
+                calls[0]++;
+            }
+        };
+        PDDocument doc2 = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.TTSubset5);
+        mbfont.addFont(getFont(doc2, "F1"));
+        doc.close();
+        doc2.close();
+        Assert.assertEquals(calls[0], 512);
     }
 }
