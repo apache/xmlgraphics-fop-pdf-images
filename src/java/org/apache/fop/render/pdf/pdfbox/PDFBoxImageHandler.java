@@ -67,8 +67,8 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
             float h = (float)destRect.getHeight() / 1000f;  // Height of image.
 
             AffineTransform pageAdjust = new AffineTransform();
-            AffineTransform at = generator.getAffineTransform();
-            if (at != null) {
+            AffineTransform generatorAT = generator.getAffineTransform();
+            if (generatorAT != null) {
                 pageAdjust.setToTranslation(
                     (float)(generator.getState().getTransform().getTranslateX()),
                     (float)(generator.getState().getTransform().getTranslateY() - h - y));
@@ -76,7 +76,7 @@ public class PDFBoxImageHandler extends AbstractPDFBoxHandler implements ImageHa
             FontInfo fontinfo = (FontInfo)context.getHint("fontinfo");
             Object stream = createStreamForPDF(pdfImage, targetPage, pdfContext.getUserAgent(),
                     pageAdjust, fontinfo, destRect, pdfContext.getUsedFieldNames(), pdfContext.getPageNumbers(),
-                    pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem());
+                    pdfContext.getPdfLogicalStructureHandler(), pdfContext.getCurrentSessionStructElem(), generatorAT);
 
             if (stream == null) {
                 return;

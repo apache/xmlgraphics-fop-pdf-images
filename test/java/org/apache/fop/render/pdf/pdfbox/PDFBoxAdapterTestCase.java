@@ -258,7 +258,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         String c = (String) getPDFBoxAdapter(true, false)
-                .createStreamFromPDFBoxPage(doc, page, pdf, pageAdjust, fi, new Rectangle());
+                .createStreamFromPDFBoxPage(doc, page, pdf, pageAdjust, fi, new Rectangle(), new AffineTransform());
         doc.close();
         return c;
     }
@@ -271,7 +271,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         Assert.assertTrue(stream, stream.contains("/P <</MCID 5 >>BDC"));
         doc.close();
     }
@@ -290,7 +290,7 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.output(os);
         os.reset();
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         pdfdoc.outputTrailer(os);
         Assert.assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields ["));
         doc.close();
@@ -307,7 +307,7 @@ public class PDFBoxAdapterTestCase {
 
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         doc.close();
     }
 
@@ -323,7 +323,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.output(os);
         String out = os.toString(StandardCharsets.UTF_8.name());
@@ -346,7 +346,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.outputTrailer(os);
         Assert.assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields []"));
@@ -365,7 +365,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.outputTrailer(os);
         Assert.assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields []"));
@@ -384,7 +384,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         Assert.assertTrue(stream.contains("/Link <</MCID 5 >>BDC"));
         assertEquals(pageNumbers.size(), 4);
         PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
@@ -406,7 +406,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, new FontInfo(), r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, new FontInfo(), r, pageAdjust);
         doc.close();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
@@ -559,18 +559,18 @@ public class PDFBoxAdapterTestCase {
 
     private PDFPage loadPage(PDFDocument pdfdoc, PDDocument doc, Rectangle destRect) throws IOException {
         PDFPage pdfpage = getPDFPage(pdfdoc);
-        callCreateStreamFromPDFBoxPage(pdfpage, pdfdoc, doc, destRect);
+        createStreamFromPDFBoxPage(pdfpage, pdfdoc, doc, destRect, new AffineTransform());
         return pdfpage;
     }
 
-    private Object callCreateStreamFromPDFBoxPage(PDFPage pdfpage, PDFDocument pdfdoc, PDDocument doc,
-                                                  Rectangle destRect) throws IOException {
+    private Object createStreamFromPDFBoxPage(PDFPage pdfpage, PDFDocument pdfdoc, PDDocument doc,
+                                                  Rectangle destRect, AffineTransform generatorAT) throws IOException {
         pdfdoc.assignObjectNumber(pdfpage);
         pdfpage.setDocument(pdfdoc);
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<Integer, PDFArray>());
         PDPage page = doc.getPage(0);
-
-        Object object = adapter.createStreamFromPDFBoxPage(doc, page, "key", new AffineTransform(), null, destRect);
+        AffineTransform pageAdjust = new AffineTransform();
+        Object object = adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, destRect, generatorAT);
         doc.close();
 
         return object;
@@ -593,7 +593,7 @@ public class PDFBoxAdapterTestCase {
         when(mockedAgent.getPDFObjectCache()).thenReturn(new SoftMapCache(true));
         PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, pdfpage, null);
         c.setPageNumbers(new HashMap<Integer, PDFArray>());
-        new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
+        new PDFBoxImageHandler().handleImage(c, img, new Rectangle(0, 0, 100, 100));
         PDFResources res = c.getPage().getPDFResources();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         res.output(bos);
@@ -642,7 +642,7 @@ public class PDFBoxAdapterTestCase {
             PDDocument doc = load(pdf);
             PDPage page = doc.getPage(0);
             String stream = (String) adapter.createStreamFromPDFBoxPage(
-                    doc, page, pdf, new AffineTransform(), null, new Rectangle());
+                    doc, page, pdf, new AffineTransform(), null, new Rectangle(), new AffineTransform());
             doc.close();
             return stream;
         }
@@ -687,7 +687,7 @@ public class PDFBoxAdapterTestCase {
         page.setResources(null);
         AffineTransform pageAdjust = new AffineTransform();
         getPDFBoxAdapter(false, false)
-                .createStreamFromPDFBoxPage(doc, page, CFF1, pageAdjust, new FontInfo(), new Rectangle());
+                .createStreamFromPDFBoxPage(doc, page, CFF1, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust);
         doc.close();
     }
 
@@ -714,8 +714,8 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
-            getPDFBoxAdapter(true, true)
-                    .createStreamFromPDFBoxPage(doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle()));
+            getPDFBoxAdapter(true, true).createStreamFromPDFBoxPage(
+                    doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust));
         doc.close();
         assertEquals(ex.getMessage(), "merge-fonts and form-xobject can't both be enabled");
     }
@@ -726,7 +726,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         PDFFormXObject formXObject = (PDFFormXObject) getPDFBoxAdapter(false, true)
-                .createStreamFromPDFBoxPage(doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle());
+                .createStreamFromPDFBoxPage(doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust);
         doc.close();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         formXObject.output(bos);
@@ -748,7 +748,7 @@ public class PDFBoxAdapterTestCase {
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         Map<String, List<String>> filterMap = new HashMap<String, List<String>>();
         List<String> filterList = new ArrayList<String>();
@@ -865,7 +865,7 @@ public class PDFBoxAdapterTestCase {
         PDPage srcPage = input.getPage(0);
         AffineTransform at = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(input, srcPage, "key", at, null, r);
+        adapter.createStreamFromPDFBoxPage(input, srcPage, "key", at, null, r, at);
         input.close();
         return adapter.getTargetPage();
     }
@@ -926,6 +926,23 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
+    public void testPatternMatrixWithPageAdjust() throws Exception {
+        PDDocument doc = load(SHADING);
+        PDFDocument pdfdoc = new PDFDocument("");
+        Rectangle destRect = new Rectangle(0, 1650, 274818, 174879);
+        PDFPage pdfpage = getPDFPage(pdfdoc);
+        AffineTransform generatorAT = AffineTransform.getTranslateInstance(0, 100);
+        createStreamFromPDFBoxPage(pdfpage, pdfdoc, doc, destRect, generatorAT);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        pdfdoc.output(bos);
+        String outStr = removeWhiteSpace(bos);
+        Assert.assertTrue(outStr.contains("<<\n"
+                + "/Type /Pattern\n/PatternType 2\n/Shading 2 0 R\n"
+                + "/Matrix [53.8858833313 0 0 -26.4968185425 72.7459411621 -120.8601837158]\n"
+                + ">>"));
+    }
+
+    @Test
     public void testPatternMatrixFormXObject() throws Exception {
         PDDocument doc = load(SHADING);
         PDFDocument pdfdoc = new PDFDocument("");
@@ -963,8 +980,8 @@ public class PDFBoxAdapterTestCase {
         page.setCropBox(new PDRectangle(600, 500, 1200, 800));
         page.setRotation(rotation);
 
-        PDFFormXObject form = (PDFFormXObject) callCreateStreamFromPDFBoxPage(pdfPage, pdfdoc, pdDoc,
-                new Rectangle(0, 0, 274818, 174879));
+        PDFFormXObject form = (PDFFormXObject) createStreamFromPDFBoxPage(pdfPage, pdfdoc, pdDoc,
+                new Rectangle(0, 0, 274818, 174879), new AffineTransform());
 
         AffineTransform at = form.getMatrix();
         String message = "Value must be calculated based on the rotation";

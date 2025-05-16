@@ -42,12 +42,15 @@ public class PatternUtil {
     private PDFPage targetPage;
     private Rectangle pos;
     private PDPage sourcePage;
+    private AffineTransform generatorAT;
 
-    public PatternUtil(PDFPage targetPage, Rectangle pos, PDPage sourcePage, boolean disabled) throws IOException {
+    public PatternUtil(PDFPage targetPage, Rectangle pos, PDPage sourcePage, boolean disabled,
+                       AffineTransform generatorAT) throws IOException {
         if (!disabled) {
             this.targetPage = targetPage;
             this.pos = pos;
             this.sourcePage = sourcePage;
+            this.generatorAT = generatorAT;
             PDResources srcPgResources = sourcePage.getResources();
             if (srcPgResources != null) {
                 for (COSName name : srcPgResources.getPatternNames()) {
@@ -95,6 +98,10 @@ public class PatternUtil {
         double xTranslation = cDestRect.getX() / 1000f - srcMediaBox.getLowerLeftX() * xScaleFactor;
         // y translation: media box offset + scaled cDestRect
         double yTranslation = cDestRect.getY() / 1000f - srcMediaBox.getLowerLeftY() * yScaleFactor;
+        if (generatorAT != null) {
+            xTranslation -= generatorAT.getTranslateX();
+            yTranslation -= generatorAT.getTranslateY();
+        }
         return new AffineTransform(xScaleFactor, 0, 0, yScaleFactor, xTranslation, yTranslation);
     }
 

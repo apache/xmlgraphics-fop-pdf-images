@@ -73,7 +73,7 @@ public class PDFRotateTestCase {
         page.setRotation(angle);
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r);
+        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         Assert.assertTrue(stream.contains("/GS0106079 gs"));
         Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
         doc.close();

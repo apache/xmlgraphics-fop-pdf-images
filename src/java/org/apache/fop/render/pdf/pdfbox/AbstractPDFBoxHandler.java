@@ -52,8 +52,8 @@ public abstract class AbstractPDFBoxHandler {
     protected Object createStreamForPDF(ImagePDF image, PDFPage targetPage, FOUserAgent userAgent,
                                         AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect,
                                         Map<String, Object> usedFieldNames, Map<Integer, PDFArray> pageNumbers,
-                                        PDFLogicalStructureHandler handler,
-                                        PDFStructElem curentSessionElem) throws IOException {
+                                        PDFLogicalStructureHandler handler, PDFStructElem curentSessionElem,
+                                        AffineTransform generatorAT) throws IOException {
 
         EventBroadcaster eventBroadcaster = null;
         if (userAgent != null) {
@@ -107,8 +107,8 @@ public abstract class AbstractPDFBoxHandler {
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }
-        Object stream =
-                adapter.createStreamFromPDFBoxPage(srcDoc, srcPage, originalImageUri, pageAdjust, fontinfo, destRect);
+        Object stream = adapter.createStreamFromPDFBoxPage(
+                srcDoc, srcPage, originalImageUri, pageAdjust, fontinfo, destRect, generatorAT);
         if (userAgent.isAccessibilityEnabled() && curentSessionElem != null) {
             TaggedPDFConductor conductor = new TaggedPDFConductor(curentSessionElem, handler, srcPage, adapter);
             conductor.handleLogicalStructure(srcDoc);

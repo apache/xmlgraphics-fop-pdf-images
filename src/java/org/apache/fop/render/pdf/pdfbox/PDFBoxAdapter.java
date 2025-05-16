@@ -171,14 +171,16 @@ public class PDFBoxAdapter {
      * @param pageAdjust adjustment for annotations
      * @param fontinfo fonts
      * @param destRect rectangle
+     * @param generatorAT generator transform
      * @return the stream
      * @throws IOException if an I/O error occurs
      */
     public Object createStreamFromPDFBoxPage(PDDocument sourceDoc, PDPage sourcePage, String key,
-                                             AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect)
-        throws IOException {
+                                             AffineTransform pageAdjust, FontInfo fontinfo, Rectangle destRect,
+                                             AffineTransform generatorAT) throws IOException {
         COSDictionary sourcePageResources = getResources(sourcePage);
-        PatternUtil patternUtil = new PatternUtil(targetPage, destRect, sourcePage, pdfDoc.isFormXObjectEnabled());
+        PatternUtil patternUtil =
+                new PatternUtil(targetPage, destRect, sourcePage, pdfDoc.isFormXObjectEnabled(), generatorAT);
         uniqueName = new UniqueName(
                 key, sourcePageResources, patternUtil.getPatternNames(), pdfDoc.isFormXObjectEnabled(), destRect);
         key = patternUtil.getKey(key);
@@ -477,7 +479,7 @@ public class PDFBoxAdapter {
          */
     }
 
-    private void handleAnnotations(PDDocument sourceDoc, PDPage page, AffineTransform at, Rectangle pos)
+    private void handleAnnotations(PDDocument sourceDoc, PDPage page, AffineTransform pageAdjust, Rectangle pos)
         throws IOException {
         PDDocumentCatalog srcCatalog = sourceDoc.getDocumentCatalog();
         PDAcroForm srcAcroForm = srcCatalog.getAcroForm();
@@ -486,7 +488,7 @@ public class PDFBoxAdapter {
             return;
         }
 
-        PDFBoxAdapterUtil.moveAnnotations(page, pageAnnotations, at, pos);
+        PDFBoxAdapterUtil.moveAnnotations(page, pageAnnotations, pageAdjust, pos);
 
         //Pseudo-cache the target page in place of the original source page.
         //This essentially replaces the original page reference with the target page.

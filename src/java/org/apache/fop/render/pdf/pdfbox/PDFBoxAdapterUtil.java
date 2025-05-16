@@ -132,23 +132,23 @@ public final class PDFBoxAdapterUtil {
         return null;
     }
 
-    protected static void rotate(int rotation, PDRectangle viewBox, AffineTransform atdoc) {
+    protected static void rotate(int rotation, PDRectangle viewBox, AffineTransform pageAdjust) {
         float w = viewBox.getWidth();
         float h = viewBox.getHeight();
         float x = viewBox.getLowerLeftX();
         float y = viewBox.getLowerLeftY();
         switch (rotation) {
             case 90:
-                atdoc.rotate(Math.toRadians(rotation + 180), x, y);
-                atdoc.translate(-h, 0);
+                pageAdjust.rotate(Math.toRadians(rotation + 180), x, y);
+                pageAdjust.translate(-h, 0);
                 break;
             case 180:
-                atdoc.translate(w, h);
-                atdoc.rotate(Math.toRadians(rotation), x, y);
+                pageAdjust.translate(w, h);
+                pageAdjust.rotate(Math.toRadians(rotation), x, y);
                 break;
             case 270:
-                atdoc.rotate(Math.toRadians(rotation + 180), x, h + y);
-                atdoc.translate(-w, 0);
+                pageAdjust.rotate(Math.toRadians(rotation + 180), x, h + y);
+                pageAdjust.translate(-w, 0);
                 break;
             default:
                 //no additional transformations necessary
@@ -175,15 +175,16 @@ public final class PDFBoxAdapterUtil {
         }
     }
 
-    protected static void moveAnnotations(PDPage page, List pageAnnotations, AffineTransform at, Rectangle pos) {
+    protected static void moveAnnotations(
+            PDPage page, List pageAnnotations, AffineTransform pageAdjust, Rectangle pos) {
         PDRectangle mediaBox = page.getMediaBox();
         PDRectangle cropBox = page.getCropBox();
         PDRectangle viewBox = cropBox != null ? cropBox : mediaBox;
         for (Object obj : pageAnnotations) {
             PDAnnotation annot = (PDAnnotation) obj;
             PDRectangle rect = annot.getRectangle();
-            float translateX = (float) (at.getTranslateX() - viewBox.getLowerLeftX());
-            float translateY = (float) (at.getTranslateY() - viewBox.getLowerLeftY());
+            float translateX = (float) (pageAdjust.getTranslateX() - viewBox.getLowerLeftX());
+            float translateY = (float) (pageAdjust.getTranslateY() - viewBox.getLowerLeftY());
             if (rect != null) {
                 rect.setUpperRightX(rect.getUpperRightX() + translateX);
                 rect.setLowerLeftX(rect.getLowerLeftX() + translateX);
