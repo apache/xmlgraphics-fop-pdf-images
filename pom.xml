@@ -218,6 +218,12 @@
         <enabled>false</enabled>
       </snapshots>
     </repository>
-  </repositories>  
+  </repositories>
+  <distributionManagement>
+    <snapshotRepository>
+      <id>apache.snapshots.https</id>
+      <url>https://repository.apache.org/content/repositories/snapshots</url>
+    </snapshotRepository>
+  </distributionManagement>
 
 </project>
