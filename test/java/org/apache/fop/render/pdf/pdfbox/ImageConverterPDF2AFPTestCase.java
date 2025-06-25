@@ -16,6 +16,8 @@
  */
 package org.apache.fop.render.pdf.pdfbox;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,7 +35,7 @@ public class ImageConverterPDF2AFPTestCase {
     @Test
     public void testConverter() throws Exception {
         PDDocument orgdoc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.ANNOT);
-        String orgPage = IOUtils.toString(orgdoc.getPage(1).getContents(), "utf8");
+        String orgPage = IOUtils.toString(orgdoc.getPage(1).getContents(), StandardCharsets.UTF_8);
         Assert.assertEquals(orgdoc.getNumberOfPages(), 2);
         ImageInfo info = new ImageInfo("x.pdf#page=2", ImagePDF.MIME_PDF);
         ImagePDF imagePDF = new ImagePDF(info, orgdoc);
@@ -41,7 +43,7 @@ public class ImageConverterPDF2AFPTestCase {
         ImageRawStream stream = (ImageRawStream) converter.convert(imagePDF, null);
         PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(stream.createInputStream()));
         PDPage page = doc.getPage(0);
-        Assert.assertEquals(orgPage, IOUtils.toString(page.getContents(), "utf8"));
+        Assert.assertEquals(orgPage, IOUtils.toString(page.getContents(), StandardCharsets.UTF_8));
         Assert.assertEquals(doc.getNumberOfPages(), 1);
         Assert.assertEquals(stream.getMimeType(), ImagePDF.MIME_PDF);
         orgdoc.close();

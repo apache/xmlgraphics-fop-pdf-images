@@ -22,6 +22,7 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.output.CountingOutputStream;
 
@@ -97,7 +98,7 @@ public class PDFString extends PDFObject {
             try {
                 byte[] binary;
                 if (unicode16) {
-                    byte[] data = this.text.getBytes("UTF-16BE");
+                    byte[] data = this.text.getBytes(StandardCharsets.UTF_16BE);
                     binary = new byte[data.length + 2];
                     binary[0] = (byte)0xFE;
                     binary[1] = (byte)0xFF;

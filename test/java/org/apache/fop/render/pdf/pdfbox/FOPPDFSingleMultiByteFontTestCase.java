@@ -19,6 +19,7 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -82,7 +83,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         Assert.assertEquals(sbfont.getFontName(), "MyriadPro-Regular_Type1f0encstdcs");
         Assert.assertEquals(sbfont.getEncodingName(), "WinAnsiEncoding");
         Assert.assertEquals(sbfont.mapChar('W'), 'W');
-        String x = IOUtils.toString(sbfont.getInputStream(), "utf8");
+        String x = IOUtils.toString(sbfont.getInputStream(), StandardCharsets.UTF_8);
         Assert.assertTrue(x, x.contains("Adobe Systems"));
         Assert.assertEquals(sbfont.getEncoding().getName(), "FOPPDFEncoding");
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("A"));
