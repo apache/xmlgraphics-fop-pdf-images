@@ -34,6 +34,7 @@ import org.apache.fontbox.cmap.CMap;
 
 import org.apache.fontbox.ttf.CmapSubtable;
 import org.apache.fontbox.ttf.GlyphData;
+import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.ttf.TrueTypeFont;
 
 import org.apache.pdfbox.cos.COSArray;
@@ -42,6 +43,7 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
 
+import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDFontDescriptor;
@@ -51,6 +53,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.encoding.BuiltInEncoding;
 import org.apache.pdfbox.pdmodel.font.encoding.Encoding;
 
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.EmbeddingMode;
 import org.apache.fop.fonts.FontType;
 import org.apache.fop.fonts.SingleByteEncoding;
@@ -74,9 +77,12 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private String shortFontName;
     private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
     private PDFMergeFontsParams params;
+    private EventBroadcaster eventBroadcaster;
 
-    public FOPPDFSingleByteFont(COSDictionary fontData, String name, PDFMergeFontsParams params) throws IOException {
+    public FOPPDFSingleByteFont(COSDictionary fontData, String name, EventBroadcaster eventBroadcaster,
+                                PDFMergeFontsParams params) throws IOException {
         super(null, EmbeddingMode.FULL);
+        this.eventBroadcaster = eventBroadcaster;
         this.params = params;
         if (fontData.getItem(COSName.SUBTYPE) == COSName.TRUE_TYPE) {
             setFontType(FontType.TRUETYPE);
@@ -522,7 +528,14 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     }
 
     public InputStream getInputStream() throws IOException {
-        return new ByteArrayInputStream(mergeFonts.getMergedFontSubset());
+        List<MergeTTFonts.Cmap> localCmaps = duplicateCmaps();
+        byte[] mergedFontSubset = mergeFonts.getMergedFontSubset();
+
+        // we are validating the codebase maps first because they are merged when we call the
+        // getMergedFontSubset method, meaning it would be impossible to validate them after
+        validateCharacterCodeMap(localCmaps, mergedFontSubset);
+
+        return new ByteArrayInputStream(mergedFontSubset);
     }
 
     protected FontContainer getFont(COSDictionary fontData) throws IOException {
@@ -565,5 +578,121 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
             }
         }
         return null;
+    }
+
+    public void validateCharacterCodeMap(List<MergeTTFonts.Cmap> localCmaps, byte[] mergedFontSubset)
+            throws IOException {
+        if (font.getFont() instanceof PDTrueTypeFont) {
+            TTFParser parser = new TTFParser();
+            TrueTypeFont mergedFont = parser.parse(new RandomAccessReadBuffer(mergedFontSubset));
+            for (MergeTTFonts.Cmap cmap : localCmaps) {
+                boolean validateMap = validateGlyphIdToCharacterCode(mergedFont, cmap);
+                if (!validateMap) {
+                    return;
+                }
+
+                validateMap = validateGlyphIdToCharacterCodeBase(cmap);
+                if (!validateMap) {
+                    return;
+                }
+
+                validateMap = validateGetGlyphIdToCharacterCode(cmap);
+                if (!validateMap) {
+                    return;
+                }
+            }
+
+            validateUniqueCharacterCode(mergedFont);
+        }
+    }
+
+    private boolean validateGetGlyphIdToCharacterCode(MergeTTFonts.Cmap cmap) {
+        MergeTTFonts.Cmap localCmap = new MergeTTFonts.Cmap(0, 0);
+        localCmap.glyphIdToCharacterCode = new TreeMap<>(cmap.glyphIdToCharacterCode);
+        localCmap.glyphIdToCharacterCodeBase = new HashMap<>(cmap.glyphIdToCharacterCodeBase);
+
+        for (Map.Entry<Integer, Integer> entry : localCmap.getGlyphIdToCharacterCode().entrySet()) {
+            if (entryNotInCodebaseMap(cmap.glyphIdToCharacterCode, entry)
+                    && entryNotInCodebaseMap(cmap.glyphIdToCharacterCodeBase, entry)) {
+                PDFBoxEventProducer.Provider.get(eventBroadcaster)
+                        .invalidGlyphId(this, shortFontName, entry.getValue());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean entryNotInCodebaseMap(Map<Integer, Integer> codebaseMap, Map.Entry<Integer, Integer> entry) {
+        return !codebaseMap.containsKey(entry.getKey()) || !codebaseMap.get(entry.getKey()).equals(entry.getValue());
+    }
+
+    private boolean validateGlyphIdToCharacterCode(TrueTypeFont mergedFont, MergeTTFonts.Cmap localCmap)
+            throws IOException {
+        if (localCmap.glyphIdToCharacterCode.containsValue(0)) {
+            PDFBoxEventProducer.Provider.get(eventBroadcaster).invalidGlyphId(this, shortFontName, 0);
+            return false;
+        }
+
+        // each glyphId is only part of one map
+        for (Map.Entry<Integer, Integer> entry : localCmap.glyphIdToCharacterCode.entrySet()) {
+            int index = entry.getKey();
+            int gid = entry.getValue();
+
+            GlyphData glyphData = mergedFont.getGlyph().getGlyph(gid);
+            if (glyphData == null && index != 32) {
+                PDFBoxEventProducer.Provider.get(eventBroadcaster).glyphDataMissing(this, shortFontName, gid);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean validateGlyphIdToCharacterCodeBase(MergeTTFonts.Cmap localCmap) {
+        if (localCmap.glyphIdToCharacterCodeBase.containsValue(0)) {
+            PDFBoxEventProducer.Provider.get(eventBroadcaster).invalidGlyphId(this, shortFontName, 0);
+            return false;
+        }
+
+        return true;
+    }
+
+    private List<MergeTTFonts.Cmap> duplicateCmaps() {
+        List<MergeTTFonts.Cmap> localCmaps = new ArrayList<>();
+        for (MergeTTFonts.Cmap cmap : newCmap) {
+            MergeTTFonts.Cmap localCmap = new MergeTTFonts.Cmap(cmap.platformId, cmap.platformEncodingId);
+            if (cmap.glyphIdToCharacterCodeBase != null) {
+                localCmap.glyphIdToCharacterCodeBase.putAll(cmap.glyphIdToCharacterCodeBase);
+            }
+            if (cmap.glyphIdToCharacterCode != null) {
+                localCmap.glyphIdToCharacterCode.putAll(cmap.glyphIdToCharacterCode);
+            }
+
+            localCmaps.add(localCmap);
+        }
+
+        return localCmaps;
+    }
+
+    private void validateUniqueCharacterCode(TrueTypeFont mergedFont) throws IOException {
+        for (CmapSubtable cmapSubtable : mergedFont.getCmap().getCmaps()) {
+            Map<Integer, Integer> map = new HashMap<>();
+            for (int characterCode = getFirstChar(); characterCode <= 'z'; characterCode++) {
+                int gid = cmapSubtable.getGlyphId(characterCode);
+                GlyphData glyphData = mergedFont.getGlyph().getGlyph(gid);
+
+                if (gid != 0 && glyphData != null) {
+                    if (map.containsKey(gid)) {
+                        PDFBoxEventProducer.Provider.get(eventBroadcaster)
+                                .characterCodesSharingGlyphId(this, shortFontName,
+                                        String.valueOf((char) map.get(gid).intValue()),
+                                        String.valueOf((char) characterCode), gid);
+                        return;
+                    } else {
+                        map.put(gid, characterCode);
+                    }
+                }
+            }
+        }
     }
 }

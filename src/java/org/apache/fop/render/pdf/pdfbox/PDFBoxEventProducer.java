@@ -71,4 +71,47 @@ interface PDFBoxEventProducer extends EventProducer {
      * @event.severity WARN
      */
     void pdfXActive(Object source);
+
+    /**
+     * Glyph data missing
+     *
+     * @param source the event source
+     * @param fontName the name of the font
+     * @param index the index of the glyph
+     * @event.severity WARN
+     */
+    void glyphDataMissing(Object source, String fontName, int index);
+
+    /**
+     * Glyph index is being used for multiple glyphs
+     *
+     * @param source the event source
+     * @param fontName the name of the font
+     * @param index the index of the glyph
+     * @event.severity WARN
+     */
+    void duplicatedGlyph(Object source, String fontName, int index);
+
+    /**
+     * Invalid glyph ID
+     *
+     * @param source the event source
+     * @param fontName the name of the font
+     * @param index the index of the glyph
+     * @event.severity WARN
+     */
+    void invalidGlyphId(Object source, String fontName, int index);
+
+    /**
+     * Different character codes sharing the smae glyph ID
+     *
+     * @param source the event source
+     * @param fontName the name of the font
+     * @param char1 character 1 pointing to glyph ID
+     * @param char2 character 2 pointing to glyph ID
+     * @param index glyph ID
+     * @event.severity WARN
+     */
+    void characterCodesSharingGlyphId(Object source, String fontName, String char1, String char2, int index);
+
 }

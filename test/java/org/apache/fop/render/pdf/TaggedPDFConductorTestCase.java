@@ -28,7 +28,7 @@ import org.junit.Test;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
-import org.apache.fop.pdf.PDFArray;
+import org.apache.fop.events.DefaultEventBroadcaster;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFName;
@@ -92,8 +92,8 @@ public class TaggedPDFConductorTestCase {
         PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         PDPage srcPage = doc.getPage(0);
         elem.setObjectNumber(2);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(
-                pdfPage, new HashMap<>(),  new HashMap<Integer, PDFArray>());
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(),  new HashMap<>(), new HashMap<>(),
+                new HashMap<>(), new DefaultEventBroadcaster());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
         doc.close();

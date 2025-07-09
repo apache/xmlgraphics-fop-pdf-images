@@ -19,11 +19,14 @@ package org.apache.fop.render.pdf.pdfbox;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.io.IOUtils;
@@ -51,6 +54,7 @@ import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.encoding.GlyphList;
 
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.CIDFontType;
 import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.EmbeddingMode;
@@ -66,8 +70,10 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
     private MergeFonts mergeFonts;
     //private Map<String, GlyphData> glyphs = new HashMap<String, GlyphData>();
     private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
+    private EventBroadcaster eventBroadcaster;
 
-    public FOPPDFMultiByteFont(COSDictionary fontData, String name) throws IOException {
+    public FOPPDFMultiByteFont(COSDictionary fontData, String name, EventBroadcaster eventBroadcaster)
+        throws IOException {
         super(null, EmbeddingMode.SUBSET);
         //this stops fop modifying font later on
         setEmbeddingMode(EmbeddingMode.FULL);
@@ -75,6 +81,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         setFontName(name);
         addFont(fontData);
         notifyMapOperation();
+        this.eventBroadcaster = eventBroadcaster;
     }
 
     public String addFont(COSDictionary fontData) throws IOException {
@@ -349,6 +356,8 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
     }
 
     public InputStream getInputStream() throws IOException {
+        validate();
+
         return new ByteArrayInputStream(mergeFonts.getMergedFontSubset());
     }
 
@@ -410,5 +419,19 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             }
         }
         return "<" + newHex.toString() + ">";
+    }
+
+    private void validate() {
+        Collection<Integer> indexes = charMapGlobal.values();
+        Set<Integer> indexesSet = new HashSet<>();
+
+        for (Integer index : indexes) {
+            if (indexesSet.contains(index)) {
+                PDFBoxEventProducer.Provider.get(eventBroadcaster).duplicatedGlyph(this, getFontName(), index);
+                return;
+            } else {
+                indexesSet.add(index);
+            }
+        }
     }
 }

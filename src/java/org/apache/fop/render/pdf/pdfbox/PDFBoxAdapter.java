@@ -51,6 +51,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFArray;
@@ -86,20 +87,20 @@ public class PDFBoxAdapter {
     protected int currentMCID;
     protected UniqueName uniqueName;
     private HandleAnnotations handleAnnotations;
+    private EventBroadcaster eventBroadcaster;
 
     /**
      * Creates a new PDFBoxAdapter.
      * @param targetPage The target FOP PDF page object
      * @param objectCachePerFile the object cache for reusing objects shared by multiple pages.
+     * @param usedFields annotations used fields
      * @param pageNumbers references to page object numbers
+     * @param objectCache object cache
+     * @param eventBroadcaster event broadcaster
      */
-    public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile,
-                         Map<Integer, PDFArray> pageNumbers) {
-        this(targetPage, objectCachePerFile, null, pageNumbers, new HashMap<>());
-    }
-
     public PDFBoxAdapter(PDFPage targetPage, Map<Object, Object> objectCachePerFile, Map<String, Object> usedFields,
-                         Map<Integer, PDFArray> pageNumbers, Map<Object, Object> objectCache) {
+                         Map<Integer, PDFArray> pageNumbers, Map<Object, Object> objectCache,
+                         EventBroadcaster eventBroadcaster) {
         this.targetPage = targetPage;
         this.pdfDoc = this.targetPage.getDocument();
         this.clonedVersion = objectCachePerFile;
@@ -110,6 +111,8 @@ public class PDFBoxAdapter {
         } else {
             handleAnnotations = new CloneAnnotations(this);
         }
+        this.eventBroadcaster = eventBroadcaster;
+        this.uniqueName = null;
     }
 
     public PDFPage getTargetPage() {
@@ -196,7 +199,7 @@ public class PDFBoxAdapter {
         if (fonts != null && pdfDoc.getMergeFontsParams() != null) {
             fontsBackup = new COSDictionary(fonts);
             MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID,
-                    pdfDoc.getMergeFontsParams());
+                    eventBroadcaster, pdfDoc.getMergeFontsParams());
             newStream = m.writeText(pdStream);
         }
         if (!pdfDoc.isFormXObjectEnabled()) {
@@ -393,7 +396,7 @@ public class PDFBoxAdapter {
                             }
                         }
                         PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName, parentFonts, 0,
-                                pdfDoc.getMergeFontsParams());
+                                eventBroadcaster, pdfDoc.getMergeFontsParams());
                         String c = writer.writeText(new PDStream(stream));
                         if (c != null) {
                             stream.removeItem(COSName.FILTER);

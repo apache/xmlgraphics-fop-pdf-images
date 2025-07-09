@@ -102,8 +102,8 @@ public abstract class AbstractPDFBoxHandler {
         }
 
         Map<Object, Object> objectCache = getObjectCache(getClass().getName(), userAgent);
-        PDFBoxAdapter adapter =
-                new PDFBoxAdapter(targetPage, objectCachePerFile, usedFieldNames, pageNumbers, objectCache);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(targetPage, objectCachePerFile, usedFieldNames, pageNumbers,
+                objectCache, eventBroadcaster);
         if (handler != null) {
             adapter.setCurrentMCID(handler.getPageParentTree().length());
         }

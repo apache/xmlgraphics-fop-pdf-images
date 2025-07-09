@@ -4,4 +4,8 @@
   <message key="encryptedPdf">PDF to be embedded must not be encrypted!</message>
   <message key="pdfAActive">PDF/A mode is active. Embedding a PDF file may result in a non-compliant file!</message>
   <message key="pdfXActive">PDF/X mode is active. Embedding a PDF file may result in a non-compliant file!</message>
+  <message key="glyphDataMissing">Merged font {fontName} has no data for glyph index {index}.</message>
+  <message key="duplicatedGlyph">Merged font {fontName} has glyph index {index} duplicated in the char map.</message>
+  <message key="invalidGlyphId">Glyph index {index} is invalid for merged font {fontName}.</message>
+  <message key="characterCodesSharingGlyphId">Characters {char1} and {char2} sharing the same glyph index {index} for merged font {fontName}.</message>
 </catalogue>

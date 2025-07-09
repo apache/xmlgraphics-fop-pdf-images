@@ -50,6 +50,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
+import org.apache.fop.events.DefaultEventBroadcaster;
 import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.FontType;
@@ -80,6 +81,8 @@ public class FontMergeTestCase {
     protected static final String TTSubset8 = "ttsubset8.pdf";
     protected static final String TTSubset9 = "ttsubset9.pdf";
     protected static final String TTSubset10 = "ttsubset10.pdf";
+    protected static final String TTSubset14 = "ttsubset14.pdf";
+    protected static final String TTSubset15 = "ttsubset15.pdf";
     protected static final String CFFCID1 = "cffcid1.pdf";
     protected static final String CFFCID2 = "cffcid2.pdf";
     protected static final String Type1Subset1 = "t1subset.pdf";
@@ -203,7 +206,8 @@ public class FontMergeTestCase {
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), pageNumbers);
+        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<>(), pageNumbers,
+                new HashMap<>(), new DefaultEventBroadcaster());
         PDDocument doc = PDFBoxAdapterTestCase.load(XFORM);
         PDPage page = doc.getPage(0);
         AffineTransform pageAdjust = new AffineTransform();

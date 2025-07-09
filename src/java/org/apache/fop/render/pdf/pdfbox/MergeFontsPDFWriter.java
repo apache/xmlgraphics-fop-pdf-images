@@ -52,6 +52,7 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1CFont;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.fonts.truetype.OTFSubSetFile;
@@ -70,14 +71,17 @@ public class MergeFontsPDFWriter extends PDFWriter {
     private static final Pattern SUBSET_PATTERN = Pattern.compile("[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]\\+.+");
     private Collection<String> parentFonts;
     private PDFMergeFontsParams params;
+    private EventBroadcaster eventBroadcaster;
 
     public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, UniqueName key,
-                               Collection<String> parentFonts, int mcid, PDFMergeFontsParams params) {
+                               Collection<String> parentFonts, int mcid, EventBroadcaster eventBroadcaster,
+                               PDFMergeFontsParams params) {
         super(key, mcid);
         this.fonts = fonts;
         this.fontInfo = fontInfo;
         this.parentFonts = parentFonts;
         this.params = params;
+        this.eventBroadcaster = eventBroadcaster;
     }
 
     public String writeText(PDStream pdStream) throws IOException {
@@ -147,9 +151,9 @@ public class MergeFontsPDFWriter extends PDFWriter {
             }
             if (base.endsWith("cid") || fontData.getItem(COSName.SUBTYPE) != COSName.TYPE1
                     && fontData.getItem(COSName.SUBTYPE) != COSName.TRUE_TYPE) {
-                fontinfo.addMetrics(base, new FOPPDFMultiByteFont(fontData, base));
+                fontinfo.addMetrics(base, new FOPPDFMultiByteFont(fontData, base, eventBroadcaster));
             } else {
-                fontinfo.addMetrics(base, new FOPPDFSingleByteFont(fontData, base, params));
+                fontinfo.addMetrics(base, new FOPPDFSingleByteFont(fontData, base, eventBroadcaster, params));
             }
         } catch (IOException e) {
             log.warn(e.getMessage());

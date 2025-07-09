@@ -40,6 +40,8 @@ import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 
+import org.apache.fop.events.DefaultEventBroadcaster;
+
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
@@ -76,7 +78,8 @@ public class StructureTreeMergerTestCase {
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new DefaultEventBroadcaster());
         adapter.setCurrentMCID(1);
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
@@ -97,7 +100,8 @@ public class StructureTreeMergerTestCase {
         markedContentParents.add(0, null);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new DefaultEventBroadcaster());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -114,7 +118,8 @@ public class StructureTreeMergerTestCase {
         COSArray markedContentParents = finder.getPageParentTreeArray(doc);
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new DefaultEventBroadcaster());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -199,7 +204,8 @@ public class StructureTreeMergerTestCase {
         COSArray kids = (COSArray) dict.getDictionaryObject(COSName.K);
         COSDictionary kid = (COSDictionary) kids.get(1);
         kid.setItem(COSName.OBJ, nullObj);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new DefaultEventBroadcaster());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
         merger.copyStructure(markedContentParents);
@@ -214,7 +220,8 @@ public class StructureTreeMergerTestCase {
     public void testDirectDescedants() throws IOException {
         PDFStructElem elem = new PDFStructElem();
         elem.setObjectNumber(100);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new DefaultEventBroadcaster());
         PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
         PDPage srcPage = new PDPage();
         StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
@@ -235,7 +242,8 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testEmptyDict() throws IOException {
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<Integer, PDFArray>());
+        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                new DefaultEventBroadcaster());
         StructureTreeMerger structureTreeMerger = new StructureTreeMerger(null, null, adapter, null);
         COSArray cosArray = new COSArray();
         COSObject o = new COSObject(new COSDictionary());

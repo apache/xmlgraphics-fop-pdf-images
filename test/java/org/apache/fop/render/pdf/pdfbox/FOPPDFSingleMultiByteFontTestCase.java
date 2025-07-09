@@ -32,6 +32,14 @@ import java.util.TreeSet;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
@@ -56,6 +64,8 @@ import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
 import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
+import org.apache.fop.events.DefaultEventBroadcaster;
+import org.apache.fop.events.EventBroadcaster;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.pdf.PDFMergeFontsParams;
 
@@ -75,7 +85,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
     public void testCFF() throws Exception {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.CFF1);
         FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "R11"),
-                "MyriadPro-Regular_Type1f0encstdcs", params);
+                "MyriadPro-Regular_Type1f0encstdcs", new DefaultEventBroadcaster(), params);
 
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("bracketright"));
         Assert.assertTrue(!Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("A"));
@@ -110,7 +120,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
     public void testCFF2() throws Exception {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.CFF3);
         FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "T1_0"),
-                "Myriad_Pro_Type1f0encf1cs", params);
+                "Myriad_Pro_Type1f0encf1cs", new DefaultEventBroadcaster(), params);
         Assert.assertTrue(Arrays.asList(sbfont.getEncoding().getCharNameMap()).contains("uni004E"));
         Assert.assertEquals(sbfont.getFontName(), "Myriad_Pro_Type1f0encf1cs");
         Assert.assertEquals(sbfont.getEncodingName(), null);
@@ -128,7 +138,8 @@ public class FOPPDFSingleMultiByteFontTestCase {
     public void testTTCID() throws Exception {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTCID1);
         final String font = "ArialMT_Type0";
-        FOPPDFMultiByteFont mbfont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"), font);
+        FOPPDFMultiByteFont mbfont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"), font,
+                new DefaultEventBroadcaster());
         mbfont.addFont(getFont(doc, "C2_0"));
         Assert.assertEquals(mbfont.mapChar('t'), 85);
 
@@ -146,7 +157,8 @@ public class FOPPDFSingleMultiByteFontTestCase {
     public void testTTSubset() throws Exception {
         final String font = "TimesNewRomanPSMT_TrueType";
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset1);
-        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "R9"), font, params);
+        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "R9"), font,
+                new DefaultEventBroadcaster(), params);
         mbfont.addFont(getFont(doc, "R9"));
 //        Assert.assertEquals(mbfont.mapChar('t'), 116);
 
@@ -170,7 +182,8 @@ public class FOPPDFSingleMultiByteFontTestCase {
     @Test
     public void testType1Subset() throws Exception {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.Type1Subset1);
-        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "F15"), "", params);
+        FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "F15"), "",
+                new DefaultEventBroadcaster(), params);
         mbfont.addFont(getFont(doc, "F15"));
         PDDocument doc2 = PDFBoxAdapterTestCase.load(FontMergeTestCase.Type1Subset2);
         mbfont.addFont(getFont(doc2, "F15"));
@@ -188,7 +201,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         PDDocument pdf = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTCID1);
         COSDictionary font = getFont(pdf, "C2_0");
         font.removeItem(COSName.TO_UNICODE);
-        FOPPDFMultiByteFont multiByteFont = new FOPPDFMultiByteFont(font, null);
+        FOPPDFMultiByteFont multiByteFont = new FOPPDFMultiByteFont(font, null, new DefaultEventBroadcaster());
         Assert.assertTrue(multiByteFont.hadMappingOperations());
         pdf.close();
     }
@@ -210,7 +223,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
     private static class MyFOPPDFMultiByteFont extends FOPPDFMultiByteFont {
         COSDictionary fontData;
         MyFOPPDFMultiByteFont(COSDictionary fontData, String name) throws IOException {
-            super(fontData, name);
+            super(fontData, name, new DefaultEventBroadcaster());
             this.fontData = fontData;
         }
         FontContainer getFontContainer() throws IOException {
@@ -230,7 +243,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
 
     private static class NoAddFontFOPPDFMultiByteFont extends FOPPDFMultiByteFont {
         NoAddFontFOPPDFMultiByteFont(COSDictionary fontData, String name) throws IOException {
-            super(fontData, name);
+            super(fontData, name, new DefaultEventBroadcaster());
         }
         public String addFont(COSDictionary fontData) {
             return null;
@@ -240,7 +253,8 @@ public class FOPPDFSingleMultiByteFontTestCase {
     @Test
     public void testCmapFormat() throws Exception {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset10);
-        FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "test", params);
+        FOPPDFSingleByteFont sbfont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "test",
+                new DefaultEventBroadcaster(), params);
         byte[] bytes = IOUtils.toByteArray(sbfont.getInputStream());
         TrueTypeFont trueTypeFont = new TTFParser().parse(new RandomAccessReadBuffer(bytes));
         CmapTable ttfTable = (CmapTable) trueTypeFont.getTableMap().get("cmap");
@@ -279,7 +293,8 @@ public class FOPPDFSingleMultiByteFontTestCase {
     @Test
     public void testTTMergeGlyphs() throws IOException {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset3);
-        FOPPDFSingleByteFont sbFont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "ArialMT_TrueTypecidcmap1", params);
+        FOPPDFSingleByteFont sbFont = new FOPPDFSingleByteFont(getFont(doc, "F1"), "ArialMT_TrueTypecidcmap1",
+                new DefaultEventBroadcaster(), params);
         PDDocument doc2 = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset5);
         sbFont.addFont(getFont(doc2, "F1"));
         doc.close();
@@ -298,7 +313,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset3);
         final int[] calls = {0};
         FOPPDFSingleByteFont mbfont = new FOPPDFSingleByteFont(getFont(doc, "F1"),
-                "ArialMT_TrueTypecidcmap2", params) {
+                "ArialMT_TrueTypecidcmap2", new DefaultEventBroadcaster(), params) {
             protected void readCmapEntry(Map.Entry<Integer, Integer> entry, TrueTypeFont ttfont,
                                          MergeTTFonts.Cmap tempCmap,
                                          Map<Integer, Integer> oldToNewGIMapPerFont) throws IOException {
@@ -311,6 +326,49 @@ public class FOPPDFSingleMultiByteFontTestCase {
         doc.close();
         doc2.close();
         Assert.assertEquals(calls[0], 512);
+    }
+
+    @Test
+    public void testNoEOFOnValidation() throws IOException {
+        PDDocument doc = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset1);
+        PDDocument doc2 = PDFBoxAdapterTestCase.load(FontMergeTestCase.TTSubset5);
+
+        PDFBoxEventProducer eventProducer = mock(PDFBoxEventProducer.class);
+        FOPPDFSingleByteFont sbFont = new FOPPDFSingleByteFont(getFont(doc, "R11"), "QOYQBZ+TimesNewRomanPSMT",
+                getEventBroadcaster(eventProducer), params);
+        sbFont.addFont(getFont(doc2, "F1"));
+
+        doc.close();
+        doc2.close();
+
+        sbFont.getInputStream();
+        verifyNoEvents(eventProducer);
+    }
+
+    @Test
+    public void testValidationMultiByteFont() throws IOException {
+        PDDocument doc = PDFBoxAdapterTestCase.load("ttsubset11.pdf");
+        PDDocument doc2 = PDFBoxAdapterTestCase.load("ttsubset12.pdf");
+
+        PDFBoxEventProducer eventProducer = mock(PDFBoxEventProducer.class);
+
+        FOPPDFMultiByteFont sbFont = new FOPPDFMultiByteFont(getFont(doc, "C2_0"), "CIDFont+F2",
+                getEventBroadcaster(eventProducer));
+        sbFont.addFont(getFont(doc2, "C2_1"));
+
+        doc.close();
+        doc2.close();
+
+        sbFont.getInputStream();
+        verifyNoEvents(eventProducer);
+    }
+
+    @Test
+    public void testValidationSingleByteFont() throws IOException {
+        validateSingleByteFont(FontMergeTestCase.TTSubset3, FontMergeTestCase.TTSubset5,
+                "QOYQBZ+TimesNewRomanPSMT", "F1", true);
+        validateSingleByteFont(FontMergeTestCase.TTSubset14, FontMergeTestCase.TTSubset15,
+                "Montserrat-Regular", "TT1", true);
     }
 
     @Test
@@ -392,10 +450,24 @@ public class FOPPDFSingleMultiByteFontTestCase {
         PDDocument doc = PDFBoxAdapterTestCase.load(firstFile);
         PDDocument doc2 = PDFBoxAdapterTestCase.load(secondFile);
         FOPPDFSingleByteFont sbFont = new FOPPDFSingleByteFont(getFont(doc, internalName), fontName,
-                new PDFMergeFontsParams(remapFont));
+                new DefaultEventBroadcaster(), new PDFMergeFontsParams(remapFont));
         sbFont.addFont(getFont(doc2, internalName));
         doc.close();
         doc2.close();
         return sbFont.getInputStream();
+    }
+
+    private EventBroadcaster getEventBroadcaster(PDFBoxEventProducer eventProducer) {
+        EventBroadcaster eventBroadcaster = mock(EventBroadcaster.class);
+        when(eventBroadcaster.getEventProducerFor(PDFBoxEventProducer.class)).thenReturn(eventProducer);
+        return eventBroadcaster;
+    }
+
+    private void verifyNoEvents(PDFBoxEventProducer eventProducer) {
+        verify(eventProducer, times(0)).duplicatedGlyph(any(), anyString(), anyInt());
+        verify(eventProducer, times(0)).invalidGlyphId(any(), anyString(), anyInt());
+        verify(eventProducer, times(0)).glyphDataMissing(any(), anyString(), anyInt());
+        verify(eventProducer, times(0)).characterCodesSharingGlyphId(any(), anyString(),
+                anyString(), anyString(), anyInt());
     }
 }
