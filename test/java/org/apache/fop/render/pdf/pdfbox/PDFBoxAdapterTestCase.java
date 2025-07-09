@@ -24,13 +24,10 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -45,14 +42,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.fontbox.cff.CFFCharset;
-import org.apache.fontbox.cff.CFFParser;
-import org.apache.fontbox.cff.CFFType1Font;
-import org.apache.fontbox.ttf.GlyphData;
-import org.apache.fontbox.ttf.TTFParser;
-import org.apache.fontbox.ttf.TrueTypeFont;
-import org.apache.fontbox.type1.Type1Font;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -64,8 +53,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
-import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
-import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
@@ -76,17 +63,12 @@ import org.apache.xmlgraphics.java2d.GraphicContext;
 import org.apache.xmlgraphics.ps.PSGenerator;
 
 import org.apache.fop.apps.FOUserAgent;
-import org.apache.fop.fonts.CustomFont;
 import org.apache.fop.fonts.FontInfo;
-import org.apache.fop.fonts.FontType;
-import org.apache.fop.fonts.MultiByteFont;
-import org.apache.fop.fonts.Typeface;
 import org.apache.fop.pdf.PDFAnnotList;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
 import org.apache.fop.pdf.PDFEncryptionParams;
-import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFGState;
 import org.apache.fop.pdf.PDFMergeFontsParams;
@@ -102,30 +84,6 @@ import org.apache.fop.render.ps.PSImageFormResource;
 import org.apache.fop.render.ps.PSRenderingUtil;
 
 public class PDFBoxAdapterTestCase {
-    protected static final String CFF1 = "2fonts.pdf";
-    protected static final String CFF2 = "2fonts2.pdf";
-    protected static final String CFF3 = "simpleh.pdf";
-    protected static final String CFFSUBRS = "cffsubrs.pdf";
-    protected static final String CFFSUBRS2 = "cffsubrs2.pdf";
-    protected static final String CFFSUBRS3 = "cffsubrs3.pdf";
-    protected static final String CFFSUBRS4 = "cffsubrs4.pdf";
-    protected static final String TTCID1 = "ttcid1.pdf";
-    protected static final String TTCID2 = "ttcid2.pdf";
-    protected static final String TTSubset1 = "ttsubset.pdf";
-    protected static final String TTSubset2 = "ttsubset2.pdf";
-    protected static final String TTSubset3 = "ttsubset3.pdf";
-    protected static final String TTSubset5 = "ttsubset5.pdf";
-    protected static final String TTSubset6 = "ttsubset6.pdf";
-    protected static final String TTSubset7 = "ttsubset7.pdf";
-    protected static final String TTSubset8 = "ttsubset8.pdf";
-    protected static final String TTSubset9 = "ttsubset9.pdf";
-    protected static final String TTSubset10 = "ttsubset10.pdf";
-    protected static final String CFFCID1 = "cffcid1.pdf";
-    protected static final String CFFCID2 = "cffcid2.pdf";
-    protected static final String Type1Subset1 = "t1subset.pdf";
-    protected static final String Type1Subset2 = "t1subset2.pdf";
-    protected static final String Type1Subset3 = "t1subset3.pdf";
-    protected static final String Type1Subset4 = "t1subset4.pdf";
     protected static final String ROTATE = "rotate.pdf";
     protected static final String ANNOT = "annot.pdf";
     protected static final String ANNOT2 = "annot2.pdf";
@@ -134,20 +92,16 @@ public class PDFBoxAdapterTestCase {
     protected static final String LINK = "link.pdf";
     protected static final String IMAGE = "image.pdf";
     protected static final String HELLOTagged = "taggedWorld.pdf";
-    protected static final String XFORM = "xform.pdf";
     protected static final String LOOP = "loop.pdf";
     protected static final String ERROR = "error.pdf";
     protected static final String LIBREOFFICE = "libreoffice.pdf";
     protected static final String SMASK = "smask.pdf";
-    protected static final String TYPE0TT = "type0tt.pdf";
-    protected static final String TYPE0CFF = "type0cff.pdf";
     protected static final String ACCESSIBLERADIOBUTTONS = "accessibleradiobuttons.pdf";
     protected static final String PATTERN = "pattern.pdf";
-    protected static final String PATTERN2 = "pattern2.pdf";
     protected static final String FORMROTATED = "formrotated.pdf";
     protected static final String SOFTMASK = "softmask.pdf";
 
-    private static PDFPage getPDFPage(PDFDocument doc) {
+    protected static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
         return new PDFPage(new PDFResources(doc), 0, r, r, r, r);
     }
@@ -172,98 +126,6 @@ public class PDFBoxAdapterTestCase {
 
     public static PDDocument load(String pdf) throws IOException {
         return Loader.loadPDF(new RandomAccessReadBuffer(PDFBoxAdapterTestCase.class.getResourceAsStream(pdf)));
-    }
-
-    @Test
-    public void testPDFWriter() throws Exception {
-        FontInfo fi = new FontInfo();
-        String msg = writeText(fi, CFF3);
-        Assert.assertTrue(msg, msg.contains("/Myriad_Pro"));
-        assertEquals(fi.getUsedFonts().size(), 2);
-        msg = writeText(fi, TTSubset1);
-        Assert.assertTrue(msg, msg.contains("<74>-0.168 <65>-0.1523 <73>0.1528 <74>277.832"));
-        msg = writeText(fi, TTSubset2);
-        Assert.assertTrue(msg, msg.contains("(t)-0.168 (e)-0.1523 (s)0.1528 (t)"));
-        msg = writeText(fi, TTSubset3);
-        Assert.assertTrue(msg, msg.contains("[<01>3 <02>-7 <03>] TJ"));
-        msg = writeText(fi, TTSubset5);
-        Assert.assertTrue(msg, msg.contains("[(\u0001)2 (\u0002)-7 (\u0003)] TJ"));
-        msg = writeText(fi, TTCID1);
-        Assert.assertTrue(msg, msg.contains("<0031001100110011001800120012001300140034>"));
-        msg = writeText(fi, TTCID2);
-        Assert.assertTrue(msg, msg.contains("<0031001100110011001800120012001300120034>"));
-        msg = writeText(fi, CFFCID1);
-        Assert.assertTrue(msg, msg.contains("/Fm0-1998009062 Do"));
-        msg = writeText(fi, CFFCID2);
-        Assert.assertTrue(msg, msg.contains("/Fm0-1997085541 Do"));
-        msg = writeText(fi, Type1Subset1);
-        Assert.assertTrue(msg, msg.contains("/Verdana_Type1"));
-        msg = writeText(fi, Type1Subset2);
-        Assert.assertTrue(msg, msg.contains("[(2nd example)] TJ"));
-        msg = writeText(fi, Type1Subset3);
-        Assert.assertTrue(msg, msg.contains("/URWChanceryL-MediItal_Type1 20 Tf"));
-        msg = writeText(fi, Type1Subset4);
-        Assert.assertTrue(msg, msg.contains("/F15_1683747577 40 Tf"));
-        parseFonts(fi);
-    }
-
-    @Test
-    public void testMergeTTCFF() throws IOException {
-        FontInfo fi = new FontInfo();
-        writeText(fi, TYPE0TT);
-        writeText(fi, TYPE0CFF);
-        parseFonts(fi);
-    }
-
-    @Test
-    public void testMergeTT() throws IOException {
-        PDDocument doc = load(TYPE0TT);
-        PDType0Font type0Font = (PDType0Font) doc.getPage(0).getResources().getFont(COSName.getPDFName("C2_0"));
-        PDCIDFontType2 ttf = (PDCIDFontType2) type0Font.getDescendantFont();
-        InputStream originalData = ttf.getTrueTypeFont().getOriginalData();
-        byte[] originalDataBytes = IOUtils.toByteArray(originalData);
-        doc.close();
-
-        MergeTTFonts mergeTTFonts = new MergeTTFonts(null);
-        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
-        map.put(0, 0);
-        mergeTTFonts.readFont(new ByteArrayInputStream(originalDataBytes), null, null, map, true);
-        byte[] mergedData = mergeTTFonts.getMergedFontSubset();
-        Assert.assertArrayEquals(mergedData, originalDataBytes);
-    }
-
-    private void parseFonts(FontInfo fi) throws IOException {
-        for (Typeface font : fi.getUsedFonts().values()) {
-            InputStream is = ((CustomFont) font).getInputStream();
-            if (font.getFontType() == FontType.TYPE1C || font.getFontType() == FontType.CIDTYPE0) {
-                CFFParser p = new CFFParser();
-                p.parse(new RandomAccessReadBuffer(is));
-            } else if (font.getFontType() == FontType.TRUETYPE) {
-                TTFParser parser = new TTFParser();
-                parser.parse(new RandomAccessReadBuffer(is));
-            } else if (font.getFontType() == FontType.TYPE0) {
-                TTFParser parser = new TTFParser(true);
-                parser.parse(new RandomAccessReadBuffer(is));
-            } else if (font.getFontType() == FontType.TYPE1) {
-                Type1Font.createWithPFB(is);
-            }
-            Assert.assertTrue(((CustomFont) font).isEmbeddable());
-            if (font instanceof MultiByteFont) {
-                Assert.assertTrue(((MultiByteFont) font).getWidthsMap() != null);
-            } else {
-                Assert.assertFalse(((CustomFont)font).isSymbolicFont());
-            }
-        }
-    }
-
-    protected static String writeText(FontInfo fi, String pdf) throws IOException {
-        PDDocument doc = load(pdf);
-        PDPage page = doc.getPage(0);
-        AffineTransform pageAdjust = new AffineTransform();
-        String c = (String) getPDFBoxAdapter(true, false)
-                .createStreamFromPDFBoxPage(doc, page, pdf, pageAdjust, fi, new Rectangle(), new AffineTransform());
-        doc.close();
-        return c;
     }
 
     @Test
@@ -396,82 +258,35 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testXform() throws Exception {
-        PDFDocument pdfdoc = new PDFDocument("");
-        pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Collections.singletonList("null"));
-        pdfdoc.setMergeFontsParams(new PDFMergeFontsParams(true));
-        PDFPage pdfpage = getPDFPage(pdfdoc);
-        pdfpage.setDocument(pdfdoc);
-        pdfpage.setObjectNumber(1);
-        Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), pageNumbers);
-        PDDocument doc = load(XFORM);
-        PDPage page = doc.getPage(0);
-        AffineTransform pageAdjust = new AffineTransform();
-        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, new FontInfo(), r, pageAdjust);
-        doc.close();
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        pdfdoc.output(bos);
-        Assert.assertFalse(bos.toString(StandardCharsets.UTF_8.name()).contains("/W 5 /H 5 /BPC 8 /CS /RGB ID ÿÿÿ"));
-    }
-
-    @Test
     public void testPSPDFGraphics2D() throws Exception {
         ByteArrayOutputStream stream = pdfToPS(IMAGE);
         assertEquals(countString(stream.toString(StandardCharsets.UTF_8.name()), "%AXGBeginBitmap:"), 1);
 
-        pdfToPS(CFF1);
-        pdfToPS(CFF2);
-        pdfToPS(CFF3);
-        pdfToPS(TTCID1);
-        pdfToPS(TTCID2);
-        pdfToPS(TTSubset1);
-        pdfToPS(TTSubset2);
-        pdfToPS(TTSubset3);
-        pdfToPS(TTSubset5);
-        stream = pdfToPS(CFFCID1);
+        pdfToPS(FontMergeTestCase.CFF1);
+        pdfToPS(FontMergeTestCase.CFF2);
+        pdfToPS(FontMergeTestCase.CFF3);
+        pdfToPS(FontMergeTestCase.TTCID1);
+        pdfToPS(FontMergeTestCase.TTCID2);
+        pdfToPS(FontMergeTestCase.TTSubset1);
+        pdfToPS(FontMergeTestCase.TTSubset2);
+        pdfToPS(FontMergeTestCase.TTSubset3);
+        pdfToPS(FontMergeTestCase.TTSubset5);
+        stream = pdfToPS(FontMergeTestCase.CFFCID1);
         assertEquals(countString(stream.toString(StandardCharsets.UTF_8.name()), "%AXGBeginBitmap:"), 2);
-        pdfToPS(CFFCID2);
-        pdfToPS(Type1Subset1);
-        pdfToPS(Type1Subset2);
-        pdfToPS(Type1Subset3);
-        pdfToPS(Type1Subset4);
+        pdfToPS(FontMergeTestCase.CFFCID2);
+        pdfToPS(FontMergeTestCase.Type1Subset1);
+        pdfToPS(FontMergeTestCase.Type1Subset2);
+        pdfToPS(FontMergeTestCase.Type1Subset3);
+        pdfToPS(FontMergeTestCase.Type1Subset4);
         pdfToPS(ROTATE);
         pdfToPS(LINK);
         pdfToPS(LOOP);
         stream = pdfToPS(LIBREOFFICE);
         Assert.assertTrue(stream.toString(StandardCharsets.UTF_8.name()).contains("/MaskColor [ 255 255 255 ]"));
-
     }
 
     private int countString(String s, String value) {
         return s.split(value).length - 1;
-    }
-
-    @Test
-    public void testPDFToPDF() throws IOException {
-        FontInfo fi = new FontInfo();
-        writeText(fi, CFF1);
-        writeText(fi, CFF2);
-        writeText(fi, CFF3);
-        writeText(fi, CFFCID1);
-        writeText(fi, CFFCID2);
-        writeText(fi, IMAGE);
-        writeText(fi, LINK);
-        writeText(fi, ROTATE);
-        writeText(fi, SHADING);
-        writeText(fi, TTCID1);
-        writeText(fi, TTCID2);
-        writeText(fi, TTSubset1);
-        writeText(fi, TTSubset2);
-        writeText(fi, TTSubset3);
-        writeText(fi, TTSubset5);
-        writeText(fi, Type1Subset1);
-        writeText(fi, Type1Subset2);
-        writeText(fi, Type1Subset3);
-        writeText(fi, Type1Subset4);
-        writeText(fi, LOOP);
     }
 
     protected static ByteArrayOutputStream pdfToPS(String pdf) throws IOException, ImageException {
@@ -685,12 +500,12 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testNoPageResource() throws IOException {
-        PDDocument doc = load(CFF1);
+        PDDocument doc = load(FontMergeTestCase.CFF1);
         PDPage page = doc.getPage(0);
         page.setResources(null);
         AffineTransform pageAdjust = new AffineTransform();
-        getPDFBoxAdapter(false, false)
-                .createStreamFromPDFBoxPage(doc, page, CFF1, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust);
+        getPDFBoxAdapter(false, false).createStreamFromPDFBoxPage(
+                doc, page, FontMergeTestCase.CFF1, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust);
         doc.close();
     }
 
@@ -709,18 +524,6 @@ public class PDFBoxAdapterTestCase {
         PDFRenderingContext c = new PDFRenderingContext(mockedAgent, con, pdfpage, null);
         c.setPageNumbers(new HashMap<Integer, PDFArray>());
         new PDFBoxImageHandler().handleImage(c, img, new Rectangle());
-    }
-
-    @Test
-    public void testMergeFontsAndFormXObject() throws IOException {
-        PDDocument doc = load(IMAGE);
-        PDPage page = doc.getPage(0);
-        AffineTransform pageAdjust = new AffineTransform();
-        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
-            getPDFBoxAdapter(true, true).createStreamFromPDFBoxPage(
-                    doc, page, IMAGE, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust));
-        doc.close();
-        assertEquals(ex.getMessage(), "merge-fonts and form-xobject can't both be enabled");
     }
 
     @Test
@@ -779,81 +582,12 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testCmapLengthInName() throws IOException {
-        FontInfo fi = new FontInfo();
-        String msg = writeText(fi, TTSubset3);
-        Assert.assertTrue(msg, msg.contains("/ArialMT_TrueTypecidcmap1"));
-    }
-
-    @Test
-    public void testMapChar() throws Exception {
-        FontInfo fi = new FontInfo();
-        writeText(fi, TTSubset6);
-        String msg = writeText(fi, TTSubset7);
-        Assert.assertTrue(msg, msg.contains("( )Tj"));
-    }
-
-    @Test
-    public void testReorderGlyphs() throws IOException {
-        FontInfo fontInfo = new FontInfo();
-        writeText(fontInfo, TTSubset8);
-        writeText(fontInfo, TTSubset9);
-        List<Integer> compositeList = new ArrayList<>();
-        for (Typeface font : fontInfo.getUsedFonts().values()) {
-            InputStream inputStream = ((CustomFont) font).getInputStream();
-            TTFParser parser = new TTFParser(true);
-            TrueTypeFont trueTypeFont = parser.parse(new RandomAccessReadBuffer(inputStream));
-            int i = 0;
-            for (int gid = 0; gid < trueTypeFont.getNumberOfGlyphs(); gid++) {
-                GlyphData glyphData = trueTypeFont.getGlyph().getGlyph(gid);
-                if (glyphData != null && glyphData.getDescription().isComposite()) {
-                    compositeList.add(i);
-                }
-                i++;
-            }
-        }
-        assertEquals(compositeList, Arrays.asList(18, 19, 39, 42, 62, 63, 29));
-    }
-
-    @Test
     public void testFormRotated() throws IOException {
         PDFDocument pdfdoc = new PDFDocument("");
         loadPage(pdfdoc, FORMROTATED);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         Assert.assertFalse(bos.toString(StandardCharsets.UTF_8.name()).contains("/R 90"));
-    }
-
-    @Test
-    public void testCFFSubrs() throws Exception {
-        FontInfo fontInfo = new FontInfo();
-        writeText(fontInfo, CFFSUBRS);
-        writeText(fontInfo, CFFSUBRS2);
-        InputStream is = null;
-        for (Typeface font : fontInfo.getUsedFonts().values()) {
-            if ("AllianzNeo-Bold".equals(font.getEmbedFontName())) {
-                is = ((CustomFont) font).getInputStream();
-            }
-        }
-        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(is)).get(0);
-        byte[][] indexData = (byte[][]) font.getPrivateDict().get("Subrs");
-        assertEquals(indexData.length, 183);
-    }
-
-    @Test
-    public void testCFFSubrsCharset() throws Exception {
-        FontInfo fontInfo = new FontInfo();
-        writeText(fontInfo, CFFSUBRS4);
-        writeText(fontInfo, CFFSUBRS3);
-        CustomFont typeface = (CustomFont) fontInfo.getUsedFonts().get("AllianzNeo-Light_Type1");
-        InputStream is = typeface.getInputStream();
-        CFFType1Font font = (CFFType1Font) new CFFParser().parse(new RandomAccessReadBuffer(is)).get(0);
-        CFFCharset charset = font.getCharset();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 5; i++) {
-            sb.append(charset.getNameForGID(i)).append(" ");
-        }
-        assertEquals(sb.toString(), ".notdef uni00A0 trademark uni003B uniFB00 ");
     }
 
     private String getAnnotationsID(PDFPage page) throws IOException {
@@ -866,9 +600,9 @@ public class PDFBoxAdapterTestCase {
         PDFBoxAdapter adapter = getPDFBoxAdapter(pdfDoc, false, false, true, usedFields);
         PDDocument input = load(pdf);
         PDPage srcPage = input.getPage(0);
-        AffineTransform at = new AffineTransform();
+        AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(input, srcPage, "key", at, null, r, at);
+        adapter.createStreamFromPDFBoxPage(input, srcPage, "key", pageAdjust, null, r, pageAdjust);
         input.close();
         return adapter.getTargetPage();
     }
@@ -900,7 +634,7 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testPreservePropertyNames() throws Exception {
-        PDDocument doc = load(CFF1);
+        PDDocument doc = load(FontMergeTestCase.CFF1);
         COSDictionary properties = new COSDictionary();
         properties.setItem(COSName.S, COSName.S);
         doc.getPage(0).getResources().getCOSObject().setItem(COSName.PROPERTIES, properties);
@@ -1001,25 +735,11 @@ public class PDFBoxAdapterTestCase {
     }
 
     @Test
-    public void testAscenderDoesntMatch() throws IOException {
-        FontInfo fi = new FontInfo();
-        writeText(fi, TTSubset6);
-        String msg = writeText(fi, TTSubset7);
-        Assert.assertTrue(msg, msg.contains("/C2_0745125721 12 Tf"));
-    }
-
-    @Test
     public void testSoftMask() throws Exception {
         ByteArrayOutputStream bos = pdfToPS(SOFTMASK);
         String output = bos.toString(StandardCharsets.UTF_8.name());
         assertEquals(output.split("BeginBitmap").length, 3);
         Assert.assertTrue(output.contains("/ImageMatrix [148 0 0 78 0 0]"));
         Assert.assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
-    }
-
-    @Test
-    public void testMergeMacFont() throws IOException {
-        String msg = writeText(new FontInfo(), TTSubset6);
-        Assert.assertTrue(msg, msg.contains("/Calibri_TrueTypemac"));
     }
 }

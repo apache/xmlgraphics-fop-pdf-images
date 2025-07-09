@@ -136,7 +136,7 @@ public class ImageConverterPDF2G2DTestCase {
 
     @Test
     public void testCheckImageMask() throws IOException, ImageException {
-        String pdf = PDFBoxAdapterTestCase.CFFCID1;
+        String pdf = FontMergeTestCase.CFFCID1;
         PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
         COSStream cosStream = new COSStream();
         OutputStream outputStream = cosStream.createOutputStream();
