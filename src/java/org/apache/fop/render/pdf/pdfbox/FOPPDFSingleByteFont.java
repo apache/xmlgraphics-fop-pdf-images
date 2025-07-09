@@ -56,6 +56,7 @@ import org.apache.fop.fonts.FontType;
 import org.apache.fop.fonts.SingleByteEncoding;
 import org.apache.fop.fonts.SingleByteFont;
 import org.apache.fop.pdf.PDFDictionary;
+import org.apache.fop.pdf.PDFMergeFontsParams;
 import org.apache.fop.pdf.PDFText;
 
 public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
@@ -63,6 +64,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private FontContainer font;
     protected PDFDictionary ref;
     protected Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
+    private Map<Integer, Integer> oldToNewGIMap = new HashMap<>();
     private Map<Integer, Integer> newWidth = new HashMap<Integer, Integer>();
     private Map<String, byte[]> charStringsDict;
     private List<MergeTTFonts.Cmap> newCmap = new ArrayList<MergeTTFonts.Cmap>();
@@ -71,9 +73,11 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     private MergeFonts mergeFonts;
     private String shortFontName;
     private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
+    private PDFMergeFontsParams params;
 
-    public FOPPDFSingleByteFont(COSDictionary fontData, String name) throws IOException {
+    public FOPPDFSingleByteFont(COSDictionary fontData, String name, PDFMergeFontsParams params) throws IOException {
         super(null, EmbeddingMode.FULL);
+        this.params = params;
         if (fontData.getItem(COSName.SUBTYPE) == COSName.TRUE_TYPE) {
             setFontType(FontType.TRUETYPE);
         }
@@ -181,17 +185,22 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     }
 
     private void loadFontFile(FontContainer font) throws IOException {
+        oldToNewGIMap.clear();
         PDStream ff = readFontFile(font.font);
-        mergeFontFile(ff.createInputStream(), font);
         if (font.font instanceof PDTrueTypeFont) {
             TrueTypeFont ttfont = ((PDTrueTypeFont) font.font).getTrueTypeFont();
             CmapSubtable[] cmapList = ttfont.getCmap().getCmaps();
+            Map<Integer, Integer> oldToNewGIMapPerFont = new HashMap<>();
             for (CmapSubtable c : cmapList) {
                 MergeTTFonts.Cmap tempCmap = getNewCmap(c.getPlatformId(), c.getPlatformEncodingId());
                 for (Map.Entry<Integer, Integer> entry : getCharacterCodeToGlyphId(c).entrySet()) {
-                    readCmapEntry(entry, ttfont, tempCmap);
+                    readCmapEntry(entry, ttfont, tempCmap, oldToNewGIMapPerFont);
                 }
             }
+        }
+        mergeFontFile(ff.createInputStream(), font);
+        if (font.getFont() instanceof PDTrueTypeFont) {
+            TrueTypeFont ttfont = ((PDTrueTypeFont) font.getFont()).getTrueTypeFont();
             FOPPDFMultiByteFont.mergeMaxp(ttfont, ((MergeTTFonts)mergeFonts).maxp);
         }
     }
@@ -206,16 +215,39 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         }
     }
 
-    protected void readCmapEntry(Map.Entry<Integer, Integer> entry, TrueTypeFont ttfont, MergeTTFonts.Cmap tempCmap)
-        throws IOException {
-        int i = entry.getKey();
+    protected void readCmapEntry(Map.Entry<Integer, Integer> entry, TrueTypeFont ttfont, MergeTTFonts.Cmap tempCmap,
+                                 Map<Integer, Integer> oldToNewGIMapPerFont) throws IOException {
+        int charCode = entry.getKey();
         int gid = entry.getValue();
         GlyphData glyphData = ttfont.getGlyph().getGlyph(gid);
-        if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(i) && (glyphData != null || i == 32)) {
-            tempCmap.glyphIdToCharacterCode.put(i, gid);
-        } else if (gid != 0 && !tempCmap.glyphIdToCharacterCodeBase.containsKey(i)) {
-            tempCmap.glyphIdToCharacterCodeBase.put(i, gid);
+        if (params.isRemapSingleByteFontEnabled() && gid != 0 && hasGlyph(glyphData) && !charMapGlobal.isEmpty()
+                && tempCmap.glyphIdToCharacterCode.containsValue(gid)
+                && !tempCmap.glyphIdToCharacterCode.containsKey(charCode)) {
+            //Move glyphs to different gid when 2 fonts use same gid with different char code
+            if (oldToNewGIMapPerFont.containsKey(gid)) {
+                gid = oldToNewGIMapPerFont.get(gid);
+            } else {
+                int newGid = 1;
+                while (tempCmap.glyphIdToCharacterCode.containsValue(newGid)
+                        || tempCmap.glyphIdToCharacterCodeBase.containsValue(newGid)
+                        || hasGlyph(ttfont.getGlyph().getGlyph(newGid))) {
+                    newGid++;
+                }
+                oldToNewGIMap.put(gid, newGid);
+                oldToNewGIMapPerFont.put(gid, newGid);
+                gid = newGid;
+            }
         }
+        if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(charCode)
+                && (hasGlyph(glyphData) || charCode == 32)) {
+            tempCmap.glyphIdToCharacterCode.put(charCode, gid);
+        } else if (gid != 0 && !tempCmap.glyphIdToCharacterCodeBase.containsKey(charCode)) {
+            tempCmap.glyphIdToCharacterCodeBase.put(charCode, gid);
+        }
+    }
+
+    private boolean hasGlyph(GlyphData glyphData) {
+        return glyphData != null && glyphData.getNumberOfContours() != 0;
     }
 
     private MergeTTFonts.Cmap getNewCmap(int platformID, int platformEncodingID) {
@@ -484,9 +516,8 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 mergeFonts = new MergeCFFFonts();
             }
         }
-        Map<Integer, Integer> chars = new HashMap<Integer, Integer>();
-        chars.put(0, 0);
-        mergeFonts.readFont(ff, shortFontName, pdFont, chars, false);
+        oldToNewGIMap.put(0, 0);
+        mergeFonts.readFont(ff, shortFontName, pdFont, oldToNewGIMap, false);
         fontCount++;
     }
 

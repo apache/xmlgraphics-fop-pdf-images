@@ -89,6 +89,7 @@ import org.apache.fop.pdf.PDFEncryptionParams;
 import org.apache.fop.pdf.PDFFilterList;
 import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFGState;
+import org.apache.fop.pdf.PDFMergeFontsParams;
 import org.apache.fop.pdf.PDFPage;
 import org.apache.fop.pdf.PDFResources;
 import org.apache.fop.pdf.PDFStream;
@@ -158,7 +159,9 @@ public class PDFBoxAdapterTestCase {
     private static PDFBoxAdapter getPDFBoxAdapter(PDFDocument doc, boolean mergeFonts, boolean formXObject,
                                                     boolean mergeFormFields, Map<String, Object> usedFields) {
         PDFPage pdfpage = getPDFPage(doc);
-        doc.setMergeFontsEnabled(mergeFonts);
+        if (mergeFonts) {
+            doc.setMergeFontsParams(new PDFMergeFontsParams(true));
+        }
         doc.setFormXObjectEnabled(formXObject);
         doc.setMergeFormFieldsEnabled(mergeFormFields);
         pdfpage.setDocument(doc);
@@ -396,7 +399,7 @@ public class PDFBoxAdapterTestCase {
     public void testXform() throws Exception {
         PDFDocument pdfdoc = new PDFDocument("");
         pdfdoc.getFilterMap().put(PDFFilterList.DEFAULT_FILTER, Collections.singletonList("null"));
-        pdfdoc.setMergeFontsEnabled(true);
+        pdfdoc.setMergeFontsParams(new PDFMergeFontsParams(true));
         PDFPage pdfpage = getPDFPage(pdfdoc);
         pdfpage.setDocument(pdfdoc);
         pdfpage.setObjectNumber(1);

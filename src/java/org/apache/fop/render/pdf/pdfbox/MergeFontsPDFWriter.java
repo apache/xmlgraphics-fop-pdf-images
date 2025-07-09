@@ -55,8 +55,8 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.fonts.Typeface;
 import org.apache.fop.fonts.truetype.OTFSubSetFile;
-
 import org.apache.fop.pdf.PDFDocument;
+import org.apache.fop.pdf.PDFMergeFontsParams;
 import org.apache.fop.pdf.PDFText;
 
 public class MergeFontsPDFWriter extends PDFWriter {
@@ -69,13 +69,15 @@ public class MergeFontsPDFWriter extends PDFWriter {
     private final Map<COSDictionary, FontContainer> fontMap = new HashMap<COSDictionary, FontContainer>();
     private static final Pattern SUBSET_PATTERN = Pattern.compile("[A-Z][A-Z][A-Z][A-Z][A-Z][A-Z]\\+.+");
     private Collection<String> parentFonts;
+    private PDFMergeFontsParams params;
 
     public MergeFontsPDFWriter(COSDictionary fonts, FontInfo fontInfo, UniqueName key,
-                               Collection<String> parentFonts, int mcid) {
+                               Collection<String> parentFonts, int mcid, PDFMergeFontsParams params) {
         super(key, mcid);
         this.fonts = fonts;
         this.fontInfo = fontInfo;
         this.parentFonts = parentFonts;
+        this.params = params;
     }
 
     public String writeText(PDStream pdStream) throws IOException {
@@ -147,7 +149,7 @@ public class MergeFontsPDFWriter extends PDFWriter {
                     && fontData.getItem(COSName.SUBTYPE) != COSName.TRUE_TYPE) {
                 fontinfo.addMetrics(base, new FOPPDFMultiByteFont(fontData, base));
             } else {
-                fontinfo.addMetrics(base, new FOPPDFSingleByteFont(fontData, base));
+                fontinfo.addMetrics(base, new FOPPDFSingleByteFont(fontData, base, params));
             }
         } catch (IOException e) {
             log.warn(e.getMessage());

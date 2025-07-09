@@ -193,9 +193,10 @@ public class PDFBoxAdapter {
         COSDictionary fonts = (COSDictionary)sourcePageResources.getDictionaryObject(COSName.FONT);
         COSDictionary fontsBackup = null;
         String newStream = null;
-        if (fonts != null && pdfDoc.isMergeFontsEnabled()) {
+        if (fonts != null && pdfDoc.getMergeFontsParams() != null) {
             fontsBackup = new COSDictionary(fonts);
-            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID);
+            MergeFontsPDFWriter m = new MergeFontsPDFWriter(fonts, fontinfo, uniqueName, parentFonts, currentMCID,
+                    pdfDoc.getMergeFontsParams());
             newStream = m.writeText(pdStream);
         }
         if (!pdfDoc.isFormXObjectEnabled()) {
@@ -294,7 +295,7 @@ public class PDFBoxAdapter {
 
     private void updateMergeFontInfo(PDFDictionary pageResources, FontInfo fontinfo) {
         PDFDictionary fontDict = (PDFDictionary)pageResources.get("Font");
-        if (fontDict != null && pdfDoc.isMergeFontsEnabled()) {
+        if (fontDict != null && pdfDoc.getMergeFontsParams() != null) {
             for (Map.Entry<String, Typeface> fontEntry : fontinfo.getUsedFonts().entrySet()) {
                 Typeface font = fontEntry.getValue();
                 if (font instanceof FOPPDFFont) {
@@ -311,7 +312,7 @@ public class PDFBoxAdapter {
 
     private PDFFormXObject getFormXObject(PDFDictionary pageResources, PDFStream pageStream, String key, PDPage page)
         throws IOException {
-        if (pdfDoc.isMergeFontsEnabled()) {
+        if (pdfDoc.getMergeFontsParams() != null) {
             throw new RuntimeException("merge-fonts and form-xobject can't both be enabled");
         }
         if (!pageResources.hasObjectNumber()) {
@@ -373,7 +374,7 @@ public class PDFBoxAdapter {
     private void mergeXObj(COSDictionary sourcePageResources, FontInfo fontinfo, UniqueName uniqueName)
         throws IOException {
         COSDictionary xobj = (COSDictionary) sourcePageResources.getDictionaryObject(COSName.XOBJECT);
-        if (xobj != null && pdfDoc.isMergeFontsEnabled()) {
+        if (xobj != null && pdfDoc.getMergeFontsParams() != null) {
             for (Map.Entry<COSName, COSBase> i : xobj.entrySet()) {
                 COSObject v = (COSObject) i.getValue();
                 COSStream stream = (COSStream) v.getObject();
@@ -391,7 +392,8 @@ public class PDFBoxAdapter {
                                 }
                             }
                         }
-                        PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName, parentFonts, 0);
+                        PDFWriter writer = new MergeFontsPDFWriter(src, fontinfo, uniqueName, parentFonts, 0,
+                                pdfDoc.getMergeFontsParams());
                         String c = writer.writeText(new PDStream(stream));
                         if (c != null) {
                             stream.removeItem(COSName.FILTER);
@@ -410,7 +412,7 @@ public class PDFBoxAdapter {
 
     private void updateXObj(COSDictionary sourcePageResources, PDFDictionary pageResources) throws IOException {
         COSDictionary xobj = (COSDictionary) sourcePageResources.getDictionaryObject(COSName.XOBJECT);
-        if (xobj != null && pdfDoc.isMergeFontsEnabled()) {
+        if (xobj != null && pdfDoc.getMergeFontsParams() != null) {
             PDFDictionary target = (PDFDictionary) pageResources.get("XObject");
             for (COSName entry : xobj.keySet()) {
                 if (newXObj.containsKey(entry)) {

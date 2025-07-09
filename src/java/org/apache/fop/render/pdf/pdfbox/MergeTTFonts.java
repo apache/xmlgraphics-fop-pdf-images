@@ -131,14 +131,11 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
              * an array first and then write the glyph info and
              * location offset.
              */
-            glyphOffsets = new int[origIndexesLen];
+            glyphOffsets = new int[added.size()];
             for (Map.Entry<Integer, Glyph> gly : added.entrySet()) {
                 byte[] glyphData = gly.getValue().data;
                 int glyphLength = glyphData.length;
                 int i = gly.getKey();
-                if (i >= origIndexesLen) {
-                    continue;
-                }
                 int endOffset1 = endOffset;
                 // Copy glyph
                 writeBytes(glyphData);
@@ -252,9 +249,11 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
         readHorizontalMetrics();
         readIndexToLocation();
         int sgsize = subsetGlyphs.size();
-        if (!cid && subsetGlyphs.size() <= 1) {
+        if (!cid) {
             for (int i = 0; i < mtxTab.length; i++) {
-                subsetGlyphs.put(i, i);
+                if (!subsetGlyphs.containsKey(i)) {
+                    subsetGlyphs.put(i, i);
+                }
             }
         }
         scanGlyphs(fontFile, subsetGlyphs);
