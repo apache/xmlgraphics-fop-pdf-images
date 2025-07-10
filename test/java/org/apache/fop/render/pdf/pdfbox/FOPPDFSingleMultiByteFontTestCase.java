@@ -321,6 +321,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
         }
         Assert.assertEquals(124, gids.size());
         Assert.assertTrue(gids.contains(242));
+        Assert.assertEquals(3, ttf.getGlyph().getGlyph(167).getNumberOfContours());
     }
 
     @Test
