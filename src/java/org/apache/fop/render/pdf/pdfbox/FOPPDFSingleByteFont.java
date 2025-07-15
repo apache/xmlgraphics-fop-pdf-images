@@ -20,6 +20,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -214,7 +216,12 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     protected static Map<Integer, Integer> getCharacterCodeToGlyphId(CmapSubtable cmapSubtable) {
         try {
             Field field = CmapSubtable.class.getDeclaredField("characterCodeToGlyphId");
-            field.setAccessible(true);
+            AccessController.doPrivileged(new PrivilegedAction() {
+                public Object run() {
+                    field.setAccessible(true);
+                    return null;
+                }
+            });
             return (Map<Integer, Integer>) field.get(cmapSubtable);
         } catch (IllegalAccessException | NoSuchFieldException e) {
             throw new RuntimeException(e);
