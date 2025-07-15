@@ -205,7 +205,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         }
     }
 
-    private Map<Integer, Integer> getCharacterCodeToGlyphId(CmapSubtable cmapSubtable) {
+    protected static Map<Integer, Integer> getCharacterCodeToGlyphId(CmapSubtable cmapSubtable) {
         try {
             Field field = CmapSubtable.class.getDeclaredField("characterCodeToGlyphId");
             field.setAccessible(true);

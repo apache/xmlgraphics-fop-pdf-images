@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,7 @@ import org.junit.Test;
 import org.apache.commons.io.IOUtils;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFParser;
+import org.apache.fontbox.ttf.CmapSubtable;
 import org.apache.fontbox.ttf.CmapTable;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.GlyphTable;
@@ -51,12 +53,15 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.font.PDCIDFontType2;
+import org.apache.pdfbox.pdmodel.font.PDTrueTypeFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import org.apache.fop.fonts.FontInfo;
 import org.apache.fop.pdf.PDFMergeFontsParams;
 
 public class FOPPDFSingleMultiByteFontTestCase {
+    private static final String TTSubset16 = "ttsubset16.pdf";
+    private static final String TTSubset17 = "ttsubset17.pdf";
     private PDFMergeFontsParams params = new PDFMergeFontsParams(true);
 
     private COSDictionary getFont(PDDocument doc, String internalname) {
@@ -310,23 +315,66 @@ public class FOPPDFSingleMultiByteFontTestCase {
 
     @Test
     public void testTTSubsetRemapGid() throws IOException {
-        InputStream is = validateSingleByteFont("ttsubset16.pdf", "ttsubset17.pdf",
+        InputStream is = validateSingleByteFont(TTSubset16, TTSubset17,
                 "Montserrat-Regular", "TT0", true);
-        TrueTypeFont ttf = new TTFParser().parse(new RandomAccessReadBuffer(is));
+        TrueTypeFont mergedTTF = new TTFParser().parse(new RandomAccessReadBuffer(is));
         List<Integer> gids = new ArrayList<>();
-        for (int i = 0; i < ttf.getNumberOfGlyphs(); i++) {
-            if (ttf.getGlyph().getGlyph(i).getNumberOfContours() != 0) {
+        for (int i = 0; i < mergedTTF.getNumberOfGlyphs(); i++) {
+            if (mergedTTF.getGlyph().getGlyph(i).getNumberOfContours() != 0) {
                 gids.add(i);
             }
         }
         Assert.assertEquals(124, gids.size());
         Assert.assertTrue(gids.contains(242));
-        Assert.assertEquals(3, ttf.getGlyph().getGlyph(167).getNumberOfContours());
+        Assert.assertEquals(3, mergedTTF.getGlyph().getGlyph(167).getNumberOfContours());
+        compareGlyphsUsingTTSubset16And17(mergedTTF);
+    }
+
+    private void compareGlyphsUsingTTSubset16And17(TrueTypeFont mergedTTF) throws IOException {
+        Map<Integer, GlyphData> glyphsFromInput1 = getGlyphs(TTSubset16, "TT0");
+        Assert.assertEquals(74, glyphsFromInput1.size());
+        for (Map.Entry<Integer, GlyphData> entry : glyphsFromInput1.entrySet()) {
+            compareGlyph(mergedTTF, entry.getKey(), entry.getValue());
+        }
+        Map<Integer, GlyphData> glyphsFromInput2 = getGlyphs(TTSubset17, "TT0");
+        Assert.assertEquals(54, glyphsFromInput2.size());
+        List<Integer> glyphsChecked = new ArrayList<>();
+        for (Map.Entry<Integer, GlyphData> entry : glyphsFromInput2.entrySet()) {
+            if (!glyphsFromInput1.containsKey(entry.getKey())) {
+                compareGlyph(mergedTTF, entry.getKey(), entry.getValue());
+                glyphsChecked.add(entry.getKey());
+            }
+        }
+        Assert.assertEquals(Arrays.asList(8211, 37, 74), glyphsChecked);
+    }
+
+    private void compareGlyph(TrueTypeFont mergedTTF, int charCode, GlyphData glyphFromInput) throws IOException {
+        CmapSubtable cmap = mergedTTF.getCmap().getCmaps()[0];
+        int gid = cmap.getGlyphId(charCode);
+        GlyphData mergedGlyph = mergedTTF.getGlyph().getGlyph(gid);
+        Assert.assertEquals(mergedGlyph.getNumberOfContours(), glyphFromInput.getNumberOfContours());
+        Assert.assertEquals(mergedGlyph.getBoundingBox().toString(), glyphFromInput.getBoundingBox().toString());
+    }
+
+    private Map<Integer, GlyphData> getGlyphs(String pdf, String fontName) throws IOException {
+        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
+        PDTrueTypeFont font = (PDTrueTypeFont) doc.getPage(0).getResources().getFont(COSName.getPDFName(fontName));
+        TrueTypeFont ttf = font.getTrueTypeFont();
+        Map<Integer, GlyphData> glyphs = new HashMap<>();
+        for (Map.Entry<Integer, Integer> entry : FOPPDFSingleByteFont.getCharacterCodeToGlyphId(
+                ttf.getCmap().getCmaps()[0]).entrySet()) {
+            GlyphData glyph = ttf.getGlyph().getGlyph(entry.getValue());
+            if (glyph.getNumberOfContours() != 0) {
+                glyphs.put(entry.getKey(), glyph);
+            }
+        }
+        doc.close();
+        return glyphs;
     }
 
     @Test
     public void testTTSubsetNoRemapGid() throws IOException {
-        InputStream is = validateSingleByteFont("ttsubset16.pdf", "ttsubset17.pdf",
+        InputStream is = validateSingleByteFont(TTSubset16, TTSubset17,
                 "Montserrat", "TT0", false);
         TrueTypeFont ttf = new TTFParser().parse(new RandomAccessReadBuffer(is));
         List<Integer> gids = new ArrayList<>();
