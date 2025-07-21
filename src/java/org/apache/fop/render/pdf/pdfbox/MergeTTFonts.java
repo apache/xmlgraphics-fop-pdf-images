@@ -92,20 +92,20 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                         (int)entry.getOffset() + glyphOffset,
                         glyphLength);
 
-                Glyph g = new Glyph(glyphData, mtxTab[origGlyphIndex],
+                Glyph glyph = new Glyph(glyphData, mtxTab[origGlyphIndex],
                         composedGlyphs.contains(origGlyphIndex),
                         compositeGlyphs.contains(origGlyphIndex), origGlyphIndex);
                 if (!cid && (origIndexesLen == 0 || (glyphLength > 0 && i > 0))) {
                     if (added.containsKey(i)) {
                         Glyph existing = added.get(i);
-                        if (existing.data.length == 0) {
-                            added.put(i, g);
+                        if (existing.data.length == 0 || existing.origGlyphIndex == 0) {
+                            added.put(i, glyph);
                         }
                     } else {
-                        added.put(i, g);
+                        added.put(i, glyph);
                     }
                 } else if (cid) {
-                    added.put(i + origIndexesLen, g);
+                    added.put(i + origIndexesLen, glyph);
                 }
             }
             if (!cid) {
@@ -585,6 +585,11 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
                 glyphIdToCharacterCodeBase = null;
             }
             return glyphIdToCharacterCode;
+        }
+
+        public boolean needsRemap(int gid, int charCode) {
+            return (glyphIdToCharacterCode.containsKey(charCode) && glyphIdToCharacterCode.get(charCode) != gid)
+                    || (glyphIdToCharacterCode.containsValue(gid) && !glyphIdToCharacterCode.containsKey(charCode));
         }
     }
 }

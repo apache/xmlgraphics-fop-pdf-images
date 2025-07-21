@@ -234,8 +234,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
         int gid = entry.getValue();
         GlyphData glyphData = ttfont.getGlyph().getGlyph(gid);
         if (params.isRemapSingleByteFontEnabled() && gid != 0 && hasGlyph(glyphData) && !charMapGlobal.isEmpty()
-                && tempCmap.glyphIdToCharacterCode.containsValue(gid)
-                && !tempCmap.glyphIdToCharacterCode.containsKey(charCode)) {
+                && tempCmap.needsRemap(gid, charCode)) {
             //Move glyphs to different gid when 2 fonts use same gid with different char code
             if (oldToNewGIMapPerFont.containsKey(gid)) {
                 gid = oldToNewGIMapPerFont.get(gid);
@@ -246,9 +245,11 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                         || hasGlyph(ttfont.getGlyph().getGlyph(newGid))) {
                     newGid++;
                 }
-                oldToNewGIMap.put(gid, newGid);
-                oldToNewGIMapPerFont.put(gid, newGid);
-                gid = newGid;
+                if (newGid < ttfont.getNumberOfGlyphs()) {
+                    oldToNewGIMap.put(gid, newGid);
+                    oldToNewGIMapPerFont.put(gid, newGid);
+                    gid = newGid;
+                }
             }
         }
         if (gid != 0 && !tempCmap.glyphIdToCharacterCode.containsKey(charCode)
