@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Predicate;
 
 import org.apache.fop.fonts.truetype.FontFileReader;
 import org.apache.fop.fonts.truetype.GlyfTable;
@@ -579,6 +580,11 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
 
         public Map<Integer, Integer> getGlyphIdToCharacterCode() {
             if (glyphIdToCharacterCodeBase != null) {
+                glyphIdToCharacterCodeBase.entrySet().removeIf(new Predicate<Map.Entry<Integer, Integer>>() {
+                    public boolean test(Map.Entry<Integer, Integer> entry) {
+                        return glyphIdToCharacterCode.containsValue(entry.getValue());
+                    }
+                });
                 //Values put in base map for entries with no glyph data so values can be overritten by another font
                 glyphIdToCharacterCodeBase.putAll(glyphIdToCharacterCode);
                 glyphIdToCharacterCode.putAll(glyphIdToCharacterCodeBase);

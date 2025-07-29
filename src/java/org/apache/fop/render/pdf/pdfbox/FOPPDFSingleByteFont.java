@@ -70,6 +70,7 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
     protected PDFDictionary ref;
     protected Map<String, Integer> charMapGlobal = new LinkedHashMap<String, Integer>();
     private Map<Integer, Integer> oldToNewGIMap = new HashMap<>();
+    private List<Integer> newGids = new ArrayList<>();
     private Map<Integer, Integer> newWidth = new HashMap<Integer, Integer>();
     private Map<String, byte[]> charStringsDict;
     private List<MergeTTFonts.Cmap> newCmap = new ArrayList<MergeTTFonts.Cmap>();
@@ -240,13 +241,14 @@ public class FOPPDFSingleByteFont extends SingleByteFont implements FOPPDFFont {
                 gid = oldToNewGIMapPerFont.get(gid);
             } else {
                 int newGid = 1;
-                while (tempCmap.glyphIdToCharacterCode.containsValue(newGid)
+                while (newGids.contains(newGid) || tempCmap.glyphIdToCharacterCode.containsValue(newGid)
                         || tempCmap.glyphIdToCharacterCodeBase.containsValue(newGid)
                         || hasGlyph(ttfont.getGlyph().getGlyph(newGid))) {
                     newGid++;
                 }
                 if (newGid < ttfont.getNumberOfGlyphs()) {
                     oldToNewGIMap.put(gid, newGid);
+                    newGids.add(newGid);
                     oldToNewGIMapPerFont.put(gid, newGid);
                     gid = newGid;
                 }

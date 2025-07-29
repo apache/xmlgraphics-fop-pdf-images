@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,6 +76,9 @@ public class FOPPDFSingleMultiByteFontTestCase {
     private static final String TTSubset18 = "ttsubset18.pdf";
     private static final String TTSubset19 = "ttsubset19.pdf";
     private static final String TTSubset20 = "ttsubset20.pdf";
+    private static final String TTSubset21 = "ttsubset21.pdf";
+    private static final String TTSubset22 = "ttsubset22.pdf";
+    private static final String TTSubset23 = "ttsubset23.pdf";
     private PDFMergeFontsParams params = new PDFMergeFontsParams(true);
 
     private COSDictionary getFont(PDDocument doc, String internalname) {
@@ -267,18 +271,26 @@ public class FOPPDFSingleMultiByteFontTestCase {
         ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
         bis.skip(ttfTable.getOffset() + 29);
         Assert.assertEquals(bis.read(), 12); //subtableFormat
-        bis = new ByteArrayInputStream(bytes);
-        bis.skip(ttfTable.getOffset() + 465);
-        Assert.assertEquals(bis.read(), 4); //subtableFormat
-        bis = new ByteArrayInputStream(bytes);
-        bis.skip(ttfTable.getOffset() + 809);
+        bis.skip(14);
+        bis.skip(34 * 12);
         DataInputStream dis = new DataInputStream(bis);
-        Assert.assertEquals(dis.read(), 4); //subtableFormat
+        Assert.assertEquals(dis.readShort(), 4); //subtableFormat
         dis.skip(2 * 6);
-        dis.skip(2 * 37); //endCode
+        dis.skip(39 * 2); //endCode
         Assert.assertEquals(dis.readShort(), (short)0xFFFF);
         dis.skip(2); //reservedPad
-        dis.skip(2 * 37); //startCode
+        dis.skip(39 * 2); //startCode
+        Assert.assertEquals(dis.readShort(), (short)0xFFFF);
+        dis.skip(39 * 2); //idDelta
+        Assert.assertEquals(dis.readShort(), 0);
+        dis.skip(39 * 2); //idRangeOffsets
+        Assert.assertEquals(dis.readShort(), 0);
+        Assert.assertEquals(dis.readShort(), 4); //subtableFormat
+        dis.skip(2 * 6);
+        dis.skip(2 * 36); //endCode
+        Assert.assertEquals(dis.readShort(), (short)0xFFFF);
+        dis.skip(2); //reservedPad
+        dis.skip(2 * 36); //startCode
         Assert.assertEquals(dis.readShort(), (short)0xFFFF);
         doc.close();
     }
@@ -373,7 +385,10 @@ public class FOPPDFSingleMultiByteFontTestCase {
 
     @Test
     public void testTTSubsetRemapGid() throws IOException {
-        TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat-Regular", "TT0", true, TTSubset16, TTSubset17);
+        Map<String, String> pdfs = new LinkedHashMap<>();
+        pdfs.put(TTSubset16, "TT0");
+        pdfs.put(TTSubset17, "TT0");
+        TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat-Regular", true, pdfs);
         List<Integer> gids = new ArrayList<>();
         for (int i = 0; i < mergedTTF.getNumberOfGlyphs(); i++) {
             if (mergedTTF.getGlyph().getGlyph(i).getNumberOfContours() != 0) {
@@ -388,22 +403,37 @@ public class FOPPDFSingleMultiByteFontTestCase {
             Assert.assertTrue(String.valueOf(gid), gids.contains(gid));
         }
         Assert.assertEquals(3, mergedTTF.getGlyph().getGlyph(167).getNumberOfContours());
-        Assert.assertEquals(Arrays.asList(8211, 37, 74), compareGlyphs(mergedTTF, TTSubset16, TTSubset17));
+        Assert.assertEquals(Arrays.asList(8211, 37, 74), compareGlyphs(mergedTTF, pdfs));
     }
 
     @Test
     public void testTTSubsetRemapGid2() throws IOException {
-        TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat", "TT0", true, TTSubset18, TTSubset19, TTSubset20);
+        Map<String, String> pdfs = new LinkedHashMap<>();
+        pdfs.put(TTSubset18, "TT0");
+        pdfs.put(TTSubset19, "TT0");
+        pdfs.put(TTSubset20, "TT0");
+        TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat", true, pdfs);
         Assert.assertEquals(1, mergedTTF.getGlyph().getGlyph(1608).getNumberOfContours());
-        Assert.assertEquals(Arrays.asList(8212, 55, 85), compareGlyphs(mergedTTF, TTSubset18, TTSubset19, TTSubset20));
+        Assert.assertEquals(Arrays.asList(8212, 55, 85), compareGlyphs(mergedTTF, pdfs));
     }
 
-    private List<Integer> compareGlyphs(TrueTypeFont mergedTTF, String... files) throws IOException {
+    @Test
+    public void testTTSubsetRemapGidNotInCmap() throws IOException {
+        Map<String, String> pdfs = new LinkedHashMap<>();
+        pdfs.put(TTSubset21, "TT2");
+        pdfs.put(TTSubset22, "TT0");
+        pdfs.put(TTSubset23, "TT1");
+        TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat-Bold", true, pdfs);
+        Assert.assertEquals(262, mergedTTF.getCmap().getCmaps()[0].getGlyphId(48));
+        Assert.assertEquals(Arrays.asList(36, 48, 86), compareGlyphs(mergedTTF, pdfs));
+    }
+
+    private List<Integer> compareGlyphs(TrueTypeFont mergedTTF, Map<String, String> pdfs) throws IOException {
         List<Integer> lastGlyphsChecked = new ArrayList<>();
         List<Integer> glyphsChecked = new ArrayList<>();
-        for (String file : files) {
+        for (Map.Entry<String, String> entryInput : pdfs.entrySet()) {
             lastGlyphsChecked.clear();
-            Map<Integer, GlyphData> glyphsFromInput = getGlyphs(file, "TT0");
+            Map<Integer, GlyphData> glyphsFromInput = getGlyphs(entryInput.getKey(), entryInput.getValue());
             for (Map.Entry<Integer, GlyphData> entry : glyphsFromInput.entrySet()) {
                 if (!glyphsChecked.contains(entry.getKey())) {
                     compareGlyph(mergedTTF, entry.getKey(), entry.getValue());
@@ -454,15 +484,24 @@ public class FOPPDFSingleMultiByteFontTestCase {
 
     private TrueTypeFont validateSingleByteFont(String fontName, String internalName, boolean remap, String... files)
         throws IOException {
+        Map<String, String> pdfs = new LinkedHashMap<>();
+        for (String pdf : files) {
+            pdfs.put(pdf, internalName);
+        }
+        return validateSingleByteFont(fontName, remap, pdfs);
+    }
+
+    private TrueTypeFont validateSingleByteFont(String fontName, boolean remap, Map<String, String> pdfs)
+        throws IOException {
         FOPPDFSingleByteFont sbFont = null;
         PDFBoxEventProducer eventProducer = mock(PDFBoxEventProducer.class);
-        for (String file : files) {
-            PDDocument doc = PDFBoxAdapterTestCase.load(file);
+        for (Map.Entry<String, String> entry : pdfs.entrySet()) {
+            PDDocument doc = PDFBoxAdapterTestCase.load(entry.getKey());
             if (sbFont == null) {
-                sbFont = new FOPPDFSingleByteFont(getFont(doc, internalName), fontName,
+                sbFont = new FOPPDFSingleByteFont(getFont(doc, entry.getValue()), fontName,
                         getEventBroadcaster(eventProducer), new PDFMergeFontsParams(remap));
             } else {
-                sbFont.addFont(getFont(doc, internalName));
+                sbFont.addFont(getFont(doc, entry.getValue()));
             }
             doc.close();
         }
