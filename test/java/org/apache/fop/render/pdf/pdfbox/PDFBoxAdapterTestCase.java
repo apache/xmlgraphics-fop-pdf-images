@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -102,6 +103,8 @@ public class PDFBoxAdapterTestCase {
     protected static final String PATTERN = "pattern.pdf";
     protected static final String FORMROTATED = "formrotated.pdf";
     protected static final String SOFTMASK = "softmask.pdf";
+    protected static final String DCT_ARRAY = "dctArray.pdf";
+    protected static final String DCT_ARRAY2 = "dctArray2.pdf";
 
     protected static PDFPage getPDFPage(PDFDocument doc) {
         final Rectangle2D r = new Rectangle2D.Double();
@@ -139,7 +142,7 @@ public class PDFBoxAdapterTestCase {
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
-        Assert.assertTrue(stream, stream.contains("/P <</MCID 5 >>BDC"));
+        assertTrue(stream, stream.contains("/P <</MCID 5 >>BDC"));
         doc.close();
     }
 
@@ -160,7 +163,7 @@ public class PDFBoxAdapterTestCase {
         os.reset();
         adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         pdfdoc.outputTrailer(os);
-        Assert.assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields ["));
+        assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields ["));
         doc.close();
     }
 
@@ -196,8 +199,8 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.output(os);
         String out = os.toString(StandardCharsets.UTF_8.name());
-        Assert.assertTrue(out.contains("/Parent "));
-        Assert.assertTrue(out.contains("/Kids "));
+        assertTrue(out.contains("/Parent "));
+        assertTrue(out.contains("/Kids "));
         doc.close();
     }
 
@@ -219,7 +222,7 @@ public class PDFBoxAdapterTestCase {
         adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.outputTrailer(os);
-        Assert.assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields []"));
+        assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields []"));
         doc.close();
     }
 
@@ -239,7 +242,7 @@ public class PDFBoxAdapterTestCase {
         adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         pdfdoc.outputTrailer(os);
-        Assert.assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields []"));
+        assertTrue(os.toString(StandardCharsets.UTF_8.name()).contains("/Fields []"));
         doc.close();
     }
 
@@ -257,7 +260,7 @@ public class PDFBoxAdapterTestCase {
         AffineTransform pageAdjust = new AffineTransform();
         Rectangle r = new Rectangle(0, 1650, 842000, 595000);
         String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
-        Assert.assertTrue(stream.contains("/Link <</MCID 5 >>BDC"));
+        assertTrue(stream.contains("/Link <</MCID 5 >>BDC"));
         assertEquals(pageNumbers.size(), 4);
         PDFAnnotList annots = (PDFAnnotList) pdfpage.get("Annots");
         assertEquals(annots.toPDFString(), "[\n1 0 R\n2 0 R\n]");
@@ -289,7 +292,7 @@ public class PDFBoxAdapterTestCase {
         pdfToPS(LINK);
         pdfToPS(LOOP);
         stream = pdfToPS(LIBREOFFICE);
-        Assert.assertTrue(stream.toString(StandardCharsets.UTF_8.name()).contains("/MaskColor [ 255 255 255 ]"));
+        assertTrue(stream.toString(StandardCharsets.UTF_8.name()).contains("/MaskColor [ 255 255 255 ]"));
     }
 
     private int countString(String s, String value) {
@@ -321,15 +324,15 @@ public class PDFBoxAdapterTestCase {
     @Test
     public void testSmask() throws IOException, ImageException {
         ByteArrayOutputStream ps = pdfToPS(SMASK);
-        Assert.assertTrue(ps.toString(StandardCharsets.UTF_8.name()).contains("/Pattern"));
-        Assert.assertTrue(ps.toString(StandardCharsets.UTF_8.name()).contains("{<\nf1f1f1"));
+        assertTrue(ps.toString(StandardCharsets.UTF_8.name()).contains("/Pattern"));
+        assertTrue(ps.toString(StandardCharsets.UTF_8.name()).contains("{<\nf1f1f1"));
     }
 
     @Test
     public void testPCL() {
         UnsupportedOperationException ex = Assert.assertThrows(UnsupportedOperationException.class, () ->
                 pdfToPCL(SHADING));
-        Assert.assertTrue(ex.getMessage().contains("Clipping is not supported."));
+        assertTrue(ex.getMessage().contains("Clipping is not supported."));
     }
 
     private void pdfToPCL(String pdf) throws IOException, ImageException {
@@ -423,7 +426,7 @@ public class PDFBoxAdapterTestCase {
         PDFResources res = c.getPage().getPDFResources();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         res.output(bos);
-        Assert.assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/ExtGState << /GS1"));
+        assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/ExtGState << /GS1"));
     }
 
     @Test
@@ -451,8 +454,8 @@ public class PDFBoxAdapterTestCase {
         LoadPDFWithCache loadPDFWithCache = new LoadPDFWithCache();
         String stream = loadPDFWithCache.run(LOOP);
         String cachedStream = (String) loadPDFWithCache.objectCachePerFile.get(LOOP);
-        Assert.assertTrue(cachedStream.contains("EMC"));
-        Assert.assertTrue(stream.endsWith(cachedStream));
+        assertTrue(cachedStream.contains("EMC"));
+        assertTrue(stream.endsWith(cachedStream));
     }
 
     private static class LoadPDFWithCache {
@@ -482,7 +485,7 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         loadPDFWithCache.pdfdoc.output(bos);
         assertEquals(loadPDFWithCache.pdfCache.size(), 2);
-        Assert.assertTrue(bos.size() <= 6418);
+        assertTrue(bos.size() <= 6418);
     }
 
     @Test
@@ -492,7 +495,7 @@ public class PDFBoxAdapterTestCase {
         page.setContents(new PDStream(doc, new ByteArrayInputStream("<".getBytes(StandardCharsets.UTF_8))));
         doc.addPage(page);
         RuntimeException ex = Assert.assertThrows(RuntimeException.class, () -> pdfToPCL(doc, ERROR));
-        Assert.assertTrue(ex.getMessage().startsWith("Error while painting PDF page: " + ERROR));
+        assertTrue(ex.getMessage().startsWith("Error while painting PDF page: " + ERROR));
     }
 
     @Test
@@ -503,7 +506,7 @@ public class PDFBoxAdapterTestCase {
         ImagePDF imagePDF = new ImagePDF(new ImageInfo(ERROR, null), null);
         RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
                 new PDFBoxImageHandler().handleImage(context, imagePDF, null));
-        Assert.assertTrue(ex.getMessage().startsWith("Error on PDF page: " + ERROR));
+        assertTrue(ex.getMessage().startsWith("Error on PDF page: " + ERROR));
     }
 
     @Test
@@ -544,12 +547,12 @@ public class PDFBoxAdapterTestCase {
         doc.close();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         formXObject.output(bos);
-        Assert.assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/Type /XObject"));
+        assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/Type /XObject"));
     }
 
     @Test
     public void testRewriteOfForms() throws IOException {
-        Assert.assertTrue(getPDFToPDF(ACCESSIBLERADIOBUTTONS).contains("/F15106079 12 Tf"));
+        assertTrue(getPDFToPDF(ACCESSIBLERADIOBUTTONS).contains("/F15106079 12 Tf"));
     }
 
     private String getPDFToPDF(String pdf) throws IOException {
@@ -577,17 +580,40 @@ public class PDFBoxAdapterTestCase {
 
     @Test
     public void testRewriteOfPatternForms() throws IOException {
-        Assert.assertTrue(getPDFToPDF(PATTERN).contains("/R1106079 gs\n1 1 m"));
+        assertTrue(getPDFToPDF(PATTERN).contains("/R1106079 gs\n1 1 m"));
     }
 
     @Test
     public void testDCTEncryption() throws IOException {
+        defaultTestDCTEncryption(IMAGE, "/Filter /DCTDecode");
+    }
+
+    @Test
+    public void testDCTEncryptionFilterInsideArray() throws IOException {
+        //dct filters can be inside a COSArray (/Filter [/DCTDecode])
+        int outputSize = defaultTestDCTEncryption(DCT_ARRAY, "/Filter /DCTDecode");
+        assertTrue("Filter inside a COSArray cannot cause output file size to ballon", outputSize < 100000);
+    }
+
+    @Test
+    public void testDCTEncryptionMultipleFiltersInsideArray() throws IOException {
+        //multiple filters can be inside a COSArray (/Filter [/FlateDecode /DCTDecode])
+        int outputSize = defaultTestDCTEncryption(DCT_ARRAY2, "/Filter [/FlateDecode /DCTDecode]");
+        assertTrue("Filter inside a COSArray cannot cause output file size to ballon", outputSize < 100000);
+    }
+
+    private int defaultTestDCTEncryption(String filename, String expected) throws IOException {
         PDFDocument pdfdoc = new PDFDocument("");
         pdfdoc.setEncryption(new PDFEncryptionParams());
-        loadPage(pdfdoc, IMAGE);
+        loadPage(pdfdoc, filename);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
-        Assert.assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/Filter /DCTDecode"));
+
+        String output = bos.toString(StandardCharsets.UTF_8.name());
+        assertTrue("Output must have the DCTDecode filter as the input uses this filter",
+                output.contains(expected));
+
+        return bos.size();
     }
 
     @Test
@@ -633,8 +659,8 @@ public class PDFBoxAdapterTestCase {
         String id2 = "33 0 R";
         assertEquals(getAnnotationsID(page2), id2);
         String outStr = os.toString(StandardCharsets.UTF_8.name()).replaceAll("\\s\\s/", "/");
-        Assert.assertTrue(outStr.contains("<< /Kids [32 0 R] /T ([Signer1) >>"));
-        Assert.assertTrue(outStr.contains("<<\n"
+        assertTrue(outStr.contains("<< /Kids [32 0 R] /T ([Signer1) >>"));
+        assertTrue(outStr.contains("<<\n"
                 + "/Kids [" + id1 + " " + id2 + "]\n"
                 + "/Parent 34 0 R\n"
                 + "/T (Fullname1)\n"
@@ -651,7 +677,7 @@ public class PDFBoxAdapterTestCase {
         PDFPage page = loadPage(pdfdoc, doc, new Rectangle());
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         page.getPDFResources().output(bos);
-        Assert.assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/Properties << /S /S >>"));
+        assertTrue(bos.toString(StandardCharsets.UTF_8.name()).contains("/Properties << /S /S >>"));
     }
 
     @Test
@@ -663,7 +689,7 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         String outStr = removeWhiteSpace(bos);
-        Assert.assertTrue(outStr.contains("<<\n"
+        assertTrue(outStr.contains("<<\n"
                 + "/Type /Pattern\n"
                 + "/PatternType 2\n"
                 + "/Shading 2 0 R\n"
@@ -682,7 +708,7 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         String outStr = removeWhiteSpace(bos);
-        Assert.assertTrue(outStr.contains("<<\n"
+        assertTrue(outStr.contains("<<\n"
                 + "/Type /Pattern\n/PatternType 2\n/Shading 2 0 R\n"
                 + "/Matrix [53.8858833313 0 0 -26.4968185425 72.7459411621 -120.8601837158]\n"
                 + ">>"));
@@ -698,8 +724,8 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         String outStr = removeWhiteSpace(bos);
-        Assert.assertTrue(outStr.contains("/Pattern << /Pa1 12 0 R /Pa2 13 0 R >>"));
-        Assert.assertTrue(outStr.contains("<<\n"
+        assertTrue(outStr.contains("/Pattern << /Pa1 12 0 R /Pa2 13 0 R >>"));
+        assertTrue(outStr.contains("<<\n"
                 + "/Type /Pattern\n"
                 + "/PatternType 2\n"
                 + "/Shading 2 0 R\n"
@@ -748,7 +774,7 @@ public class PDFBoxAdapterTestCase {
         ByteArrayOutputStream bos = pdfToPS(SOFTMASK);
         String output = bos.toString(StandardCharsets.UTF_8.name());
         assertEquals(output.split("BeginBitmap").length, 3);
-        Assert.assertTrue(output.contains("/ImageMatrix [148 0 0 78 0 0]"));
-        Assert.assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
+        assertTrue(output.contains("/ImageMatrix [148 0 0 78 0 0]"));
+        assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
     }
 }

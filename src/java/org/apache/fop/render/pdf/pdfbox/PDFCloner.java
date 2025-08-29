@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -39,10 +40,13 @@ import org.apache.pdfbox.cos.COSNull;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.cos.COSString;
+import org.apache.pdfbox.filter.Filter;
+import org.apache.pdfbox.filter.FilterFactory;
 import org.apache.pdfbox.pdmodel.common.COSObjectable;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 
 import org.apache.fop.pdf.DCTFilter;
+import org.apache.fop.pdf.FlateFilter;
 import org.apache.fop.pdf.PDFArray;
 import org.apache.fop.pdf.PDFDictionary;
 import org.apache.fop.pdf.PDFDocument;
@@ -178,8 +182,23 @@ public class PDFCloner {
         InputStream in;
         Set filter;
         PDFStream stream = new PDFStream();
-        if (adapter.pdfDoc.isEncryptionActive() && originalStream.getItem(COSName.FILTER) == COSName.DCT_DECODE) {
+        if (adapter.pdfDoc.isEncryptionActive() && isDctDecodeFilter(originalStream.getItem(COSName.FILTER))) {
             stream.getFilterList().addFilter(new DCTFilter());
+            in = originalStream.createRawInputStream();
+            filter = Collections.EMPTY_SET;
+        } else if (adapter.pdfDoc.isEncryptionActive()
+                    && isDctAndFlateDecodeFilter(originalStream.getItem(COSName.FILTER))) {
+            in = originalStream.createRawInputStream();
+            OutputStream out = originalStream.createRawOutputStream();
+
+            Filter flateFilter = FilterFactory.INSTANCE.getFilter(COSName.FLATE_DECODE);
+            flateFilter.decode(in, out, originalStream, 0);
+            IOUtils.closeQuietly(in);
+            IOUtils.closeQuietly(out);
+
+            stream.getFilterList().addFilter(new DCTFilter());
+            stream.getFilterList().addFilter(new FlateFilter());
+
             in = originalStream.createRawInputStream();
             filter = Collections.EMPTY_SET;
         } else if (adapter.pdfDoc.isEncryptionActive()
@@ -217,6 +236,26 @@ public class PDFCloner {
         }
         adapter.transferDict(originalStream, stream, filter);
         return cacheClonedObject(keyBase, stream);
+    }
+
+    private boolean isDctDecodeFilter(COSBase filterItem) {
+        if (filterItem instanceof COSArray) {
+            COSArray arrayFilters = (COSArray) filterItem;
+            List<?> list = arrayFilters.toList();
+            return list.size() == 1 && list.contains(COSName.DCT_DECODE);
+        }
+
+        return filterItem == COSName.DCT_DECODE;
+    }
+
+    private boolean isDctAndFlateDecodeFilter(COSBase filterItem) {
+        if (filterItem instanceof COSArray) {
+            COSArray arrayFilters = (COSArray) filterItem;
+            List<?> list = arrayFilters.toList();
+            return list.size() == 2 && list.contains(COSName.DCT_DECODE) && list.contains(COSName.FLATE_DECODE);
+        }
+
+        return false;
     }
 
     protected Object cacheClonedObject(Object base, Object cloned) throws IOException {
