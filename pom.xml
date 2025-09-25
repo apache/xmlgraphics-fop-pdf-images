@@ -12,6 +12,7 @@
   <properties>
     <antrun.plugin.version>1.8</antrun.plugin.version>
     <checkstyle.plugin.version>2.15</checkstyle.plugin.version>
+    <spotbugs.version>4.7.3.6</spotbugs.version>
     <jacoco.plugin.version>0.8.5</jacoco.plugin.version>
     <jacoco.coverage.line.min>0.8</jacoco.coverage.line.min>
     <junit.version>4.13.1</junit.version>
@@ -167,7 +168,7 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.7.3.6</version>
+        <version>${spotbugs.version}</version>
         <configuration>
           <effort>Max</effort>
           <threshold>Low</threshold>
@@ -196,6 +197,18 @@
       </resource>
     </resources>
   </build>
+  
+  <profiles>
+    <profile>
+      <id>spotbugs-java11</id>
+      <activation>
+        <jdk>[11,)</jdk>
+      </activation>
+      <properties>
+        <spotbugs.version>4.8.6.7</spotbugs.version>
+      </properties>
+    </profile>
+  </profiles>  
   
   <repositories>
     <repository>
