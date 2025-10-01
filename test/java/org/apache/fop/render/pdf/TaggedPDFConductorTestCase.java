@@ -95,14 +95,14 @@ public class TaggedPDFConductorTestCase {
 
     private void runConductor(String pdf, PDFStructElem elem) throws IOException {
         setUp();
-        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
-        PDPage srcPage = doc.getPage(0);
-        elem.setObjectNumber(2);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(),  new HashMap<>(), new HashMap<>(),
-                new HashMap<>(), new DefaultEventBroadcaster());
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(pdf)) {
+            PDPage srcPage = doc.getPage(0);
+            elem.setObjectNumber(2);
+            PDFBoxAdapter adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                    new HashMap<>(), new DefaultEventBroadcaster());
+            PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+            new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
+        }
     }
 
     private void setUp() {
@@ -194,18 +194,18 @@ public class TaggedPDFConductorTestCase {
     private PDFLogicalStructureHandler runConductorForHandler(String pdf, PDFStructElem elem,
             PDFStructElem[] textElements) throws IOException {
         setUp();
-        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
-        PDPage srcPage = doc.getPage(0);
-        elem.setObjectNumber(2);
-        PDFBoxAdapter adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(),
-                new HashMap<>(), new DefaultEventBroadcaster());
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        for (PDFStructElem textElement : textElements) {
-            handler.addTextContentItem(textElement);
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(pdf)) {
+            PDPage srcPage = doc.getPage(0);
+            elem.setObjectNumber(2);
+            PDFBoxAdapter adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                    new HashMap<>(), new DefaultEventBroadcaster());
+            PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+            for (PDFStructElem textElement : textElements) {
+                handler.addTextContentItem(textElement);
+            }
+            new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
+            return handler;
         }
-        new TaggedPDFConductor(elem, handler, srcPage, adapter).handleLogicalStructure(doc);
-        doc.close();
-        return handler;
     }
 
     private static String getParentTreeContentsAsString(PDFLogicalStructureHandler logicalStructureHandler) {

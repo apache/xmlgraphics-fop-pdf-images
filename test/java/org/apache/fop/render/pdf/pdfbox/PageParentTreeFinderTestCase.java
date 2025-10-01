@@ -39,30 +39,30 @@ public class PageParentTreeFinderTestCase {
 
     @Test
     public void testGetPageParentTreeArray() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
-        PDPage srcPage = doc.getPage(0);
-        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
-        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
-        Assert.assertEquals(markedContentParents.size(), 3);
-        COSObject firstObj = (COSObject)markedContentParents.get(0);
-        COSObject secObj = (COSObject)markedContentParents.get(1);
-        COSDictionary firstObjDict = (COSDictionary) firstObj.getObject();
-        COSArray firstKids = (COSArray)firstObjDict.getDictionaryObject(COSName.K);
-        COSDictionary firstKid = (COSDictionary) firstKids.get(0);
-        int test = firstKid.getInt("MCID");
-        int expected = 0;
-        Assert.assertEquals(test, expected);
-        COSDictionary firstKidBrother = (COSDictionary)firstKids.get(2);
-        test = firstKidBrother.getInt("MCID");
-        expected = 2;
-        Assert.assertEquals(test, expected);
-        COSDictionary secObjDict = (COSDictionary) secObj.getObject();
-        COSArray secKidsArray = (COSArray)secObjDict.getDictionaryObject(COSName.K);
-        COSDictionary secondKid = (COSDictionary)secKidsArray.get(0);
-        test = secondKid.getInt("MCID");
-        expected = 1;
-        Assert.assertEquals(test, expected);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(LINK)) {
+            PDPage srcPage = doc.getPage(0);
+            PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+            COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+            Assert.assertEquals(markedContentParents.size(), 3);
+            COSObject firstObj = (COSObject) markedContentParents.get(0);
+            COSObject secObj = (COSObject) markedContentParents.get(1);
+            COSDictionary firstObjDict = (COSDictionary) firstObj.getObject();
+            COSArray firstKids = (COSArray) firstObjDict.getDictionaryObject(COSName.K);
+            COSDictionary firstKid = (COSDictionary) firstKids.get(0);
+            int test = firstKid.getInt("MCID");
+            int expected = 0;
+            Assert.assertEquals(test, expected);
+            COSDictionary firstKidBrother = (COSDictionary) firstKids.get(2);
+            test = firstKidBrother.getInt("MCID");
+            expected = 2;
+            Assert.assertEquals(test, expected);
+            COSDictionary secObjDict = (COSDictionary) secObj.getObject();
+            COSArray secKidsArray = (COSArray) secObjDict.getDictionaryObject(COSName.K);
+            COSDictionary secondKid = (COSDictionary) secKidsArray.get(0);
+            test = secondKid.getInt("MCID");
+            expected = 1;
+            Assert.assertEquals(test, expected);
+        }
     }
 
     @Test
@@ -79,31 +79,31 @@ public class PageParentTreeFinderTestCase {
 
     @Test
     public void testTraverseKids() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
-        PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
-        COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
-        COSObject kidCOSObj = (COSObject) parentTree.get(0);
-        COSDictionary dict = (COSDictionary) kidCOSObj.getObject();
-        COSArray nums = (COSArray) dict.getDictionaryObject(COSName.NUMS);
-        nums.add(0, COSInteger.get(9));
-        nums.add(1, new COSDictionary());
-        COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
-        Assert.assertEquals(numList.size(), 3);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(LINK)) {
+            PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
+            COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
+            COSObject kidCOSObj = (COSObject) parentTree.get(0);
+            COSDictionary dict = (COSDictionary) kidCOSObj.getObject();
+            COSArray nums = (COSArray) dict.getDictionaryObject(COSName.NUMS);
+            nums.add(0, COSInteger.get(9));
+            nums.add(1, new COSDictionary());
+            COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
+            Assert.assertEquals(numList.size(), 3);
+        }
     }
 
     @Test
     public void testCOSNull() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
-        PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
-        COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
-        COSObject kidCOSObj = (COSObject) parentTree.get(0);
-        COSDictionary dict = (COSDictionary) kidCOSObj.getObject();
-        COSArray nums = (COSArray) dict.getDictionaryObject(COSName.NUMS);
-        nums.add(0, COSInteger.ZERO);
-        nums.add(1, new COSObject(COSNull.NULL));
-        COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
-        Assert.assertEquals(numList.size(), 3);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(LINK)) {
+            PDNumberTreeNode srcNumberTreeNode = doc.getDocumentCatalog().getStructureTreeRoot().getParentTree();
+            COSArray parentTree = (COSArray) srcNumberTreeNode.getCOSObject().getDictionaryObject(COSName.KIDS);
+            COSObject kidCOSObj = (COSObject) parentTree.get(0);
+            COSDictionary dict = (COSDictionary) kidCOSObj.getObject();
+            COSArray nums = (COSArray) dict.getDictionaryObject(COSName.NUMS);
+            nums.add(0, COSInteger.ZERO);
+            nums.add(1, new COSObject(COSNull.NULL));
+            COSArray numList = new PageParentTreeFinder(doc.getPage(0)).getPageParentTreeArray(doc);
+            Assert.assertEquals(numList.size(), 3);
+        }
     }
 }

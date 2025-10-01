@@ -44,12 +44,12 @@ public class PDFWriterTestCase {
     @Test
     public void testFloatCache() throws IOException {
         String text = "[1.1 1.1] a";
-        PDDocument doc = new PDDocument();
-        PDStream pdStream = new PDStream(doc, new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
-        MyPDFWriter pdfWriter = new MyPDFWriter();
-        pdfWriter.writeText(pdStream);
-        doc.close();
-        Assert.assertEquals(1, pdfWriter.i);
+        try (PDDocument doc = new PDDocument()) {
+            PDStream pdStream = new PDStream(doc, new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)));
+            MyPDFWriter pdfWriter = new MyPDFWriter();
+            pdfWriter.writeText(pdStream);
+            Assert.assertEquals(1, pdfWriter.i);
+        }
     }
 
     private static class MyPDFWriter extends PDFWriter {

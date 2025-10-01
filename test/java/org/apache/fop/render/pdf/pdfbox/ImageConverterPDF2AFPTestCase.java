@@ -34,19 +34,19 @@ import org.apache.xmlgraphics.image.loader.impl.ImageRawStream;
 public class ImageConverterPDF2AFPTestCase {
     @Test
     public void testConverter() throws Exception {
-        PDDocument orgdoc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.ANNOT);
-        String orgPage = IOUtils.toString(orgdoc.getPage(1).getContents(), StandardCharsets.UTF_8);
-        Assert.assertEquals(orgdoc.getNumberOfPages(), 2);
-        ImageInfo info = new ImageInfo("x.pdf#page=2", ImagePDF.MIME_PDF);
-        ImagePDF imagePDF = new ImagePDF(info, orgdoc);
-        ImageConverterPDF2AFP converter = new ImageConverterPDF2AFP();
-        ImageRawStream stream = (ImageRawStream) converter.convert(imagePDF, null);
-        PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(stream.createInputStream()));
-        PDPage page = doc.getPage(0);
-        Assert.assertEquals(orgPage, IOUtils.toString(page.getContents(), StandardCharsets.UTF_8));
-        Assert.assertEquals(doc.getNumberOfPages(), 1);
-        Assert.assertEquals(stream.getMimeType(), ImagePDF.MIME_PDF);
-        orgdoc.close();
-        doc.close();
+        try (PDDocument orgdoc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.ANNOT)) {
+            String orgPage = IOUtils.toString(orgdoc.getPage(1).getContents(), StandardCharsets.UTF_8);
+            Assert.assertEquals(orgdoc.getNumberOfPages(), 2);
+            ImageInfo info = new ImageInfo("x.pdf#page=2", ImagePDF.MIME_PDF);
+            ImagePDF imagePDF = new ImagePDF(info, orgdoc);
+            ImageConverterPDF2AFP converter = new ImageConverterPDF2AFP();
+            ImageRawStream stream = (ImageRawStream) converter.convert(imagePDF, null);
+            try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(stream.createInputStream()))) {
+                PDPage page = doc.getPage(0);
+                Assert.assertEquals(orgPage, IOUtils.toString(page.getContents(), StandardCharsets.UTF_8));
+                Assert.assertEquals(doc.getNumberOfPages(), 1);
+                Assert.assertEquals(stream.getMimeType(), ImagePDF.MIME_PDF);
+            }
+        }
     }
 }

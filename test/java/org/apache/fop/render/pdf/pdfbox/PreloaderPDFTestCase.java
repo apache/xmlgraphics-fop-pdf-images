@@ -78,8 +78,9 @@ public class PreloaderPDFTestCase {
             ImageSource imageSource = new ImageSource(ImageIO.createImageInputStream(is), "", true);
             ImageInfo imageInfo = new PreloaderPDF().preloadImage("", imageSource, context);
             ImagePDF img = (ImagePDF) imageInfo.getOriginalImage();
-            PDDocument doc = img.getPDDocument();
-            doc.save(new ByteArrayOutputStream());
+            try (PDDocument doc = img.getPDDocument()) {
+                doc.save(new ByteArrayOutputStream());
+            }
             img.close();
         }
     }

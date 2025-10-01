@@ -94,25 +94,24 @@ public class FontMergeTestCase {
     protected static final String TYPE0CFF = "type0cff.pdf";
 
     protected static String writeText(FontInfo fi, String pdf) throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
-        PDPage page = doc.getPage(0);
-        AffineTransform pageAdjust = new AffineTransform();
-        String c = (String) PDFBoxAdapterTestCase.getPDFBoxAdapter(true, false)
-                .createStreamFromPDFBoxPage(doc, page, pdf, pageAdjust, fi, new Rectangle(), new AffineTransform());
-        doc.close();
-        return c;
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(pdf)) {
+            PDPage page = doc.getPage(0);
+            AffineTransform pageAdjust = new AffineTransform();
+            return (String) PDFBoxAdapterTestCase.getPDFBoxAdapter(true, false)
+                    .createStreamFromPDFBoxPage(doc, page, pdf, pageAdjust, fi, new Rectangle(), new AffineTransform());
+        }
     }
 
     @Test
     public void testMergeFontsAndFormXObject() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.IMAGE);
-        PDPage page = doc.getPage(0);
-        AffineTransform pageAdjust = new AffineTransform();
-        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
-                PDFBoxAdapterTestCase.getPDFBoxAdapter(true, true).createStreamFromPDFBoxPage(
-                      doc, page, PDFBoxAdapterTestCase.IMAGE, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust));
-        doc.close();
-        assertEquals(ex.getMessage(), "merge-fonts and form-xobject can't both be enabled");
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.IMAGE)) {
+            PDPage page = doc.getPage(0);
+            AffineTransform pageAdjust = new AffineTransform();
+            RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
+                    PDFBoxAdapterTestCase.getPDFBoxAdapter(true, true).createStreamFromPDFBoxPage(doc,
+                          page, PDFBoxAdapterTestCase.IMAGE, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust));
+            assertEquals(ex.getMessage(), "merge-fonts and form-xobject can't both be enabled");
+        }
     }
 
     @Test
@@ -208,12 +207,12 @@ public class FontMergeTestCase {
         Map<Integer, PDFArray> pageNumbers = new HashMap<Integer, PDFArray>();
         PDFBoxAdapter adapter = new PDFBoxAdapter(pdfpage, new HashMap<>(), new HashMap<>(), pageNumbers,
                 new HashMap<>(), new DefaultEventBroadcaster());
-        PDDocument doc = PDFBoxAdapterTestCase.load(XFORM);
-        PDPage page = doc.getPage(0);
-        AffineTransform pageAdjust = new AffineTransform();
-        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, new FontInfo(), r, pageAdjust);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(XFORM)) {
+            PDPage page = doc.getPage(0);
+            AffineTransform pageAdjust = new AffineTransform();
+            Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+            adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, new FontInfo(), r, pageAdjust);
+        }
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
         Assert.assertFalse(bos.toString(StandardCharsets.UTF_8.name()).contains("/W 5 /H 5 /BPC 8 /CS /RGB ID ÿÿÿ"));
@@ -229,19 +228,18 @@ public class FontMergeTestCase {
 
     @Test
     public void testMergeTT() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(TYPE0TT);
-        PDType0Font type0Font = (PDType0Font) doc.getPage(0).getResources().getFont(COSName.getPDFName("C2_0"));
-        PDCIDFontType2 ttf = (PDCIDFontType2) type0Font.getDescendantFont();
-        InputStream originalData = ttf.getTrueTypeFont().getOriginalData();
-        byte[] originalDataBytes = IOUtils.toByteArray(originalData);
-        doc.close();
-
-        MergeTTFonts mergeTTFonts = new MergeTTFonts(null);
-        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
-        map.put(0, 0);
-        mergeTTFonts.readFont(new ByteArrayInputStream(originalDataBytes), null, null, map, true);
-        byte[] mergedData = mergeTTFonts.getMergedFontSubset();
-        Assert.assertArrayEquals(mergedData, originalDataBytes);
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(TYPE0TT)) {
+            PDType0Font type0Font = (PDType0Font) doc.getPage(0).getResources().getFont(COSName.getPDFName("C2_0"));
+            PDCIDFontType2 ttf = (PDCIDFontType2) type0Font.getDescendantFont();
+            InputStream originalData = ttf.getTrueTypeFont().getOriginalData();
+            byte[] originalDataBytes = IOUtils.toByteArray(originalData);
+            MergeTTFonts mergeTTFonts = new MergeTTFonts(null);
+            Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+            map.put(0, 0);
+            mergeTTFonts.readFont(new ByteArrayInputStream(originalDataBytes), null, null, map, true);
+            byte[] mergedData = mergeTTFonts.getMergedFontSubset();
+            Assert.assertArrayEquals(mergedData, originalDataBytes);
+        }
     }
 
     @Test

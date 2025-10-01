@@ -78,18 +78,18 @@ public class DocumentRootModifierTestCase {
         Assert.assertEquals(test, expected);
 
 
-        PDDocument doc = PDFBoxAdapterTestCase.load(CLASSMAP);
-        COSDictionary temp = doc.getDocumentCatalog().getStructureTreeRoot().getCOSObject();
-        PDFDictionary classMap = new PDFDictionary();
-        PDFDictionary inner = new PDFDictionary();
-        inner.put("StartIndent", 0);
-        classMap.put("Normal2", inner);
-        structTreeRoot.put("ClassMap", classMap);
-        modifier.structTreeRootEntriesToCopy(temp);
-        structTreeRoot = pdfDoc.getRoot().getStructTreeRoot();
-        PDFDictionary testDict = (PDFDictionary)structTreeRoot.get("ClassMap");
-        Assert.assertNotNull(testDict.get("Normal2"));
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(CLASSMAP)) {
+            COSDictionary temp = doc.getDocumentCatalog().getStructureTreeRoot().getCOSObject();
+            PDFDictionary classMap = new PDFDictionary();
+            PDFDictionary inner = new PDFDictionary();
+            inner.put("StartIndent", 0);
+            classMap.put("Normal2", inner);
+            structTreeRoot.put("ClassMap", classMap);
+            modifier.structTreeRootEntriesToCopy(temp);
+            structTreeRoot = pdfDoc.getRoot().getStructTreeRoot();
+            PDFDictionary testDict = (PDFDictionary) structTreeRoot.get("ClassMap");
+            Assert.assertNotNull(testDict.get("Normal2"));
+        }
     }
 
 }

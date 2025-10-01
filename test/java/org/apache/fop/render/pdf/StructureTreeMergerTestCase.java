@@ -74,58 +74,58 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testCopyStructure() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
-        PDPage srcPage = doc.getPage(0);
-        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
-        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
-        PDFStructElem elem = new PDFStructElem();
-        elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
-                new DefaultEventBroadcaster());
-        adapter.setCurrentMCID(1);
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
-        merger.copyStructure(markedContentParents);
-        PDFArray array = handler.getPageParentTree();
-        checkMarkedContentsParentsForLinkTest(array);
-        PDFStructElem first = (PDFStructElem)array.get(0);
-        checkParentForLinkTest(first, 0);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(LINK)) {
+            PDPage srcPage = doc.getPage(0);
+            PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+            COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+            PDFStructElem elem = new PDFStructElem();
+            elem.setObjectNumber(2);
+            adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                    new DefaultEventBroadcaster());
+            adapter.setCurrentMCID(1);
+            PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+            StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+            merger.copyStructure(markedContentParents);
+            PDFArray array = handler.getPageParentTree();
+            checkMarkedContentsParentsForLinkTest(array);
+            PDFStructElem first = (PDFStructElem) array.get(0);
+            checkParentForLinkTest(first, 0);
+        }
     }
 
     @Test
     public void testNullEntriesInParentTree() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(LINK);
-        PDPage srcPage = doc.getPage(0);
-        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
-        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
-        markedContentParents.add(0, null);
-        PDFStructElem elem = new PDFStructElem();
-        elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
-                new DefaultEventBroadcaster());
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
-        merger.copyStructure(markedContentParents);
-        PDFArray array = handler.getPageParentTree();
-        Assert.assertNull(array.get(0));
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(LINK)) {
+            PDPage srcPage = doc.getPage(0);
+            PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+            COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+            markedContentParents.add(0, null);
+            PDFStructElem elem = new PDFStructElem();
+            elem.setObjectNumber(2);
+            adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                    new DefaultEventBroadcaster());
+            PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+            StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+            merger.copyStructure(markedContentParents);
+            PDFArray array = handler.getPageParentTree();
+            Assert.assertNull(array.get(0));
+        }
     }
 
     @Test
     public void testOBJRCorrectPosition() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(MissingOBJR);
-        PDPage srcPage = doc.getPage(0);
-        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
-        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
-        PDFStructElem elem = new PDFStructElem();
-        elem.setObjectNumber(2);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
-                new DefaultEventBroadcaster());
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
-        merger.copyStructure(markedContentParents);
-        doc.close();
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(MissingOBJR)) {
+            PDPage srcPage = doc.getPage(0);
+            PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+            COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+            PDFStructElem elem = new PDFStructElem();
+            elem.setObjectNumber(2);
+            adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                    new DefaultEventBroadcaster());
+            PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+            StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+            merger.copyStructure(markedContentParents);
+        }
 //        PDFArray array = handler.getPageParentTree();
 
 //        PDFStructElem kid = (PDFStructElem)array.get(0);
@@ -192,30 +192,30 @@ public class StructureTreeMergerTestCase {
 
     @Test
     public void testCheckNullCOSObject() throws IOException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(BrokenLink);
-        PDPage srcPage = doc.getPage(0);
-        PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
-        COSArray markedContentParents = finder.getPageParentTreeArray(doc);
-        COSObject nullObj = new COSObject(null);
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(BrokenLink)) {
+            PDPage srcPage = doc.getPage(0);
+            PageParentTreeFinder finder = new PageParentTreeFinder(srcPage);
+            COSArray markedContentParents = finder.getPageParentTreeArray(doc);
+            COSObject nullObj = new COSObject(null);
 //        nullObj.setObjectNumber(100);
 //        nullObj.setGenerationNumber(0);
-        PDFStructElem elem = new PDFStructElem();
-        elem.setObjectNumber(2);
-        COSObject parent = (COSObject)markedContentParents.get(1);
-        COSDictionary dict = (COSDictionary) parent.getObject();
-        COSArray kids = (COSArray) dict.getDictionaryObject(COSName.K);
-        COSDictionary kid = (COSDictionary) kids.get(1);
-        kid.setItem(COSName.OBJ, nullObj);
-        adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
-                new DefaultEventBroadcaster());
-        PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
-        StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
-        merger.copyStructure(markedContentParents);
-        PDFArray array = handler.getPageParentTree();
-        PDFStructElem parentElem = (PDFStructElem)array.get(1);
-        PDFDictionary objrDict = (PDFDictionary) parentElem.getKids().get(1);
-        Assert.assertNull(objrDict.get("Obj"));
-        doc.close();
+            PDFStructElem elem = new PDFStructElem();
+            elem.setObjectNumber(2);
+            COSObject parent = (COSObject) markedContentParents.get(1);
+            COSDictionary dict = (COSDictionary) parent.getObject();
+            COSArray kids = (COSArray) dict.getDictionaryObject(COSName.K);
+            COSDictionary kid = (COSDictionary) kids.get(1);
+            kid.setItem(COSName.OBJ, nullObj);
+            adapter = new PDFBoxAdapter(pdfPage, new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(),
+                    new DefaultEventBroadcaster());
+            PDFLogicalStructureHandler handler = setUpPDFLogicalStructureHandler();
+            StructureTreeMerger merger = new StructureTreeMerger(elem, handler, adapter, srcPage);
+            merger.copyStructure(markedContentParents);
+            PDFArray array = handler.getPageParentTree();
+            PDFStructElem parentElem = (PDFStructElem) array.get(1);
+            PDFDictionary objrDict = (PDFDictionary) parentElem.getKids().get(1);
+            Assert.assertNull(objrDict.get("Obj"));
+        }
     }
 
     @Test

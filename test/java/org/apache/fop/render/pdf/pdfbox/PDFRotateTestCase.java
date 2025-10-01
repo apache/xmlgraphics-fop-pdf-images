@@ -42,19 +42,20 @@ public class PDFRotateTestCase {
     public void test() throws Exception {
         ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
         ImageInfo imgi = new ImageInfo("a", "b");
-        PDDocument doc = new PDDocument();
-        PDPage page = new PDPage();
-        page.setRotation(90);
-        doc.addPage(page);
-        Image img = new ImagePDF(imgi, doc);
-        ImageGraphics2D ig = (ImageGraphics2D)i.convert(img, null);
-        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage();
+            page.setRotation(90);
+            doc.addPage(page);
+            Image img = new ImagePDF(imgi, doc);
+            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
 
-        PSGraphics2D g2d = new PSPDFGraphics2D(true);
-        GraphicContext gc = new GraphicContext();
-        g2d.setGraphicContext(gc);
-        ig.getGraphics2DImagePainter().paint(g2d, rect);
-        Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045752, 0);
+            PSGraphics2D g2d = new PSPDFGraphics2D(true);
+            GraphicContext gc = new GraphicContext();
+            g2d.setGraphicContext(gc);
+            ig.getGraphics2DImagePainter().paint(g2d, rect);
+            Assert.assertEquals(g2d.getTransform().getShearX(), 0.16339869281045752, 0);
+        }
     }
 
     @Test
@@ -68,15 +69,16 @@ public class PDFRotateTestCase {
 
     private AffineTransform getTransform(int angle) throws IOException {
         PDFBoxAdapter adapter = PDFBoxAdapterTestCase.getPDFBoxAdapter(false, false);
-        PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.ROTATE);
-        PDPage page = doc.getPage(0);
-        page.setRotation(angle);
-        AffineTransform pageAdjust = new AffineTransform();
-        Rectangle r = new Rectangle(0, 1650, 842000, 595000);
-        String stream = (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
-        Assert.assertTrue(stream.contains("/GS0106079 gs"));
-        Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
-        doc.close();
-        return pageAdjust;
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(PDFBoxAdapterTestCase.ROTATE)) {
+            PDPage page = doc.getPage(0);
+            page.setRotation(angle);
+            AffineTransform pageAdjust = new AffineTransform();
+            Rectangle r = new Rectangle(0, 1650, 842000, 595000);
+            String stream =
+                    (String) adapter.createStreamFromPDFBoxPage(doc, page, "key", pageAdjust, null, r, pageAdjust);
+            Assert.assertTrue(stream.contains("/GS0106079 gs"));
+            Assert.assertTrue(stream.contains("/TT0106079 1 Tf"));
+            return pageAdjust;
+        }
     }
 }

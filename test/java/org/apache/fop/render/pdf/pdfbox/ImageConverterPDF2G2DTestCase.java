@@ -66,37 +66,35 @@ public class ImageConverterPDF2G2DTestCase {
     }
 
     private boolean pdfToPS(String pdf, String font) throws IOException, ImageException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
-        MyLazyFont lazyFont = new MyLazyFont();
-        pdfToPS(doc, pdf, font, lazyFont);
-        return lazyFont.font.fontUsed;
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(pdf)) {
+            MyLazyFont lazyFont = new MyLazyFont();
+            pdfToPS(doc, pdf, font, lazyFont);
+            return lazyFont.font.fontUsed;
+        }
     }
 
     private void pdfToPS(String pdf, LazyFont lazyFont) throws IOException, ImageException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
-        pdfToPS(doc, pdf, "NewsMinIWA-Th", lazyFont);
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(pdf)) {
+            pdfToPS(doc, pdf, "NewsMinIWA-Th", lazyFont);
+        }
     }
 
     private String pdfToPS(PDDocument doc, String pdf, String font, LazyFont lazyFont)
             throws IOException, ImageException {
-        try {
-            ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
-            ImageInfo imgi = new ImageInfo(pdf, "b");
-            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-            ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
-            GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
-            g.addFallbackFont(font, lazyFont);
-            ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            PSPDFGraphics2D g2d = (PSPDFGraphics2D)
-                    g.getGraphics(true, new PDFBoxAdapterTestCase.FOPPSGeneratorImpl(stream));
-            Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
-            GraphicContext gc = new GraphicContext();
-            g2d.setGraphicContext(gc);
-            g.paint(g2d, rect);
-            return stream.toString(StandardCharsets.UTF_8.name());
-        } finally {
-            doc.close();
-        }
+        ImageConverterPDF2G2D i = new ImageConverterPDF2G2D();
+        ImageInfo imgi = new ImageInfo(pdf, "b");
+        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+        ImageGraphics2D ig = (ImageGraphics2D) i.convert(img, null);
+        GeneralGraphics2DImagePainter g = (GeneralGraphics2DImagePainter) ig.getGraphics2DImagePainter();
+        g.addFallbackFont(font, lazyFont);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        PSPDFGraphics2D g2d = (PSPDFGraphics2D)
+                g.getGraphics(true, new PDFBoxAdapterTestCase.FOPPSGeneratorImpl(stream));
+        Rectangle2D rect = new Rectangle2D.Float(0, 0, 100, 100);
+        GraphicContext gc = new GraphicContext();
+        g2d.setGraphicContext(gc);
+        g.paint(g2d, rect);
+        return stream.toString(StandardCharsets.UTF_8.name());
     }
 
     static class MyLazyFont extends LazyFont {
@@ -122,36 +120,37 @@ public class ImageConverterPDF2G2DTestCase {
 
     @Test
     public void testPDFToImage() throws IOException, ImageException {
-        PDDocument doc = PDFBoxAdapterTestCase.load(FONTSNOTEMBEDDED);
-        ImageInfo imgi = new ImageInfo(FONTSNOTEMBEDDED, "b");
-        org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
-        ImageConverterPDF2G2D imageConverterPDF2G2D = new ImageConverterPDF2G2D();
-        ImageGraphics2D fopGraphics2D = (ImageGraphics2D) imageConverterPDF2G2D.convert(img, null);
-        BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D graphics2D = image.createGraphics();
-        fopGraphics2D.getGraphics2DImagePainter().paint(graphics2D, new Rectangle(0, 0, 1000, 1000));
-        doc.close();
-        Assert.assertEquals(graphics2D.getTransform().getScaleX(), 1.63, 0);
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(FONTSNOTEMBEDDED)) {
+            ImageInfo imgi = new ImageInfo(FONTSNOTEMBEDDED, "b");
+            org.apache.xmlgraphics.image.loader.Image img = new ImagePDF(imgi, doc);
+            ImageConverterPDF2G2D imageConverterPDF2G2D = new ImageConverterPDF2G2D();
+            ImageGraphics2D fopGraphics2D = (ImageGraphics2D) imageConverterPDF2G2D.convert(img, null);
+            BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D graphics2D = image.createGraphics();
+            fopGraphics2D.getGraphics2DImagePainter().paint(graphics2D, new Rectangle(0, 0, 1000, 1000));
+            Assert.assertEquals(graphics2D.getTransform().getScaleX(), 1.63, 0);
+        }
     }
 
     @Test
     public void testCheckImageMask() throws IOException, ImageException {
         String pdf = FontMergeTestCase.CFFCID1;
-        PDDocument doc = PDFBoxAdapterTestCase.load(pdf);
-        COSStream cosStream = new COSStream();
-        OutputStream outputStream = cosStream.createOutputStream();
-        outputStream.write("/Fm0 Do\n".getBytes(StandardCharsets.UTF_8));
-        outputStream.close();
-        PDStream pdStream = new PDStream(cosStream);
-        doc.getPage(0).setContents(pdStream);
+        try (PDDocument doc = PDFBoxAdapterTestCase.load(pdf)) {
+            COSStream cosStream = new COSStream();
+            OutputStream outputStream = cosStream.createOutputStream();
+            outputStream.write("/Fm0 Do\n".getBytes(StandardCharsets.UTF_8));
+            outputStream.close();
+            PDStream pdStream = new PDStream(cosStream);
+            doc.getPage(0).setContents(pdStream);
 
-        PDXObject form = doc.getPage(0).getResources().getXObject(COSName.getPDFName("Fm0"));
-        OutputStream formStream = form.getCOSObject().createOutputStream();
-        formStream.write("1 g".getBytes(StandardCharsets.UTF_8));
-        formStream.close();
+            PDXObject form = doc.getPage(0).getResources().getXObject(COSName.getPDFName("Fm0"));
+            OutputStream formStream = form.getCOSObject().createOutputStream();
+            formStream.write("1 g".getBytes(StandardCharsets.UTF_8));
+            formStream.close();
 
-        String ps = pdfToPS(doc, pdf, null, null);
-        Assert.assertTrue(ps.contains("/ImageType 1"));
+            String ps = pdfToPS(doc, pdf, null, null);
+            Assert.assertTrue(ps.contains("/ImageType 1"));
+        }
     }
 
     @Test
