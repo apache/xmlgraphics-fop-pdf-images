@@ -34,7 +34,7 @@
   
   <scm>
     <connection>scm:git:https://gitbox.apache.org/repos/asf/xmlgraphics-fop-pdf-images.git</connection>
-    <url>scm:git:https://gitbox.apache.org/repos/asf/xmlgraphics-fop-pdf-images.git</url>
+    <url>https://gitbox.apache.org/repos/asf/xmlgraphics-fop-pdf-images.git</url>
     <developerConnection></developerConnection>
   </scm>
 
