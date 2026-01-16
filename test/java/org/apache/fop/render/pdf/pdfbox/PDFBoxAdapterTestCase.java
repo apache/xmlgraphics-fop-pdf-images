@@ -39,6 +39,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -101,6 +102,7 @@ public class PDFBoxAdapterTestCase {
     protected static final String SMASK = "smask.pdf";
     protected static final String ACCESSIBLERADIOBUTTONS = "accessibleradiobuttons.pdf";
     protected static final String PATTERN = "pattern.pdf";
+    protected static final String BOOKMARKS = "bookmarks.pdf";
     protected static final String FORMROTATED = "formrotated.pdf";
     protected static final String SOFTMASK = "softmask.pdf";
     protected static final String DCT_ARRAY = "dctArray.pdf";
@@ -201,6 +203,9 @@ public class PDFBoxAdapterTestCase {
             pdfdoc.output(os);
             String out = os.toString(StandardCharsets.UTF_8.name());
             assertTrue(out.contains("/Parent "));
+            assertFalse(out.contains("/Kids "));
+            pdfdoc.outputTrailer(os);
+            out = os.toString(StandardCharsets.UTF_8.name());
             assertTrue(out.contains("/Kids "));
         }
     }
@@ -625,7 +630,7 @@ public class PDFBoxAdapterTestCase {
         loadPage(pdfdoc, FORMROTATED);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         pdfdoc.output(bos);
-        Assert.assertFalse(bos.toString(StandardCharsets.UTF_8.name()).contains("/R 90"));
+        assertFalse(bos.toString(StandardCharsets.UTF_8.name()).contains("/R 90"));
     }
 
     private String getAnnotationsID(PDFPage page) throws IOException {
@@ -782,5 +787,15 @@ public class PDFBoxAdapterTestCase {
         assertEquals(output.split("BeginBitmap").length, 3);
         assertTrue(output.contains("/ImageMatrix [148 0 0 78 0 0]"));
         assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
+    }
+
+    @Test
+    public void testBookmarks() throws IOException {
+        PDFDocument pdfdoc = new PDFDocument("");
+        loadPage(pdfdoc, BOOKMARKS);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PDFDictionary outlines = (PDFDictionary) pdfdoc.getRoot().get("Outlines");
+        outlines.output(bos);
+        assertEquals("<< /First 1 0 R /Last 1 0 R >>", bos.toString("UTF-8"));
     }
 }

@@ -82,7 +82,8 @@ public class CloneAnnotations implements HandleAnnotations<COSObject> {
             COSDictionary dictionary = (COSDictionary) ((COSObject) annot).getObject();
             COSBase parent = dictionary.getItem(COSName.PARENT);
             if (parent != null) {
-                clonedAnnot.put(COSName.PARENT.getName(), pdfBoxAdapter.cloneForNewDocument(parent, parent, exclude));
+                clonedAnnot.put(COSName.PARENT.getName(), new PDFCloner(this.pdfBoxAdapter, true)
+                        .cloneForNewDocument(parent, parent, exclude));
             }
         }
     }

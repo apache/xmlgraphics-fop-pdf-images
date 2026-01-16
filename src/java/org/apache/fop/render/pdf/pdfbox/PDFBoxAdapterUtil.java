@@ -23,10 +23,14 @@ import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.commons.io.IOUtils;
@@ -36,6 +40,7 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
 import org.apache.pdfbox.cos.COSStream;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotation;
@@ -228,5 +233,61 @@ public final class PDFBoxAdapterUtil {
         rect = new PDRectangle((float)rectangleT.getX(), (float)rectangleT.getY(),
                 (float)rectangleT.getWidth(), (float)rectangleT.getHeight());
         return rect;
+    }
+
+    public static List getKids(PDDocument sourceDoc) {
+        List kids = new ArrayList();
+        List<PDPage> pages = getAllKids(sourceDoc.getDocumentCatalog().getPages().getCOSObject(), new HashSet<>());
+
+        for (PDPage page : pages) {
+            PDPage parent = getParent(page);
+            COSArray kidsArray = (COSArray) parent.getCOSObject().getDictionaryObject(COSName.KIDS);
+            for (Object kid : kidsArray.toList()) {
+                if (!kids.contains(kid)) {
+                    kids.add(kid);
+                }
+            }
+        }
+
+        return kids;
+    }
+
+    private static List<PDPage> getAllKids(COSDictionary page, Set<COSBase> seen) {
+        if (page == null) {
+            return Collections.emptyList();
+        }
+
+        COSArray kids = (COSArray)page.getDictionaryObject(COSName.KIDS);
+        if (kids == null) {
+            return Collections.emptyList();
+        }
+
+        List<PDPage> result = new ArrayList<>();
+        for (int i = 0; i < kids.size(); ++i) {
+            if (!seen.contains(kids.get(i))) {
+                COSBase obj = kids.getObject(i);
+                if (obj instanceof COSDictionary) {
+                    COSDictionary kid = (COSDictionary)obj;
+                    if (COSName.PAGE.equals(kid.getDictionaryObject(COSName.TYPE))) {
+                        result.add(new PDPage(kid));
+                    } else {
+                        result.addAll(getAllKids(kid, seen));
+                    }
+                }
+
+                seen.add(kids.get(i));
+            }
+        }
+
+        return result;
+    }
+
+    private static PDPage getParent(PDPage page) {
+        COSDictionary parentDic = page.getCOSObject().getCOSDictionary(COSName.PARENT, COSName.P);
+        if (parentDic != null) {
+            return new PDPage(parentDic);
+        }
+
+        return page;
     }
 }

@@ -25,6 +25,7 @@ import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,6 +35,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.commons.io.IOUtils;
 
@@ -49,6 +51,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
+import org.apache.pdfbox.pdmodel.graphics.optionalcontent.PDOptionalContentProperties;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 
 import org.apache.fop.events.EventBroadcaster;
@@ -61,6 +64,7 @@ import org.apache.fop.pdf.PDFFormXObject;
 import org.apache.fop.pdf.PDFNumber;
 import org.apache.fop.pdf.PDFObject;
 import org.apache.fop.pdf.PDFPage;
+import org.apache.fop.pdf.PDFReference;
 import org.apache.fop.pdf.PDFRoot;
 import org.apache.fop.pdf.PDFStream;
 
@@ -476,12 +480,129 @@ public class PDFBoxAdapter {
     }
 
     private void bindOptionalContent(PDDocument sourceDoc) throws IOException {
-        /*
-         * PDOptionalContentProperties ocProperties =
-         * sourceDoc.getDocumentCatalog().getOCProperties(); PDFDictionary ocDictionary =
-         * (PDFDictionary) cloneForNewDocument(ocProperties); if (ocDictionary != null) {
-         * this.pdfDoc.getRoot().put(COSName.OCPROPERTIES.getName(), ocDictionary); }
-         */
+        PDOptionalContentProperties ocProperties = sourceDoc.getDocumentCatalog().getOCProperties();
+        PDFDictionary ocDictionary = (PDFDictionary) cloneForNewDocument(ocProperties);
+        if (ocDictionary != null) {
+            this.pdfDoc.getRoot().put(COSName.OCPROPERTIES.getName(), ocDictionary);
+        }
+        COSDictionary catalog = sourceDoc.getDocumentCatalog().getCOSObject();
+        copyToRoot(catalog.getDictionaryObject(COSName.VIEWER_PREFERENCES), COSName.VIEWER_PREFERENCES.getName());
+        copyToRoot(catalog.getDictionaryObject("Requirements"), "Requirements");
+        copyOutlineToRoot(catalog.getDictionaryObject(COSName.NAMES), COSName.NAMES.getName());
+        copyToRoot(catalog.getDictionaryObject(COSName.COLLECTION), COSName.COLLECTION.getName());
+        copyOutlineToRoot(catalog.getItem(COSName.OUTLINES), COSName.OUTLINES.getName());
+    }
+
+    private void copyToRoot(COSBase input, String type) throws IOException {
+        if (input != null) {
+            PDFDictionary output = (PDFDictionary) pdfDoc.getRoot().get(type);
+            PDFDictionary cloned = (PDFDictionary) cloneForNewDocument(input);
+            if (output != null) {
+                copyDict(output, cloned);
+            }
+            pdfDoc.getRoot().put(type, cloned);
+        }
+    }
+
+    private void copyOutlineToRoot(COSBase input, String type) throws IOException {
+        if (input != null) {
+            PDFDictionary output = (PDFDictionary) pdfDoc.getRoot().get(type);
+            PDFDictionary cloned = (PDFDictionary) new PDFCloner(this, true).cloneForNewDocument(input);
+            if (output != null) {
+                copyDict(output, cloned);
+            }
+            movePage(cloned, new ArrayList<>());
+            pdfDoc.getRoot().put(type, cloned);
+        }
+    }
+
+    private void movePage(PDFDictionary cloned, List<Object> visited) {
+        for (String k : cloned.keySet()) {
+            Object obj = cloned.get(k);
+            if (obj instanceof PDFDictionary && !visited.contains(obj)) {
+                visited.add(obj);
+                movePage((PDFDictionary) obj, visited);
+            }
+            if (obj instanceof PDFArray && !visited.contains(obj)) {
+                visited.add(obj);
+                movePage((PDFArray) obj, visited, k);
+            }
+        }
+    }
+
+    private void movePage(PDFArray array, List<Object> visited, String k) {
+        for (int i = 0; i < array.length(); i++) {
+            Object obj = array.get(i);
+            if (obj instanceof PDFDictionary && !visited.contains(obj)) {
+                visited.add(obj);
+                movePage((PDFDictionary) obj, visited);
+            }
+            if (obj instanceof PDFArray && !visited.contains(obj)) {
+                if (("Dest".equals(k) || "Names".equals(k)) && ((PDFArray) obj).get(0) instanceof PDFReference) {
+                    PDFReference ref = (PDFReference) ((PDFArray) obj).get(0);
+                    array.set(i, ref.getObject());
+                }
+                visited.add(obj);
+                movePage((PDFArray) obj, visited, k);
+            }
+        }
+    }
+
+    private void copyDict(PDFDictionary output, PDFDictionary cloned) {
+        for (String k : output.keySet()) {
+            Object existingObj = output.get(k);
+            if (existingObj instanceof PDFDictionary) {
+                PDFDictionary c = (PDFDictionary) cloned.get(k);
+                if (existingObj == c) {
+                    continue;
+                }
+                if (c == null) {
+                    cloned.put(k, existingObj);
+                } else {
+                    copyDict((PDFDictionary) existingObj, c);
+                }
+            } else if (existingObj instanceof PDFArray) {
+                PDFArray existing = (PDFArray) existingObj;
+                PDFArray clonedArray = (PDFArray) cloned.get(k);
+                if (k.equals("Names") && existing.length() > 0 && clonedArray != null) {
+                    Map<String, Object[]> sortData = new TreeMap<>();
+                    readNamesData(sortData, existing);
+                    readNamesData(sortData, clonedArray);
+                    clonedArray.clear();
+                    for (Object[] sortedData : sortData.values()) {
+                        clonedArray.add(sortedData[0]);
+                        clonedArray.add(sortedData[1]);
+                    }
+                } else if (clonedArray != null) {
+                    for (int i = 0; i < existing.length(); i++) {
+                        clonedArray.add(existing.get(i));
+                    }
+                }
+            } else {
+                cloned.put(k, existingObj);
+            }
+        }
+    }
+
+    private void readNamesData(Map<String, Object[]> sortData, PDFArray array) {
+        Object[] data = new Object[2];
+        for (int i = 0; i < array.length(); i++) {
+            Object o = array.get(i);
+            if (o instanceof PDFDictionary) {
+                data[1] = o;
+                Object name = ((PDFDictionary)o).get("F");
+                if (name == null) {
+                    name = data[0];
+                }
+                if (name instanceof byte[]) {
+                    name = new String((byte[])name, StandardCharsets.UTF_8);
+                }
+                sortData.put((String) name, data);
+                data = new Object[2];
+            } else {
+                data[0] = o;
+            }
+        }
     }
 
     private void handleAnnotations(PDDocument sourceDoc, PDPage page, AffineTransform pageAdjust, Rectangle pos)
@@ -496,27 +617,21 @@ public class PDFBoxAdapter {
         PDFBoxAdapterUtil.moveAnnotations(page, pageAnnotations, pageAdjust, pos);
 
         //Pseudo-cache the target page in place of the original source page.
-        //This essentially replaces the original page reference with the target page.
-        COSObject cosPage = null;
-        COSDictionary parentDic = (COSDictionary) page.getCOSObject().getDictionaryObject(COSName.PARENT, COSName.P);
-        COSArray kids = (COSArray) parentDic.getDictionaryObject(COSName.KIDS);
+        //This essentially replaces the original page reference with the target page
+        List kids = PDFBoxAdapterUtil.getKids(sourceDoc);
         for (int i = 0; i < kids.size(); i++) {
             //Hopefully safe to cast, as kids need to be indirect objects
-            COSObject kid = (COSObject) kids.get(i);
-            if (!pageNumbers.containsKey(i)) {
-                PDFArray a = new PDFArray();
-                a.add(null);
-                pdfDoc.assignObjectNumber(a);
-                pdfDoc.addTrailerObject(a);
-                pageNumbers.put(i, a);
+            Object kid = kids.get(i);
+            if (getCachedClone(kid) == null) {
+                if (!pageNumbers.containsKey(i)) {
+                    PDFArray a = new PDFArray();
+                    a.add(null);
+                    pdfDoc.assignObjectNumber(a);
+                    pdfDoc.addTrailerObject(a);
+                    pageNumbers.put(i, a);
+                }
+                cacheClonedObject(kid, pageNumbers.get(i));
             }
-            cacheClonedObject(kid, pageNumbers.get(i));
-            if (kid.getObject() == page.getCOSObject()) {
-                cosPage = kid;
-            }
-        }
-        if (cosPage == null) {
-            throw new IOException("Illegal PDF. Page not part of parent page node.");
         }
 
         Set<?> fields = copyAnnotations(page, srcAcroForm);
