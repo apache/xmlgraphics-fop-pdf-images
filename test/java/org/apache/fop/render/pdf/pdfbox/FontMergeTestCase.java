@@ -85,6 +85,8 @@ public class FontMergeTestCase {
     protected static final String TTSubset15 = "ttsubset15.pdf";
     protected static final String CFFCID1 = "cffcid1.pdf";
     protected static final String CFFCID2 = "cffcid2.pdf";
+    protected static final String CFFCID3 = "cffcid3.pdf";
+    protected static final String CFFCID4 = "cffcid4.pdf";
     protected static final String Type1Subset1 = "t1subset.pdf";
     protected static final String Type1Subset2 = "t1subset2.pdf";
     protected static final String Type1Subset3 = "t1subset3.pdf";
@@ -137,6 +139,51 @@ public class FontMergeTestCase {
         writeText(fi, Type1Subset3);
         writeText(fi, Type1Subset4);
         writeText(fi, PDFBoxAdapterTestCase.LOOP);
+    }
+
+    @Test
+    public void testCFFRangeMapUnchanged() throws IOException {
+        FontInfo fi = new FontInfo();
+        writeText(fi, CFFCID3);
+        writeText(fi, CFFCID4);
+
+        InputStream inputStream = null;
+        for (Typeface usedFont : fi.getUsedFonts().values()) {
+            if ("CorporateSBQ-Light-Identity-H_Type0cff".equals(usedFont.getEmbedFontName())) {
+                inputStream = ((CustomFont) usedFont).getInputStream();
+            }
+        }
+
+        inputStream.skip(283); //start of the range map
+
+        byte[] expectedBytes = {37, 39, 42, 45, 54, 68, 72, 73, 59, 65};
+        for (byte expectedByte : expectedBytes) {
+            assertEquals("Next character separator should be zero", 0, inputStream.read()); //separator
+            assertEquals("Character byte", expectedByte, inputStream.read()); //character byte
+            assertEquals("Map should remain unchanged and no count should be done", 0, inputStream.read()); //count
+        }
+        assertEquals("Range map ended so byte should be set to 1", 1, inputStream.read());
+    }
+
+    @Test
+    public void testCFFMergeFontIndexStart() throws IOException {
+        FontInfo fi = new FontInfo();
+        writeText(fi, CFFCID3);
+        writeText(fi, CFFCID4);
+
+        InputStream inputStream = null;
+        for (Typeface usedFont : fi.getUsedFonts().values()) {
+            if ("CorporateSBQ-Light-Identity-H_Type0cff".equals(usedFont.getEmbedFontName())) {
+                inputStream = ((CustomFont) usedFont).getInputStream();
+            }
+        }
+
+        inputStream.skip(1055);
+
+        byte[] expectedBytes = {0, 1, 1, 1, 59};
+        for (byte expectedByte : expectedBytes) {
+            assertEquals("Must write the index start", expectedByte, inputStream.read());
+        }
     }
 
     @Test

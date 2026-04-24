@@ -31,7 +31,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.fontbox.cff.CFFCIDFont;
 import org.apache.fontbox.cff.CFFCharset;
@@ -307,7 +306,6 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 bos.write(fdFontByteData);
                 bos.write(fdFont.getPrivateDictData());
-                bos.write(new byte[3]);
                 index.add(bos.toByteArray());
             }
             writeIndex(index, 1);
@@ -449,20 +447,6 @@ public class MergeCFFFonts extends OTFSubSetFile implements MergeFonts {
                     }
                 } else {
                     range.put(NUM_STANDARD_STRINGS, subsetCharStringsIndex.size());
-                }
-            }
-        } else if (cffReader.getFDSelect() instanceof CFFDataReader.Format3FDSelect) {
-            int last = -1;
-            int count = 1;
-            Set<Integer> r = new TreeSet<Integer>(range.keySet());
-            for (int i : r) {
-                if (last + count == i) {
-                    range.remove(i);
-                    range.put(last, count);
-                    count++;
-                } else {
-                    last = i;
-                    count = 1;
                 }
             }
         }
