@@ -66,6 +66,12 @@
       <version>${mockito.version}</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.thoughtworks.qdox</groupId>
+      <artifactId>qdox</artifactId>
+      <version>1.12</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -107,6 +113,7 @@
                 <taskdef name="collectEvents" classname="org.apache.fop.eventtools.EventProducerCollectorTask">
                   <classpath>
                     <path refid="maven.compile.classpath"/>
+                    <path refid="maven.test.classpath"/>
                   </classpath>
                 </taskdef>
                 <collectEvents destdir="${project.build.outputDirectory}">
