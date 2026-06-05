@@ -364,7 +364,10 @@ public class MergeTTFonts extends TTFSubSetFile implements MergeFonts {
             flags = dis.readShort();
             dos.writeShort(flags);
             int glyphIndex = dis.readShort();
-            int indexInSubset = remap.get(glyphIndex);
+            Integer indexInSubset = remap.get(glyphIndex);
+            if (indexInSubset == null) {
+                indexInSubset = 0;
+            }
             dos.writeShort(indexInSubset);
             int skip = GlyfTable.GlyfFlags.getOffsetToNextComposedGlyf(flags);
             byte[] rest = new byte[skip];

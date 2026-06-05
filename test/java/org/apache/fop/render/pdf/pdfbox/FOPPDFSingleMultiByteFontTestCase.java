@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -421,6 +422,19 @@ public class FOPPDFSingleMultiByteFontTestCase {
         TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat-Bold", true, pdfs);
         Assert.assertEquals(262, mergedTTF.getCmap().getCmaps()[0].getGlyphId(48));
         Assert.assertEquals(Arrays.asList(36, 48, 86), compareGlyphs(mergedTTF, pdfs));
+    }
+
+    @Test
+    public void testTTSubsetRemapGidNotUsed() throws IOException {
+        Map<String, String> pdfs = new LinkedHashMap<>();
+        pdfs.put("ttsubset24_1.pdf", "TT1");
+        pdfs.put("ttsubset24_2.pdf", "TT1");
+        pdfs.put("ttsubset24_3.pdf", "TT1");
+        pdfs.put("ttsubset24_4.pdf", "TT1");
+        pdfs.put("ttsubset24_5.pdf", "TT1");
+        pdfs.put("ttsubset24_6.pdf", "TT1");
+        TrueTypeFont mergedTTF = validateSingleByteFont("Montserrat-Bold", true, pdfs);
+        Assert.assertEquals(Collections.singletonList(74), compareGlyphs(mergedTTF, pdfs));
     }
 
     private List<Integer> compareGlyphs(TrueTypeFont mergedTTF, Map<String, String> pdfs) throws IOException {
