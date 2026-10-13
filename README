@@ -76,11 +76,11 @@ Requirements
 
 This plug-in has the following requirements:
 - Apache PDFBox 3.0 or later
-- Apache XML Graphics Commons 2.11 or later (for the image converter)
-- Apache XML FOP 2.11 or later (for the FOP functionality)
+- Apache XML Graphics Commons 2.12 or later (for the image converter)
+- Apache XML FOP 2.12 or later (for the FOP functionality)
 - Java 1.8 or later
 
-Note: for some problems related to the PDF plug-in, Apache FOP 2.11 or later
+Note: for some problems related to the PDF plug-in, Apache FOP 2.12 or later
 is required. A number of bugs had to be fixed in FOP's PDF library.
 
 
@@ -156,6 +156,23 @@ http://www.jeremias-maerki.ch/development/fop/index.html
 ==============================================================================
   RELEASE NOTES
 ==============================================================================
+
+Version 2.12
+=========================
+
+Changes:
+FOP-3122: Copy bookmarks
+FOP-3230: Skip paragraph type elements when merging structure trees
+FOP-3254: Optimise merge-fonts performance
+FOP-3255: Adjust pattern matrix with region margins
+FOP-3261: Remap conflicting GID for font merge
+FOP-3262: Add merged fonts validation
+FOP-3265: Remap glyphs for gid conflict
+FOP-3266: Remap skip over gids not in cmap
+FOP-3267: Check COSArray content for possible filters
+FOP-3315: Fix font merge for some format 3 cff fonts
+FOP-3317: Set QDox to provided
+FOP-3324: NPE when remapping unused glyph
 
 Version 2.11
 =========================
