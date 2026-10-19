@@ -51,6 +51,7 @@ import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSInteger;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSObject;
+import org.apache.pdfbox.cos.COSString;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -385,6 +386,40 @@ public class PDFBoxAdapterTestCase {
         public Map<Integer, URI> getImages() {
             return new HashMap<Integer, URI>();
         }
+    }
+
+    @Test
+    public void testMergeNamesArray() throws Exception {
+        PDFDocument pdfdoc = new PDFDocument("");
+        try (PDDocument doc1 = createNamedDestDoc("dest1");
+             PDDocument doc2 = createNamedDestDoc("dest2")) {
+            loadPage(pdfdoc, doc1, new Rectangle());
+            loadPage(pdfdoc, doc2, new Rectangle());
+        }
+        PDFDictionary names = (PDFDictionary) pdfdoc.getRoot().get(COSName.NAMES.getName());
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        names.output(bos);
+        assertEquals("<< /Dests << /Names [(dest1) [0 /Fit] (dest2) [0 /Fit]] >> >>",
+                bos.toString(StandardCharsets.UTF_8.name()));
+    }
+
+    private PDDocument createNamedDestDoc(String name) {
+        PDDocument doc = new PDDocument();
+        PDPage page = new PDPage();
+        page.setContents(new PDStream(doc));
+        doc.addPage(page);
+        COSArray dest = new COSArray();
+        dest.add(COSInteger.ZERO);
+        dest.add(COSName.getPDFName("Fit"));
+        COSArray namesArray = new COSArray();
+        namesArray.add(new COSString(name));
+        namesArray.add(dest);
+        COSDictionary destsTree = new COSDictionary();
+        destsTree.setItem(COSName.NAMES, namesArray);
+        COSDictionary namesDict = new COSDictionary();
+        namesDict.setItem(COSName.DESTS, destsTree);
+        doc.getDocumentCatalog().getCOSObject().setItem(COSName.NAMES, namesDict);
+        return doc;
     }
 
     private void loadPage(PDFDocument pdfdoc, String src) throws IOException {

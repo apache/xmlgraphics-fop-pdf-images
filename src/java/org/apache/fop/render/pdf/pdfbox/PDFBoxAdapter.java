@@ -588,9 +588,12 @@ public class PDFBoxAdapter {
         Object[] data = new Object[2];
         for (int i = 0; i < array.length(); i++) {
             Object o = array.get(i);
-            if (o instanceof PDFDictionary) {
+            if (o instanceof PDFDictionary || o instanceof PDFArray) {
                 data[1] = o;
-                Object name = ((PDFDictionary)o).get("F");
+                Object name = null;
+                if (o instanceof PDFDictionary) {
+                    name = ((PDFDictionary) o).get("F");
+                }
                 if (name == null) {
                     name = data[0];
                 }
