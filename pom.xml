@@ -22,6 +22,9 @@
     <pdfbox.version>3.0.3</pdfbox.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.info.reports.plugin.version>2.8</project.info.reports.plugin.version>
+    <source.plugin.version>3.3.1</source.plugin.version>
+    <javadoc.plugin.version>3.11.2</javadoc.plugin.version>
+    <gpg.plugin.version>3.2.7</gpg.plugin.version>
   </properties>
   
   <licenses>
@@ -215,6 +218,56 @@
         <spotbugs.version>4.8.6.7</spotbugs.version>
       </properties>
     </profile>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>${source.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${javadoc.plugin.version}</version>
+            <configuration>
+              <doclint>none</doclint>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>${gpg.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>  
   
   <repositories>
@@ -240,6 +293,10 @@
     </repository>
   </repositories>
   <distributionManagement>
+    <repository>
+      <id>apache.releases.https</id>
+      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
+    </repository>
     <snapshotRepository>
       <id>apache.snapshots.https</id>
       <url>https://repository.apache.org/content/repositories/snapshots</url>
