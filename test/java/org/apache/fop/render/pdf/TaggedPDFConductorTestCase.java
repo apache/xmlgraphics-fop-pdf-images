@@ -171,7 +171,7 @@ public class TaggedPDFConductorTestCase {
             return "*";
         }
         StringBuilder sb = new StringBuilder(selfName.toString());
-        if ((elem.getKids() != null) && !elem.getKids().isEmpty()) {
+        if (elem.getKids() != null && !elem.getKids().isEmpty()) {
             int realSize = 0;
             for (PDFObject kid : elem.getKids()) {
                 if (kid instanceof PDFStructElem) {

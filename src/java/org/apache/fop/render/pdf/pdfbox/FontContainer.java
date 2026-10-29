@@ -18,7 +18,6 @@ package org.apache.fop.render.pdf.pdfbox;
 
 import java.io.IOException;
 import java.io.InputStream;
-
 import java.util.Collections;
 import java.util.List;
 

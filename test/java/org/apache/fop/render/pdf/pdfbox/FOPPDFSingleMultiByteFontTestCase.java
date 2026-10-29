@@ -33,7 +33,6 @@ import java.util.TreeSet;
 
 import org.junit.Assert;
 import org.junit.Test;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -221,7 +220,7 @@ public class FOPPDFSingleMultiByteFontTestCase {
             glyphTable.setGlyphs(new GlyphData[
                     ((PDCIDFontType2) font.getDescendantFont()).getTrueTypeFont().getNumberOfGlyphs() - 1]);
             IOException ex = Assert.assertThrows(IOException.class, () -> multiByteFont.addFont(fontDict));
-            Assert.assertEquals(ex.getMessage(), "Mapping not found in glyphData");
+            Assert.assertEquals("Mapping not found in glyphData", ex.getMessage());
         }
     }
 

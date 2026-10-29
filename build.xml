@@ -262,7 +262,6 @@
     <delete failonerror="false">
       <fileset dir="${basedir}/lib">
         <include name="*.jar"/>
-        <exclude name="checkstyle*.jar"/>
         <exclude name="jacocoant*.jar"/>
       </fileset>
     </delete>
@@ -459,13 +458,18 @@
 
   <target name="all" depends="package,junit"/>
 
-  <target name="checkstyle" description="Runs Checkstyle for a code quality report">
-    <taskdef name="checkstyle" classname="com.puppycrawl.tools.checkstyle.CheckStyleTask" classpathref="libs-build-tools-classpath"/>
-    <checkstyle config="checkstyle-5.5.xml" failonviolation="true" maxWarnings="0">
-      <fileset dir="${src.java.dir}" includes="**/*.java"/>
-      <fileset dir="test/java" includes="**/*.java"/>
-      <formatter type="plain"/>
-    </checkstyle>
+  <target name="checkstyle" depends="checkstyle-unix,checkstyle-windows" description="Runs Checkstyle for a code quality report"/>
+  <target name="checkstyle-unix" if="isUnix">
+    <exec executable="mvn" dir="${basedir}" failonerror="true">
+      <arg value="checkstyle:check"/>
+    </exec>
+  </target>
+  <target name="checkstyle-windows" if="isWindows">
+    <exec executable="cmd" dir="${basedir}" failonerror="true">
+      <arg value="/c"/>
+      <arg value="mvn"/>
+      <arg value="checkstyle:check"/>
+    </exec>
   </target>
   
   <property name="findbugs.lib" value="${findbugs.home.dir}/lib"/>

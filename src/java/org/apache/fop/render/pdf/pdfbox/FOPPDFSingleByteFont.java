@@ -33,18 +33,15 @@ import java.util.TreeMap;
 
 import org.apache.fontbox.cff.CFFType1Font;
 import org.apache.fontbox.cmap.CMap;
-
 import org.apache.fontbox.ttf.CmapSubtable;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.TTFParser;
 import org.apache.fontbox.ttf.TrueTypeFont;
-
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
-
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;

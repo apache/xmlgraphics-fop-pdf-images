@@ -47,7 +47,6 @@ import org.apache.fop.pdf.StandardStructureTypes.Grouping;
 import org.apache.fop.pdf.StandardStructureTypes.Illustration;
 import org.apache.fop.pdf.StandardStructureTypes.Paragraphlike;
 import org.apache.fop.pdf.StructureType;
-
 import org.apache.fop.render.pdf.PDFLogicalStructureHandler;
 
 public class StructureTreeMerger {
@@ -156,7 +155,7 @@ public class StructureTreeMerger {
             PDFStructElem parent = elem.getParentStructElem();
             if (null != parent) {
                 final StructureType parentType = parent.getStructureType();
-                if ((parentType == Paragraphlike.P) || (parentType == Grouping.DIV)) {
+                if (parentType == Paragraphlike.P || parentType == Grouping.DIV) {
                     return true;
                 }
             }

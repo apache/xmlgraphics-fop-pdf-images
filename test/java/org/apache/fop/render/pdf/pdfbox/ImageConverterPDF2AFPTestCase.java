@@ -22,7 +22,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
-
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;

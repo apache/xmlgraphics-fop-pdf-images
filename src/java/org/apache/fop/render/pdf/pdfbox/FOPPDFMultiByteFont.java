@@ -34,11 +34,9 @@ import org.apache.fontbox.cff.CFFCharset;
 import org.apache.fontbox.cff.CFFFont;
 import org.apache.fontbox.cff.CFFStandardString;
 import org.apache.fontbox.cmap.CMap;
-
 import org.apache.fontbox.ttf.CmapSubtable;
 import org.apache.fontbox.ttf.GlyphData;
 import org.apache.fontbox.ttf.TrueTypeFont;
-
 import org.apache.pdfbox.cos.COSArray;
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.cos.COSDictionary;
@@ -164,7 +162,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         for (Map.Entry<Integer, String> i : gidToGlyph.entrySet()) {
             String mappedChar = i.getValue();
             int key = i.getKey();
-            boolean skipWidth = (mappedChar == null) || mappedChar.length() == 0;
+            boolean skipWidth = mappedChar == null || mappedChar.length() == 0;
             if (skipWidth) {
                 mappedChar = (char)charMapGlobal.size() + "tmp";
             } else if (mappedChar.length() > 1) {

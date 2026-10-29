@@ -32,7 +32,6 @@ import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 
 import org.apache.commons.io.IOUtils;
@@ -112,7 +111,7 @@ public class FontMergeTestCase {
             RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
                     PDFBoxAdapterTestCase.getPDFBoxAdapter(true, true).createStreamFromPDFBoxPage(doc,
                           page, PDFBoxAdapterTestCase.IMAGE, pageAdjust, new FontInfo(), new Rectangle(), pageAdjust));
-            assertEquals(ex.getMessage(), "merge-fonts and form-xobject can't both be enabled");
+            assertEquals("merge-fonts and form-xobject can't both be enabled", ex.getMessage());
         }
     }
 
@@ -236,7 +235,7 @@ public class FontMergeTestCase {
             }
             Assert.assertTrue(((CustomFont) font).isEmbeddable());
             if (font instanceof MultiByteFont) {
-                Assert.assertTrue(((MultiByteFont) font).getWidthsMap() != null);
+                Assert.assertNotNull(((MultiByteFont) font).getWidthsMap());
             } else {
                 Assert.assertFalse(((CustomFont)font).isSymbolicFont());
             }
