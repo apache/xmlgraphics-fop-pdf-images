@@ -113,7 +113,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         CMap c = font.getToUnicodeCMap();
         Map<Integer, String> mapping = getMapping(font, c, glyphData.length);
         if (glyphData.length > 0) {
-            differentGlyphData(glyphData, mapping);
+            differentGlyphData(glyphData, mapping, mainFont);
         }
         Map<Integer, String> gidToGlyph = new TreeMap<Integer, String>(mapping);
         if (font.font instanceof PDTrueTypeFont) {
@@ -162,6 +162,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         for (Map.Entry<Integer, String> i : gidToGlyph.entrySet()) {
             String mappedChar = i.getValue();
             int key = i.getKey();
+            int gid = getGID(mainFont, key);
             boolean skipWidth = mappedChar == null || mappedChar.length() == 0;
             if (skipWidth) {
                 mappedChar = (char)charMapGlobal.size() + "tmp";
@@ -171,7 +172,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             if (!charMapGlobal.containsKey(mappedChar)) {
                 char c = mappedChar.charAt(0);
                 if (glyphData.length > 0
-                        && glyphData[key] == null
+                        && (gid >= glyphData.length || glyphData[gid] == null)
                         && !CharUtilities.isAdjustableSpace(c)) {
                     continue;
                 }
@@ -191,7 +192,7 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
                 if (hasChar(c)) {
                     glyph = (int) mapChar(c);
                 }
-                oldToNewGIMap.put(key, glyph);
+                oldToNewGIMap.put(gid, glyph);
                 if (!skipWidth) {
                     if (!(font.font instanceof PDTrueTypeFont)) {
                         widthPos = key;
@@ -255,10 +256,22 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         return "SID" + index;
     }
 
-        private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping) throws IOException {
+        // for CIDFontType2 the mapping key is a CID, which the CIDToGIDMap may map to a different glyph in the font file
+        private int getGID(PDCIDFont mainFont, int key) throws IOException {
+            if (mainFont instanceof PDCIDFontType2) {
+                return mainFont.codeToGID(key);
+            }
+            return key;
+        }
+
+        private boolean differentGlyphData(GlyphData[] data, Map<Integer, String> mapping, PDCIDFont mainFont)
+                throws IOException {
             Map<String, Integer> tmpMap = new HashMap<String, Integer>();
             for (Map.Entry<Integer, String> entry : mapping.entrySet()) {
-                if (!tmpMap.containsKey(entry.getValue())) {
+                Integer existing = tmpMap.get(entry.getValue());
+                // some producers map .notdef (glyph 0) to a real character such as space; if another
+                // glyph maps to the same character, keep that one so the real glyph is not lost
+                if (existing == null || getGID(mainFont, existing) == 0 && getGID(mainFont, entry.getKey()) != 0) {
                     tmpMap.put(entry.getValue(), entry.getKey());
                 }
             }
@@ -268,7 +281,9 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
             }
 
             for (Map.Entry<Integer, String> n : mapping.entrySet()) {
-                if (n.getKey() >= data.length) {
+                int gid = getGID(mainFont, n.getKey());
+                // fonts with CIDs past the glyph count are not merged
+                if (n.getKey() >= data.length || gid >= data.length) {
                     throw new IOException("Mapping not found in glyphData");
                 }
 //                if (data[n.getKey()] != null) {
