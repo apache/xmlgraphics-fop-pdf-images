@@ -62,6 +62,7 @@ import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.graphics.shading.PDShading;
 import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.rendering.RenderDestination;
 
 import org.apache.xmlgraphics.image.loader.Image;
 import org.apache.xmlgraphics.image.loader.ImageException;
@@ -179,6 +180,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
                     normaliseScale(g2d);
                     PDFRenderer pdfRenderer = new PDFRenderer(pdDocument);
                     pdfRenderer.setRenderingHints(getDefaultRenderingHints());
+                    pdfRenderer.setDefaultDestination(RenderDestination.PRINT);
                     pdfRenderer.renderPageToGraphics(selectedPage, g2d);
                 }
             } catch (UnsupportedOperationException e) {
@@ -221,6 +223,7 @@ public class ImageConverterPDF2G2D extends AbstractImageConverter {
 
         private void drawPageAsImage(AffineTransform at, Graphics2D g2d) throws IOException {
             PDFRenderer renderer = new PDFRenderer(pdDocument);
+            renderer.setDefaultDestination(RenderDestination.PRINT);
             BufferedImage bi = renderer.renderImageWithDPI(selectedPage, dpi);
             at.scale(72 / dpi, 72 / dpi);
             g2d.drawImage(bi, at, null);

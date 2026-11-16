@@ -31,14 +31,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Assert;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.common.PDStream;
 import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationSquare;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceDictionary;
+import org.apache.pdfbox.pdmodel.interactive.annotation.PDAppearanceStream;
 
 import org.apache.xmlgraphics.image.loader.ImageException;
 import org.apache.xmlgraphics.image.loader.ImageInfo;
@@ -61,8 +70,8 @@ public class ImageConverterPDF2G2DTestCase {
 
     @Test
     public void testFontsNotEmbedded() throws IOException, ImageException {
-        Assert.assertFalse(pdfToPS(FONTSNOTEMBEDDED, "xyz"));
-        Assert.assertFalse(pdfToPS(FONTSNOTEMBEDDEDCID, "xyz"));
+        assertFalse(pdfToPS(FONTSNOTEMBEDDED, "xyz"));
+        assertFalse(pdfToPS(FONTSNOTEMBEDDEDCID, "xyz"));
     }
 
     private boolean pdfToPS(String pdf, String font) throws IOException, ImageException {
@@ -128,7 +137,7 @@ public class ImageConverterPDF2G2DTestCase {
             BufferedImage image = new BufferedImage(100, 100, BufferedImage.TYPE_INT_ARGB);
             Graphics2D graphics2D = image.createGraphics();
             fopGraphics2D.getGraphics2DImagePainter().paint(graphics2D, new Rectangle(0, 0, 1000, 1000));
-            Assert.assertEquals(graphics2D.getTransform().getScaleX(), 1.63, 0);
+            assertEquals(graphics2D.getTransform().getScaleX(), 1.63, 0);
         }
     }
 
@@ -149,7 +158,7 @@ public class ImageConverterPDF2G2DTestCase {
             formStream.close();
 
             String ps = pdfToPS(doc, pdf, null, null);
-            Assert.assertTrue(ps.contains("/ImageType 1"));
+            assertTrue(ps.contains("/ImageType 1"));
         }
     }
 
@@ -158,9 +167,9 @@ public class ImageConverterPDF2G2DTestCase {
         InternalResourceResolver rr = ResourceResolverFactory.createDefaultInternalResourceResolver(new URI("."));
         EmbedFontInfo embedFontInfo = new EmbedFontInfo(new FontUris(
                 new File("pom.xml").toURI(), null), false, false, null, "");
-        RuntimeException ex = Assert.assertThrows(RuntimeException.class, () ->
+        RuntimeException ex = assertThrows(RuntimeException.class, () ->
             pdfToPS(FONTSNOTEMBEDDEDCID, new LazyFont(embedFontInfo, rr, false)));
-        Assert.assertTrue(ex.getMessage().contains("Reached EOF"));
+        assertTrue(ex.getMessage().contains("Reached EOF"));
     }
 
     @Test
@@ -169,8 +178,38 @@ public class ImageConverterPDF2G2DTestCase {
         hints.put("SOURCE_RESOLUTION", 96f);
         ByteArrayOutputStream bos = PDFBoxAdapterTestCase.pdfToPS(PDFBoxAdapterTestCase.SOFTMASK, hints);
         String output = bos.toString(StandardCharsets.UTF_8.name());
-        Assert.assertEquals(output.split("BeginBitmap").length, 3);
-        Assert.assertTrue(output.contains("/ImageMatrix [196 0 0 104 0 0]"));
-        Assert.assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
+        assertEquals(output.split("BeginBitmap").length, 3);
+        assertTrue(output.contains("/ImageMatrix [196 0 0 104 0 0]"));
+        assertTrue(output.contains("/ImageMatrix [192 0 0 192 0 0]"));
+    }
+
+    @Test
+    public void testNonPrintableAnnotationNotPaintedInPS() throws IOException, ImageException {
+        String annotationMarker = "0.25 0.5 0.75 RC";
+        assertTrue("Printable annotation should be painted", annotationToPS(true).contains(annotationMarker));
+        assertFalse("Non-printable annotation should not be painted",
+                annotationToPS(false).contains(annotationMarker));
+    }
+
+    private String annotationToPS(boolean printable) throws IOException, ImageException {
+        try (PDDocument doc = new PDDocument()) {
+            PDRectangle box = new PDRectangle(100, 100);
+            PDPage page = new PDPage(box);
+            doc.addPage(page);
+            PDAppearanceStream appearance = new PDAppearanceStream(doc);
+            appearance.setBBox(box);
+            appearance.setResources(new PDResources());
+            try (OutputStream os = appearance.getCOSObject().createOutputStream()) {
+                os.write("0.25 0.5 0.75 rg 10 10 30 30 re f".getBytes(StandardCharsets.UTF_8));
+            }
+            PDAppearanceDictionary appearanceDictionary = new PDAppearanceDictionary();
+            appearanceDictionary.setNormalAppearance(appearance);
+            PDAnnotationSquare annotation = new PDAnnotationSquare();
+            annotation.setRectangle(box);
+            annotation.setPrinted(printable);
+            annotation.setAppearance(appearanceDictionary);
+            page.getAnnotations().add(annotation);
+            return pdfToPS(doc, "annotation.pdf", null, null);
+        }
     }
 }

@@ -338,10 +338,12 @@ public class PSPDFGraphics2D extends PSGraphics2D {
 
     @Override
     public boolean drawImage(Image img, int x1, int y1, ImageObserver observer) {
+        assert img instanceof BufferedImage;
         Color mask = null;
-        ColorModel cm = ((BufferedImage)img).getColorModel();
+        BufferedImage bufferedImg = (BufferedImage) img;
+        ColorModel cm = bufferedImg.getColorModel();
         if (cm.hasAlpha()) {
-            mask = getMask((BufferedImage) img);
+            mask = getMask(bufferedImg);
             img = convertToRGB(img, mask);
         }
         if (gen instanceof PSDocumentHandler.FOPPSGenerator) {
