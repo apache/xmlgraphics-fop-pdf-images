@@ -111,6 +111,11 @@ public class PatternUtil {
             if (patternsDict != null) {
                 for (String key : patternsDict.keySet()) {
                     PDFObject pattern = (PDFObject) patternsDict.get(key);
+                    if (pattern.hasObjectNumber()) {
+                        // already registered (by the cloner or an earlier call for this page);
+                        // adding it again writes it twice
+                        continue;
+                    }
                     pattern.setObjectNumber(targetPage.getDocument());
                     targetPage.getDocument().addObject(pattern);
                 }
