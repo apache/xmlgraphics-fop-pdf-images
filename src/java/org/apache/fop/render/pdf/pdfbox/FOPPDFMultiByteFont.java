@@ -256,7 +256,8 @@ public class FOPPDFMultiByteFont extends MultiByteFont implements FOPPDFFont {
         return "SID" + index;
     }
 
-        // for CIDFontType2 the mapping key is a CID, which the CIDToGIDMap may map to a different glyph in the font file
+        // for CIDFontType2 the mapping key is a CID,
+        // which the CIDToGIDMap may map to a different glyph in the font file
         private int getGID(PDCIDFont mainFont, int key) throws IOException {
             if (mainFont instanceof PDCIDFontType2) {
                 return mainFont.codeToGID(key);
